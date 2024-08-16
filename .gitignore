@@ -13,9 +13,6 @@
 # generated files
 **/declarations/
 
-# rust
-target/
-
 # frontend code
 node_modules/
 dist/
@@ -29,3 +26,8 @@ package-lock.json
 
 #ids
 canister_ids.json
+
+#express
+/src/backend/express/node_modules
+/src/backend/express/package-lock.json
+.env
