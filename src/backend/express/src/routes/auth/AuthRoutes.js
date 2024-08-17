@@ -3,7 +3,6 @@ import authController from '../../controllers/auth/AuthController.js';
 
 const authRouter = express.Router();
 
-// Define routes
 authRouter.get('/', authController.homePage);
 authRouter.get('/facebook', authController.facebookAuth);
 authRouter.get('/facebook/callback', authController.facebookCallback);
