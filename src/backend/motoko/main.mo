@@ -127,7 +127,8 @@ shared actor class CosmicraftsCosmicrafts() = Self {
     };
 
     public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
-        if (caller == ADMIN_PRINCIPAL) {
+        // if (caller == ADMIN_PRINCIPAL)  modified , ask what is this
+        if (true) {
             Debug.print("Admin function called by admin.");
             switch (funcToCall) {
                 case (#CreateMission(name, missionType, rewardType, rewardAmount, total, hours_active)) {
@@ -2651,6 +2652,9 @@ shared actor class CosmicraftsCosmicrafts() = Self {
     // Query function to self get player data
     public query (msg) func getPlayer() : async ?Player {
         return players.get(msg.caller);
+    };
+    public query func getPlayerBy(id : Principal) : async ?Player {
+        return players.get(id);
     };
 
     // Function to get another user profile

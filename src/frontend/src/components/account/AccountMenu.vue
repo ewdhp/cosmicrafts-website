@@ -45,7 +45,6 @@ export default {
         <!-- Smile -->
         <path d="M10 12c1 1 3 1 4 0" />
       </svg>
-
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
       <div v-if="isMenuVisible" class="menu">
@@ -67,14 +66,14 @@ export default {
 }
 
 .avatar-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin: 10px;
 }
 
