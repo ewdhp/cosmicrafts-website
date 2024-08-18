@@ -1,18 +1,24 @@
 <template>
   <div  class="nav-container">   
-    <span class="nav-title">{{ title }}</span>
+
     <div 
     :class="['nav-sections', 
     'link-list', 
     orientationClass
     ]">     
       <ul>
+        <li>
+          <div class="row">
+          <span class="nav-title">{{ title }}</span>
+          </div>
+        </li>
         <li v-for="item in items" :key="item.path"  
           :class="{ 
           active: isActive(item.path) }"
         >
           <router-link :to="item.path">
-            <div>
+            <div class="row">
+              <img :src="item.icon"/>
               <span>{{ item.name }}</span>
             </div>
           </router-link>
@@ -38,13 +44,6 @@ export default {
     title: {
       type: String,
       default: 'Default'
-    },
-    orientation: {
-      type: String,
-      default: 'horizontal',
-      validator: (value) => 
-      ['vertical', 'horizontal']
-      .includes(value)
     }
   },
   data() {
@@ -76,8 +75,6 @@ export default {
 <style scoped>
 .nav-container {
   display: flex;
-  flex-direction: column;
-  margin: 15px;
 
 }
 .nav-title {
@@ -91,19 +88,14 @@ export default {
   flex-direction: column;
 }
 
-.link-list.horizontal ul {
-  flex-direction: row;
-}
-
 .link-list li.active {
-  border-bottom: 5px solid rgb(36, 36, 37);
+  color: rgb(33, 95, 230);
 }
 
 .nav-sections {
   display: flex;
-  align-items: first baseline;
   border-radius: 5px;
-    padding-top: 15px;
+
 }
 
 .nav-sections ul {
@@ -115,10 +107,17 @@ export default {
 
 .nav-sections li {
   display: flex;
+  border: 1px solid black;
+
+}
+.row {
+   display: flex;
   flex-direction: row;
-  margin-bottom: 20px;
-  align-items: baseline;
- 
+  align-items: center;
+  margin: 5px;
+}
+.row img {
+  margin-right: 8px; /* Adjust the value to increase or decrease the space */
 }
 
 .nav-sections a {
