@@ -18,22 +18,24 @@ import navItems from './config/navigation.js';
          <SLinkList :items="navItems.main" :title="mainTitle" />
       </div>
     </aside>
+
     <div class="right-panel">
-      <header class="top-nav">
-        <LinkList 
-          :items="navItems.main" 
-          :orientation="orientation" 
-          :title="title" 
-        />
-        <div class="nav-right">
-          <div>
-            <AccountSearch />
+
+      <div class="nav-right">  
+        <div class="top-nav">
+          <div class="link-nav">
+            <LinkList 
+              :items="navItems.main" 
+              :orientation="orientation" 
+              :title="title" 
+              />
           </div>
-          <div>
+          <div class="account-nav"> 
+            <AccountSearch />
             <AccountNav/>
           </div>
-        </div>
-      </header>
+        </div>              
+      </div>
       <main class="main-content">
         <div>
           <RouterView />
@@ -69,25 +71,33 @@ import navItems from './config/navigation.js';
   display: flex;
   flex-grow: 1;
   flex-direction: column;
-
-  .top-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    padding: 15px;
-    padding-right: 15px;
-    padding-left: 20px;
-    padding-bottom: 15px;
-    background-color: #f3f5f7;
-    border-bottom: 1px solid #888a8a;
-
-  }
-
+  
   .nav-right {
     display: flex;
     flex-direction: row;
+    background-color: #f3f5f7;
+    border: 1px solid black;
+    padding: 5px; 
   }
+  .top-nav {
+    display: flex;
 
+    width: 100%;
+
+  }
+  .link-nav {
+    display: flex;
+    padding: 5px;
+    border:1px solid black;
+  }
+  .account-nav {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    border: 1px solid black;
+    justify-content: flex-end;
+    padding: 5px;
+  }
   .main-content {
     display: flex;
     flex-direction: row;

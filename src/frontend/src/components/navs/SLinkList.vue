@@ -7,19 +7,14 @@
     orientationClass
     ]">     
       <ul>
-        <li>
-          <div class="row">
-          <span class="nav-title">{{ title }}</span>
-          </div>
-        </li>
         <li v-for="item in items" :key="item.path"  
           :class="{ 
           active: isActive(item.path) }"
         >
           <router-link :to="item.path">
-            <div class="row">
-              <img :src="item.icon"/>
-              <span>{{ item.name }}</span>
+            <div class="section">
+              <img class="section-content" :src="item.icon"/>
+              <span class="section-content" >{{ item.name }}</span>
             </div>
           </router-link>
         </li>
@@ -40,10 +35,6 @@ export default {
           item => 'name' in item && 
           'path' in item);
       }
-    },
-    title: {
-      type: String,
-      default: 'Default'
     }
   },
   data() {
@@ -77,12 +68,14 @@ export default {
   display: flex;
 
 }
-.nav-title {
-  font-size: 18px;
-  color: rgb(20, 20, 20);
-  font-weight: bold;
+.section {
+  display:flex;
+  align-items: center;
+    padding: 5px;
 }
-
+.section-content {
+  margin-right: 5px;
+}
 .link-list ul {
   display: flex;
   flex-direction: column;
@@ -109,15 +102,6 @@ export default {
   display: flex;
   border: 1px solid black;
 
-}
-.row {
-   display: flex;
-  flex-direction: row;
-  align-items: center;
-  margin: 5px;
-}
-.row img {
-  margin-right: 8px; /* Adjust the value to increase or decrease the space */
 }
 
 .nav-sections a {
