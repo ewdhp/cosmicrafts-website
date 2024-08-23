@@ -1,6 +1,7 @@
 <script>
 import { Principal } from "@dfinity/principal";
 import { cosmicrafts } from 'declarations/cosmicrafts/index';
+
 export default {
   data() {
     return {
@@ -39,44 +40,44 @@ export default {
       el.style.opacity = 0;
       done();
     },
-   async handleInput() {
-  const playerID = this.query.trim();
+    async handleInput() {
+      const playerID = this.query.trim();
 
-  try {
-        const p = Principal.fromText(playerID);     
+      try {
+        const p = Principal.fromText(playerID);
         const result = await cosmicrafts.ref_account_view(p);
 
         if (result[0].errorCode) {
-        console.error('Error code:', result[0].errorCode);
-      } else {
-        this.results = [result[0]];
-        console.log('Results Array:', this.results);
-        console.log('Player Name:', this.results[0].playerName); // Verify playerName
-      }
-    } catch (error) {
+          console.error('Error code:', result[0].errorCode);
+        } else {
+          this.results = [result[0]];
+          console.log('Results Array:', this.results);
+          console.log('Player Name:', this.results[0].playerName); // Verify playerName
+        }
+      } catch (error) {
         this.results = [];
         return console.log("Not valid principal");
-         // Invalid Principal string
-    }
-},
+        // Invalid Principal string
+      }
+    },
   },
 };
 </script>
 
 <template>
 
-   <div class="search">
+  <div class="search">
     <div class="search-input" @click="toggleMenu">
-       <input v-model="query" @input="handleInput" />
+      <input v-model="query" @input="handleInput" />
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
       <div v-if="isMenuVisible" class="search-results">
         <ul v-if="results.length > 0" :key="results.length">
-          <li v-for="(result, index) in results" :key="index">   
-          <FriendQuery :avatarUrl="result.avatarUrl" :name="result.playerName" />
+          <li v-for="(result, index) in results" :key="index">
+            <FriendQuery :avatarUrl="result.avatarUrl" :name="result.playerName" />
           </li>
         </ul>
-        <p v-else-if="query.length > 0">No results found</p>      
+        <p v-else-if="query.length > 0">No results found</p>
       </div>
     </transition>
   </div>
@@ -85,7 +86,6 @@ export default {
 </template>
 
 <style scoped>
-
 .search {
   position: relative;
   display: flex;
@@ -93,6 +93,7 @@ export default {
 
 
 }
+
 .search-input {
   display: flex;
   padding: 10px;
