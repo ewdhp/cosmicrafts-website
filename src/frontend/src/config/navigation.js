@@ -8,6 +8,14 @@ const navItems = [
     children: []
   },
   {
+    path: '/',
+    name: "HomeView",
+    component: 'HomeView',
+    meta: { requiresAuth: true },
+    icon: DashboardIcon,
+    children: []
+  },
+  {
     path: '/dashboard',
     name: "DashboardView",
     component: 'DashboardView',

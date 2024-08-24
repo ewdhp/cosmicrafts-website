@@ -1,31 +1,27 @@
 <script setup>
-import { useAuthStore } from './stores/auth.js';
-import { useRouter } from 'vue-router';
-
-
 import LinkList from '@/components/navs/LinkList.vue';
 import SLinkList from '@/components/navs/SLinkList.vue';
 import AccountNav from '@/components/account/AccountMenu.vue';
 import AccountSearch from '@/components/account/AccountSearch.vue';
-
-import { ref, computed, watchEffect } from 'vue';
-import { useRoute } from 'vue-router';
+import LoginView from '@/views/login/LoginView.vue';
 import navItems from './config/navigation.js';
+import { ref, computed, watchEffect } from 'vue';
+import { useAuthStore } from './stores/auth.js';
+import { useRouter, useRoute } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+
+const currentSection = ref(null);
+const childNavItems = ref([]);
+const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const logout = async () => {
   await authStore.logout();
   router.push({ name: 'Dashboard' });
 };
 
-// Reactive references to track current section and children
-const route = useRoute();
-const currentSection = ref(null);
-const childNavItems = ref([]);
-
-// Computed property for the main navigation items
 const mainNavItems = computed(() =>
   navItems.map(item => ({
     path: item.path,
@@ -34,41 +30,42 @@ const mainNavItems = computed(() =>
   }))
 );
 
-// Watch for route changes and update current section and children
 watchEffect(() => {
   const matchingSection = navItems.find(item => item.path === route.path);
   currentSection.value = matchingSection || navItems.find(item => item.path === '/'); // Default to the root if no match
   childNavItems.value = currentSection.value?.children || [];
 });
-
 </script>
 
 <template>
-  <div class="dashboard-container">
-    <aside class="left-panel">
-      <div class="nav-wrapper">
-        <SLinkList :items="mainNavItems" />
-      </div>
-    </aside>
+  <div id="app">
+    <LoginView v-if="!isAuthenticated" />
+    <div v-else class="dashboard-container">
+      <aside class="left-panel">
+        <div class="nav-wrapper">
+          <SLinkList :items="mainNavItems" />
+        </div>
+      </aside>
 
-    <div class="right-panel">
-      <div class="nav-right">
-        <div class="top-nav">
-          <div class="link-nav">
-            <LinkList :items="childNavItems" />
-          </div>
-          <div class="account-nav">
-            <AccountSearch />
-            <AccountNav />
+      <div class="right-panel">
+        <div class="nav-right">
+          <div class="top-nav">
+            <div class="link-nav">
+              <LinkList :items="childNavItems" />
+            </div>
+            <div class="account-nav">
+              <AccountSearch />
+              <AccountNav />
+            </div>
           </div>
         </div>
-      </div>
 
-      <main class="main-content">
-        <div>
-          <RouterView />
-        </div>
-      </main>
+        <main class="main-content">
+          <div>
+            <RouterView />
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 </template>
