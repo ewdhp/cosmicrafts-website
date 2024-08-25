@@ -1,7 +1,7 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 import { idlFactory as cosmicraftsIdlFactory } from '../../../declarations/cosmicrafts/cosmicrafts.did.js';
-import { generateKeysFromSub, base64Decode } from './utils.js';
+import { generateKeysFromSub, base64Decode } from '../../delete/cosmicrafts/utils.js';
 
 const createActor = async (userId, CANISTER_ID) => {
   const { publicKeyBase64, privateKeyBase64 } = await generateKeysFromSub(userId);

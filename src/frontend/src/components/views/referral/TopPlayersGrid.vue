@@ -1,13 +1,13 @@
 <template>
   <div class="box">
     <div class="box"><strong>Top 10</strong></div>
-    <table >
-      <thead >
+    <table>
+      <thead>
         <tr>
           <th>Position</th>
           <th>Player Name</th>
           <th>Multiplier</th>
-          <th>Net Worth</th>
+          <th>Networth</th>
         </tr>
       </thead>
       <tbody>
@@ -42,19 +42,23 @@ export default {
   margin-bottom: 1rem;
   border: 1px solid #dee2e6;
 }
+
 table {
   width: 100%;
 
 }
-th, td {
+
+th,
+td {
   padding: 0.5rem;
   border: 1px solid #dee2e6;
 }
+
 th {
   background-color: #f1f1f1;
 }
+
 .box {
   border: 1px solid #ccc;
 }
-
 </style>

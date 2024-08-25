@@ -1,15 +1,18 @@
-import 'dotenv/config';
-import cosmicraftsCanister from '../../apis/cosmicrafts/main.js';
+import cosmicraftsCanister from '../services/motoko/main.js';
 
-const cosmicraftsController = {
-
+const CosmicraftsController = {
+  
   registerPlayer: async (req, res) => {
     const { userId, username, avatarId } = req.body;
     if (!userId || !username || avatarId === undefined) {
       return res.status(400).json({ error: 'Missing parameters' });
     }
     try {
-      const result = await cosmicraftsCanister.registerPlayer(userId, username, avatarId);
+      const result = await cosmicraftsCanister.registerPlayer(
+        userId, 
+        username, 
+        avatarId
+      );
       res.json(result);
     } catch (error) {
       console.error(`Error registering player:`, error);
@@ -18,4 +21,4 @@ const cosmicraftsController = {
   },
   // Define other methods here
 };
-export default cosmicraftsController;
+export default CosmicraftsController;

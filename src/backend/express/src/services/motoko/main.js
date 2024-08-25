@@ -1,7 +1,7 @@
 import 'dotenv/config'; // Use ES module syntax to load environment variables
 import { Principal } from '@dfinity/principal';
-import { createActor, createPublicActor, callActorFunction } from './actor.js';
-import { parseBigIntAndPrincipalValues, convertPrincipalToString } from './utils.js';
+import { createActor, createPublicActor, callActorFunction } from '../../config/cosmicrafts/actor.js';
+import { parseBigIntAndPrincipalValues, convertPrincipalToString } from '../../config/cosmicrafts/utils.js';
 
 const CANISTER_ID = process.env.COSMICRAFTS_CANISTER_ID;
 
@@ -76,4 +76,3 @@ const cosmicraftsCanister = {
 };
 
 export default cosmicraftsCanister;
-
