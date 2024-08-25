@@ -7,16 +7,9 @@
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "_moduleAliases": {
-    "@root": ".",
-    "@components": "./src/components",
-    "@controllers": "./src/controllers",
-    "@routes": "./src/routes"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@dfinity/agent": "^2.0.0",
     "@dfinity/identity": "^2.0.0",
@@ -29,5 +22,7 @@
     "passport-facebook": "^3.0.0",
     "passport-twitter": "^1.0.4",
     "tweetnacl": "^1.0.3"
-  }
+  },
+  "devDependencies": {},
+  "description": ""
 }

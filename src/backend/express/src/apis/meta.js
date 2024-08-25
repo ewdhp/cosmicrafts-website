@@ -1,5 +1,5 @@
 import express from 'express';
-import SocialAuthController from '../../controllers/auth/social-auth-controller.js';
+import SocialAuthController from '../controllers/social-auth.js';
 
 const metaRouter = express.Router();
 

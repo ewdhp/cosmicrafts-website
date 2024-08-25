@@ -1,11 +1,11 @@
 import 'dotenv/config'; // Use ES module syntax to load environment variables
 import { Principal } from '@dfinity/principal';
-import { createActor, createPublicActor, callActorFunction } from '../../config/cosmicrafts/actor.js';
-import { parseBigIntAndPrincipalValues, convertPrincipalToString } from '../../config/cosmicrafts/utils.js';
+import { createActor, createPublicActor, callActorFunction } from './actor.js';
+import { parseBigIntAndPrincipalValues, convertPrincipalToString } from './utils.js';
 
 const CANISTER_ID = process.env.COSMICRAFTS_CANISTER_ID;
 
-const cosmicraftsCanister = {
+const CCanister = {
 
   registerPlayer: async (userId, username, avatarId) => {
     const actor = await createActor(userId, CANISTER_ID);
@@ -73,6 +73,17 @@ const cosmicraftsCanister = {
     const setting = await callActorFunction(actor, 'getMyPrivacySettings');
     return setting;
   },
+
+  ref_account: async (userId) => {
+    const actor = await createActor(userId, CANISTER_ID);
+    const setting = await callActorFunction(actor, 'ref_account');
+    return setting;
+  },
+  ref_id_gen: async (userId) => {
+    const actor = await createActor(userId, CANISTER_ID);
+    const setting = await callActorFunction(actor, 'ref_id_gen');
+    return setting;
+  },
 };
 
-export default cosmicraftsCanister;
+export default CCanister;

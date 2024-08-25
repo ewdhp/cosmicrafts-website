@@ -2726,7 +2726,7 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         cleanOldNotifications(to); // Clean old notifications after adding a new one
     };
 
-    public shared({ caller: PlayerId }) func registerPlayer(username: Username, avatar: AvatarID): async (Bool, ?Player, Text) {
+    public shared({ caller}) func registerPlayer(username: Username, avatar: Nat): async (Bool, ?Player, Text) {
         if (username.size() > 12) {
             return (false, null, "Username must be 12 characters or less");
         };

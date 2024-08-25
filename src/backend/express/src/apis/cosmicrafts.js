@@ -1,6 +1,9 @@
 import express from 'express';
-import cosmicraftsController from '../../controllers/cosmicrafts/CosmicraftsController.js';
+import CController from '../controllers/cosmicrafts.js';
 
-const cosmicraftsRouter = express.Router();
-cosmicraftsRouter.post('/registerPlayer', cosmicraftsController.registerPlayer);
-export default cosmicraftsRouter;
+const cRouter = express.Router();
+
+cRouter.post('/registerPlayer',CController.registerPlayer);
+cRouter.post('/ref_id_gen',CController.ref_id_gen);
+
+export default cRouter;

@@ -3,14 +3,16 @@ import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
 import dotenv from 'dotenv';
-import authRoutes from './src/routes/auth/AuthRoutes.js';
-import cosmicraftsRoutes from './src/routes/cosmicrafts/CosmicraftsRoutes.js';
+
+import metaRoutes from './src/apis/meta.js';
+import cRoutes from './src/apis/cosmicrafts.js';
 
 // Load environment variables
 dotenv.config();
 
 // Setup Passport
-import './src/config/passport/setup.js'; // Ensure this is imported before initializing routes
+// Ensure this is imported before initializing routes
+import './src/config/passport.js'; 
 
 const app = express();
 
@@ -29,8 +31,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // Routes
-app.use('/auth', authRoutes);
-app.use('/cosmicrafts', cosmicraftsRoutes);
+
+app.use('/cosmicrafts', cRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

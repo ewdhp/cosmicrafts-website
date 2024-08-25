@@ -1,24 +1,28 @@
-import cosmicraftsCanister from '../services/motoko/main.js';
+import cc from '../services/motoko/main.js';
 
-const CosmicraftsController = {
+const CController = {
   
-  registerPlayer: async (req, res) => {
+registerPlayer: async (req, res) => {
     const { userId, username, avatarId } = req.body;
-    if (!userId || !username || avatarId === undefined) {
-      return res.status(400).json({ error: 'Missing parameters' });
-    }
+
     try {
-      const result = await cosmicraftsCanister.registerPlayer(
-        userId, 
-        username, 
-        avatarId
-      );
+      const result = await cc.registerPlayer(userId, username, avatarId);
       res.json(result);
     } catch (error) {
       console.error(`Error registering player:`, error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   },
-  // Define other methods here
+   ref_id_gen: async (req, res) => {
+
+    try {
+      const result = await cc.ref_id_gen();
+      res.json(result);
+    } catch (error) {
+      console.error(`Error ref_id_gen:`, error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+
 };
-export default CosmicraftsController;
+export default CController;
