@@ -246,6 +246,7 @@ module {
 
 // Root Type for NFT Metadata
 public type Metadata = {
+    category: Category;
     general: GeneralMetadata;
     basic: ?BasicMetadata;
     skills: ?SkillMetadata;
@@ -253,15 +254,57 @@ public type Metadata = {
     soul: ?SoulMetadata;
 };
 
+// Category Type
+public type Category = {
+    #Unit: Unit;
+    #Avatar;
+    #Chest;
+    #Trophy;
+};
+
 // General Metadata
 public type GeneralMetadata = {
-    category: ?Category;
     rarity: ?Nat;
     faction: ?Faction;
     id: Nat;
     name: Text;
     description: Text;
     image: Text;
+};
+
+// Basic Metadata
+public type BasicMetadata = {
+    level: Nat;
+    health: Nat;
+    damage: Nat;
+};
+
+// Unit Type
+public type Unit = {
+    #Character;
+    #Spaceship;
+    #Station;
+    #Weapon;
+};
+
+public type SkinMetadata = {
+    #Skin;
+};
+
+// Soul Metadata
+public type SoulMetadata = {
+    birth: Time.Time;
+    combatExperience: Nat;
+    gamesPlayed: ?Nat;
+    totalKills: ?Nat;
+    totalDamageDealt: ?Nat;
+};
+
+// Skill Metadata
+public type SkillMetadata = {
+    #Shield;
+    #Evasion;
+    #CriticalStrike;
 };
 
 public type Faction = {
@@ -272,122 +315,6 @@ public type Faction = {
     #Arch;
     #Celestial;
     #Neutral;
-};
-
-// Basic Metadata
-public type BasicMetadata = {
-    level: Nat;
-    health: Nat;
-    damage: Nat;
-};
-
-// Category Type
-public type Category = {
-    #character: CharacterMetadata;
-    #unit: Unit;
-    #avatar: AvatarMetadata;
-    #chest: ChestMetadata;
-    #trophy: TrophyMetadata;
-};
-
-// Character Metadata
-public type CharacterMetadata = {
-    general: GeneralMetadata;
-    basic: ?BasicMetadata;
-    skills: ?SkillMetadata;
-    skins: ?SkinMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Unit Type
-public type Unit = {
-    #spaceship: ?SpaceshipMetadata;
-    #station: ?StationMetadata;
-    #weapon: ?WeaponMetadata;
-};
-
-// Spaceship Metadata
-public type SpaceshipMetadata = {
-    general: GeneralMetadata;
-    basic: ?BasicMetadata;
-    skills: ?SkillMetadata;
-    skins: ?SkinMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Station Metadata
-public type StationMetadata = {
-    general: GeneralMetadata;
-    basic: ?BasicMetadata;
-    skills: ?SkillMetadata;
-    skins: ?SkinMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Weapon Metadata
-public type WeaponMetadata = {
-    general: GeneralMetadata;
-    basic: ?BasicMetadata;
-    skills: ?SkillMetadata;
-    skins: ?SkinMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Avatar Metadata
-public type AvatarMetadata = {
-    general: GeneralMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Chest Metadata
-public type ChestMetadata = {
-    general: GeneralMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Trophy Metadata
-public type TrophyMetadata = {
-    general: GeneralMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Skin Metadata
-public type SkinMetadata = {
-    general: GeneralMetadata;
-    soul: ?SoulMetadata;
-};
-
-// Soul Metadata
-public type SoulMetadata = {
-    birth: Time.Time;
-    gamesPlayed: ?Nat;
-    totalKills: ?Nat;
-    totalDamageDealt: ?Nat;
-};
-
-// Skill Metadata
-public type SkillMetadata = {
-    #shield: ?ShieldMetadata;
-    #evasion: ?EvasionMetadata;
-    #criticalStrike: ?CriticalStrikeMetadata;
-};
-
-// Shield Skill Metadata
-public type ShieldMetadata = {
-    // Define fields specific to the shield skill
-    // Placeholder fields for future expansion
-};
-
-// Evasion Skill Metadata
-public type EvasionMetadata = {
-    // Define fields specific to the evasion skill
-    // Placeholder fields for future expansion
-};
-
-// Critical Strike Skill Metadata
-public type CriticalStrikeMetadata = {
-    // Define fields specific to the critical strike skill
-    // Placeholder fields for future expansion
 };
 
 

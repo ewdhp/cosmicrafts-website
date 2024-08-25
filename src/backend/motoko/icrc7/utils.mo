@@ -96,18 +96,18 @@ module {
 	};
 
 	// NFT Metadata
-    public func initDeck(): [(Text, Nat, Nat, Nat)] {
-            return [
-                ("Blackbird", 30, 120, 3),
-                ("Predator", 20, 140, 2),
-                ("Warhawk", 30, 180, 4),
-                ("Tigershark", 10, 100, 1),
-                ("Devastator", 20, 120, 2),
-                ("Pulverizer", 10, 180, 3),
-                ("Barracuda", 20, 140, 2),
-                ("Farragut", 10, 220, 4)
-            ];
-    };
+	// NFT Metadata Initialization with general info
+	public func initDeck(): [(Text, Nat, Nat, Nat, Text, Text)] {
+	return [
+		("Blackbird", 30, 120, 1, "A stealth fighter designed for reconnaissance and hit-and-run tactics.", "url_to_blackbird_image"),
+		("Warhawk", 30, 180, 3, "A heavy assault fighter built for long-range engagements.", "url_to_warhawk_image"),
+		("Tigershark", 10, 100, 2, "A nimble and fast fighter ideal for quick strikes.", "url_to_tigershark_image"),
+		("Devastator", 20, 120, 1, "A mid-range fighter equipped with powerful energy weapons.", "url_to_devastator_image"),
+		("Barracuda", 20, 140, 2, "A fighter optimized for high-speed pursuits and interceptions.", "url_to_barracuda_image"),
+		("Farragut", 10, 220, 1, "An advanced fighter capable of dominating the battlefield with superior firepower.", "url_to_farragut_image")
+	];
+	};
+
 
       public func generateUUID64() : async Nat {
         let randomBytes = await Random.blob();
