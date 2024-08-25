@@ -1,6 +1,6 @@
 import passport from 'passport';
 
-const authController = {
+const SocialAuthController = {
   homePage: (req, res) => {
     if (req.isAuthenticated()) {
       res.send(`Hello, ${req.user.username}`);
@@ -97,4 +97,4 @@ const authController = {
   }
 };
 
-export default authController;
+export default SocialAuthController;

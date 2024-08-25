@@ -1,4 +1,3 @@
-// src/config/passport/setup.js
 import passport from 'passport';
 import { Strategy as TwitterStrategy } from 'passport-twitter';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
