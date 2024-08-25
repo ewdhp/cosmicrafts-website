@@ -1,10 +1,15 @@
 import express from 'express';
-import SocialAuthController from '../../controllers/auth/social-auth-controller.js';
+import SocialAuthController from '../controllers/social-auth.js';
 
-const twitterRouter = express.Router();
+const router = express.Router();
 
-twitterRouter.get('/', SocialAuthController.homePage);
-twitterRouter.get('/twitter/callback', SocialAuthController.twitterCallback);
-twitterRouter.get('/logout', SocialAuthController.logout);
 
-export default twitterRouter;
+//temp
+router.get('/', SocialAuthController.homePage);
+// Twitter authentication route
+router.get('/auth/twitter', SocialAuthController.twitterAuth);
+
+// Twitter callback route
+router.get('/auth/twitter/callback', SocialAuthController.twitterCallback);
+
+export default router;

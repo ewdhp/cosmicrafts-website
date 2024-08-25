@@ -1,10 +1,10 @@
-// src/server.js
 import express from 'express';
 import session from 'express-session';
 import passport from 'passport';
 import dotenv from 'dotenv';
 
-import metaRoutes from './src/apis/meta.js';
+import mRoutes from './src/apis/meta.js';
+import tRoutes from './src/apis/twitter.js';
 import cRoutes from './src/apis/cosmicrafts.js';
 
 // Load environment variables
@@ -32,13 +32,16 @@ app.use(express.json());
 
 // Routes
 
+//temp , remove later
+app.use('/', tRoutes);
+
+
 app.use('/cosmicrafts', cRoutes);
+app.use('/twitter', tRoutes);
+app.use('/facebook', mRoutes);
+app.use('/instagram', mRoutes); // Ensure this is used
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+// Home Route
 app.get('/', (req, res) => {
   if (req.isAuthenticated()) {
     res.send(`Hello, ${req.user.username}`);
@@ -49,7 +52,7 @@ app.get('/', (req, res) => {
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Login with Twitter</title>
+          <title>Login with Social Media</title>
       </head>
       <body>
           <h1>Welcome to the Login Example</h1>
@@ -72,5 +75,11 @@ app.get('/', (req, res) => {
       </body>
       </html>
     `);
-  };
+  }
+});
+
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

@@ -1,11 +1,19 @@
 import express from 'express';
 import SocialAuthController from '../controllers/social-auth.js';
 
-const metaRouter = express.Router();
+const router = express.Router();
 
-metaRouter.get('/facebook', SocialAuthController.facebookAuth);
-metaRouter.get('/facebook/callback', SocialAuthController.facebookCallback);
-metaRouter.get('/instagram', SocialAuthController.instagramAuth);
-metaRouter.get('/instagram/callback', SocialAuthController.instagramCallback);
+// Facebook authentication route
+router.get('/auth/facebook', SocialAuthController.facebookAuth);
 
-export default metaRouter;
+// Facebook callback route
+router.get('/auth/facebook/callback', SocialAuthController.facebookCallback);
+
+
+// Instagram authentication route
+router.get('/auth/instagram', SocialAuthController.instagramAuth);
+
+// Instagram callback route
+router.get('/auth/instagram/callback', SocialAuthController.instagramCallback);
+
+export default router;
