@@ -2,14 +2,14 @@ import DashboardIcon from '@/assets/icons/dashboard.svg';
 const navItems = [
   {
     path: '/login',
-    name: "LoginView",
+    name: "Login",
     component: 'LoginView',
     icon: DashboardIcon,
     children: []
   },
   {
     path: '/',
-    name: "HomeView",
+    name: "Home",
     component: 'HomeView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -17,7 +17,7 @@ const navItems = [
   },
   {
     path: '/dashboard',
-    name: "DashboardView",
+    name: "Dashboard",
     component: 'DashboardView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -25,7 +25,7 @@ const navItems = [
   },
   {
     path: '/nfts',
-    name: "NFTSView",
+    name: "NFTS",
     component: 'NFTSView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -33,7 +33,7 @@ const navItems = [
   },
   {
     path: '/tokens',
-    name: "TokensView",
+    name: "Tokens",
     component: 'TokensView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -41,7 +41,7 @@ const navItems = [
   },
   {
     path: '/referrals',
-    name: "ReferralsView",
+    name: "Referrals",
     component: 'ReferralsView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -58,7 +58,7 @@ const navItems = [
   },
   {
     path: '/statistics',
-    name: "StatisticsView",
+    name: "Statistics",
     component: 'StatisticsView',
     meta: { requiresAuth: true },
     icon: DashboardIcon,
@@ -66,7 +66,7 @@ const navItems = [
   },
   {
     path: '/tourneys',
-    name: "TourneysView",
+    name: "Tourneys",
     component: 'TourneysView',
     meta: { requiresAuth: true },
     children: [

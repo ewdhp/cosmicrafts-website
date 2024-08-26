@@ -19,7 +19,7 @@ const isAuthenticated = computed(() => authStore.isAuthenticated);
 
 const logout = async () => {
   await authStore.logout();
-  router.push({ name: 'Dashboard' });
+  router.push({ path: '/login' });
 };
 
 const mainNavItems = computed(() =>
