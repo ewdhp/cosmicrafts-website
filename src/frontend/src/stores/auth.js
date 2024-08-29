@@ -38,16 +38,13 @@ export const useAuthStore = defineStore('auth', {
           );
           const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
 
-           if (import.meta.env.VITE_DFX_NETWORK !== 'ic') {
+          if (import.meta.env.MODE !== 'production') {
             agent.fetchRootKey(); // Only for local development
           }
 
           const canisterIds = {
-            cosmicrafts: import.meta.env.VITE_DFX_NETWORK === 'ic'
-              ? import.meta.env.VITE_CANISTER_ID_IC
-              : import.meta.env.VITE_CANISTER_ID_LOCAL,
+            cosmicrafts: import.meta.env.VITE_CANISTER_ID_COSMICRAFTS,
           };
-
 
           await this.initializeActors(agent, canisterIds);
         }

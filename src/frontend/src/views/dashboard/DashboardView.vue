@@ -2,6 +2,14 @@
 <template>
     <div class="dashboard">
         <UserInfo />
+        <button @click="logout">Logout</button>
+        <nav>
+            <router-link to="/tokens">Tokens</router-link>
+            <router-link to="/nfts">NFTs</router-link>
+            <router-link to="/user">User</router-link>
+            <router-link to="/statistics">Statistics</router-link>
+            <router-link to="/tournament-section">Tournaments</router-link>
+        </nav>
     </div>
 </template>
 

@@ -32,7 +32,7 @@ const mainNavItems = computed(() =>
 
 watchEffect(() => {
   const matchingSection = navItems.find(item => item.path === route.path);
-  currentSection.value = matchingSection || navItems.find(item => item.path === '/');
+  currentSection.value = matchingSection || navItems.find(item => item.path === '/'); // Default to the root if no match
   childNavItems.value = currentSection.value?.children || [];
 });
 </script>
