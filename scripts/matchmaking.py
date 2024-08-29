@@ -41,17 +41,6 @@ def get_principal(identity_name):
     logging.info(f"{identity_name} principal: {principal}")
     return principal
 
-def store_current_deck(identity_name, token_ids):
-    """Stores the current deck using the provided token IDs."""
-    switch_identity(identity_name)
-
-    # Create the deck string using the token IDs
-    deck_str = "; ".join(map(str, token_ids))
-
-    # Construct the command to store the current deck
-    command = f'dfx canister call cosmicrafts storeCurrentDeck "(vec {{ {deck_str} }})"'
-    logging.info(f"Storing current deck for {identity_name}: {deck_str}")
-    return execute_dfx_command(command)
 
 def get_match_searching(identity_name, player_game_data):
     """Starts searching for a match."""
@@ -60,9 +49,6 @@ def get_match_searching(identity_name, player_game_data):
     units = get_units(principal)  # Get units using the principal
     player_game_data["listSavedKeys"] = units  # Add units to player_game_data
 
-    # Store the current deck before searching for a match
-    store_result = store_current_deck(identity_name, units)
-    logging.info(f"Store current deck result for {identity_name}: {store_result}")
 
     # Correct the format for the JSON string in the command
     player_game_data_str = json.dumps(player_game_data)
@@ -157,24 +143,24 @@ def parse_match_id(search_result):
 def generate_random_stats(shared_energy_generated, shared_sec_remaining, won):
     """Generates randomized game statistics using Nat values."""
     stats = {
-        "botDifficulty": random.randint(0, 5),
-        "botMode": random.randint(0, 5),
+        "botDifficulty": random.randint(0, 2),
+        "botMode": random.randint(0, 1),
         "characterID": random.randint(1, 2),
-        "damageCritic": random.randint(1000, 25000),  # Changed to random integer
-        "damageDealt": random.randint(1000, 25000),   # Changed to random integer
-        "damageEvaded": random.randint(1000, 25000),  # Changed to random integer
-        "damageTaken": random.randint(1000, 25000),   # Changed to random integer
-        "deploys": random.randint(10, 225),           # Changed to random integer
-        "energyChargeRate": random.randint(33, 200),  # Changed to random integer
+        "damageCritic": random.randint(250, 850),  # Changed to random integer
+        "damageDealt": random.randint(1000, 2500),   # Changed to random integer
+        "damageEvaded": random.randint(100, 400),  # Changed to random integer
+        "damageTaken": random.randint(250, 850),   # Changed to random integer
+        "deploys": random.randint(10, 120),           # Changed to random integer
+        "energyChargeRate": random.randint(1, 3),  # Changed to random integer
         "energyGenerated": shared_energy_generated,   # Already Nat
-        "energyUsed": random.randint(55, 200),        # Changed to random integer
-        "energyWasted": random.randint(33, 200),      # Changed to random integer
+        "energyUsed": random.randint(30, 120),        # Changed to random integer
+        "energyWasted": random.randint(3, 15),      # Changed to random integer
         "faction": random.randint(0, 2),
-        "gameMode": random.randint(1, 2),
-        "kills": random.randint(10, 250),             # Changed to random integer
+        "gameMode": random.randint(1, 1),
+        "kills": random.randint(10, 80),             # Changed to random integer
         "secRemaining": shared_sec_remaining,         # Already Nat
         "wonGame": won,
-        "xpEarned": random.randint(1000, 25000)       # Changed to random integer
+        "xpEarned": random.randint(0, 0)       # Changed to random integer
     }
     return stats
 
@@ -187,12 +173,12 @@ def get_current_mission_progress(identity_name):
 def claim_user_specific_reward(identity_name, mission_id):
     """Claims the user-specific reward for the given mission ID."""
     switch_identity(identity_name)
-    command = f'dfx canister call cosmicrafts claimUserReward \'({mission_id})\''
-    return execute_dfx_command(command)
+    #command = f'dfx canister call cosmicrafts claimUserReward \'({mission_id})\''
+    #return execute_dfx_command(command)
 
 def create_user_specific_hourly_mission(principal):
     """Creates a user-specific hourly mission for the given principal."""
-    command = f'dfx canister call cosmicrafts createUserMission \'(principal "{principal}")\''
+    command = f'dfx canister call cosmicrafts getUserMissions'
     return execute_dfx_command(command)
 
 def handle_mission_progress(identity_name):

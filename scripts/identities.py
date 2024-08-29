@@ -6,7 +6,7 @@ def create_identities(num_identities):
         print(f"Creating identity: {identity_name}")
         try:
             # Run the `dfx identity new` command
-            subprocess.run(["dfx", "identity", "new", identity_name,"--storage-mode=plaintext"], check=True)
+            subprocess.run(["dfx", "identity", "new", identity_name], check=True)
             print(f"Identity {identity_name} created successfully.")
         except subprocess.CalledProcessError as e:
             print(f"Error creating identity {identity_name}: {e}")
