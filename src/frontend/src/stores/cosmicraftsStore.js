@@ -4,7 +4,10 @@ import { cosmicrafts } from '@/declarations/cosmicrafts';
 import { useAuthStore } from '@/stores/authStore';
 
 export const useCosmicraftsStore = defineStore('cosmicrafts', () => {
-  let canisterId = null; // Private variable
+
+  const canisterId = network === 'ic' 
+    ? import.meta.env.VITE_CANISTER_ID_IC 
+    : import.meta.env.VITE_CANISTER_ID_LOCAL;
 
   const state = () => ({
     playerData: null,
@@ -17,9 +20,8 @@ export const useCosmicraftsStore = defineStore('cosmicrafts', () => {
       const authStore = useAuthStore();
       const principalId = authStore.principalId;
 
-      this.agent = new HttpAgent();
-      this.actor = Actor.createActor(cosmicrafts, { agent: this.agent, canisterId: principalId });
-      canisterId = principalId;
+      this.agent = new HttpAgent({ host: network === 'ic' ? 'https://ic0.app' : 'http://localhost:8000' });
+      this.actor = Actor.createActor(cosmicrafts, { agent: this.agent, canisterId });
     },
     async fetchPlayerData(account) {
       if (!this.actor) {
