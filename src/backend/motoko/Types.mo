@@ -29,13 +29,11 @@ module Types {
     elo: Float;
     friends: [FriendDetails];
   };
-
   public type FriendDetails = {
     playerId: PlayerId;
     username: Username;
     avatar: AvatarID;
   };
-
   public type FriendRequest = {
       from: PlayerId;
       to: PlayerId;
@@ -46,27 +44,65 @@ module Types {
       friend2: PlayerId;
       friendsSince: Int;
   };
-
   public type PrivacySetting = {
     #acceptAll;
     #blockAll;
     #friendsOfFriends
   };
-
   public type Notification = {
     from: PlayerId;
     message: Text;
     timestamp: Time.Time;
   };
-
   public type UpdateTimestamps = {
       avatar: Nat64;
       description: Nat64;
       username: Nat64;
   };
+// Social APIs
+  public type SocialConnection = {
+      platform: PlatformType;
+      username: Text;
+      memberSince: Text;
+      profileLink: Text;
+  };
 
+  public type PlatformType = {
+      #Twitter;
+      #Discord;
+      #Facebook;
+      #Instagram;
+      #DSCVR;
+  };
 
+  public type UserProfile = {
+    id: PlayerId;
+    title: Title;
+    username: Username;
+    avatar: AvatarID;
+    level: Level;
+    description: Description;
+    registrationDate: RegistrationDate;
+    connections: [SocialConnection];
+  };
 
+  public type ShortProfile = {
+    id: PlayerId;
+    username: Username;
+    avatar: AvatarID;
+    level: Level;
+    registrationDate: RegistrationDate;
+  };
+//Referals
+  public type ReferralCode = Nat;
+
+  public type ReferralInfo = {
+      directReferrals: Nat;
+      indirectReferrals: Nat;
+      multiplier: Float;
+  };
+
+//--
 // Statistics
   public type PlayerStats = {
     playerId: PlayerId;
@@ -391,6 +427,7 @@ module Types {
             #Avatar;
             #NFT;
             #XP;
+            #Multiplier;
         };
 
         public type NFTDetails = {
@@ -436,4 +473,6 @@ module Types {
             #WeeklyMissionsCompleted;
             #XPEarned;
         };
+//-- 
+
 }

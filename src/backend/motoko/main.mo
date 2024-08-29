@@ -25,9 +25,12 @@
     import ICRC7Utils "/icrc7/utils";
     import TypesICRC7 "/icrc7/types";
     import TypesICRC1 "/icrc1/Types";
+    import Result "mo:base/Result";
 
     import Int64 "mo:base/Int64";
     import ExperimentalCycles "mo:base/ExperimentalCycles";
+    import Order "mo:base/Order";
+
     import ICRC1 "/icrc1/Canisters/..";
     import MetadataUtils "MetadataUtils";
    // import AchievementMissionsTemplate "AchievementMissionsTemplate";
@@ -38,6 +41,8 @@
 
 shared actor class Cosmicrafts() = Self {
 // Types
+
+  public type Result<T, E> = { #ok : T; #err : E; };
   public type PlayerId = Types.PlayerId;
   public type Username = Types.Username;
   public type AvatarID = Types.AvatarID;
@@ -1195,40 +1200,40 @@ shared actor class Cosmicrafts() = Self {
         return categories;
     };
 
-public func loadAchievements(): async Bool {
-    // Get the pre-defined "Tiers" category from the AchievementData module
-    let tiersCategory = AchievementData.getTiersCategory();
+    public func loadAchievements(): async Bool {
+        // Get the pre-defined "Tiers" category from the AchievementData module
+        let tiersCategory = AchievementData.getTiersCategory();
 
-    // Step 1: Create the category
-    let (successCat, messageCat, categoryID) = await createAchievementCategory(tiersCategory.name, tiersCategory.reward);
-    if (not successCat) {
-        Debug.print("Failed to create category: " # messageCat);
-        return false;
-    };
-
-    // Step 2: Iterate through the achievement lines in the category
-    for (achievementLine in tiersCategory.achievements.vals()) {
-        let (successAch, messageAch, achievementID) = await createAchievement(categoryID, achievementLine.name, achievementLine.reward);
-        if (not successAch) {
-            Debug.print("Failed to create achievement: " # messageAch);
+        // Step 1: Create the category
+        let (successCat, messageCat, categoryID) = await createAchievementCategory(tiersCategory.name, tiersCategory.reward);
+        if (not successCat) {
+            Debug.print("Failed to create category: " # messageCat);
             return false;
         };
 
-        // Step 3: Iterate through the individual achievements in the line
-        for (individualAchievement in achievementLine.individualAchievements.vals()) {
-            let _successIndAch = await createIndividualAchievement(
-                achievementID, 
-                individualAchievement.name, 
-                individualAchievement.achievementType, 
-                individualAchievement.requiredProgress, 
-                individualAchievement.reward
-            );
-        };
-    };
+        // Step 2: Iterate through the achievement lines in the category
+        for (achievementLine in tiersCategory.achievements.vals()) {
+            let (successAch, messageAch, achievementID) = await createAchievement(categoryID, achievementLine.name, achievementLine.reward);
+            if (not successAch) {
+                Debug.print("Failed to create achievement: " # messageAch);
+                return false;
+            };
 
-    Debug.print("Achievements initialized successfully");
-    return true;
-};
+            // Step 3: Iterate through the individual achievements in the line
+            for (individualAchievement in achievementLine.individualAchievements.vals()) {
+                let _successIndAch = await createIndividualAchievement(
+                    achievementID, 
+                    individualAchievement.name, 
+                    individualAchievement.achievementType, 
+                    individualAchievement.requiredProgress, 
+                    individualAchievement.reward
+                );
+            };
+        };
+
+        Debug.print("Achievements initialized successfully");
+        return true;
+    };
 
     public func createAchievementCategory(
         name: Text,
@@ -1448,7 +1453,6 @@ public func loadAchievements(): async Bool {
         };
     };
 
-    // Helper function to find the individual achievement
     private func findIndividualAchievement(userCategoriesList : [AchievementCategory], individualAchievementId : Nat) 
         : (?AchievementCategory, 
             ?AchievementLine, 
@@ -1471,7 +1475,7 @@ public func loadAchievements(): async Bool {
         user: PlayerId,
         individualAchievementId: Nat,
         progressToAdd: Nat
-    ): async Bool {
+        ): async Bool {
         // Get the user's progress structure from the unified HashMap
         let userProgressOpt = userProgress.get(user);
 
@@ -1595,8 +1599,6 @@ public func loadAchievements(): async Bool {
             };
         };
     };
-
-        // queries deben tener estructurado los tipos nesteados en jerarquia Categoria/Linea/Individuales
 
     public shared(msg) func claimIndividualAchievementReward(achievementId: Nat): async (Bool, Text) {
         let userProgressOpt = userProgress.get(msg.caller);
@@ -1946,29 +1948,16 @@ public func loadAchievements(): async Bool {
             case (#Chest) {
                 let (success, message) = await mintChest(caller, reward.amount);
                 if (success) {
-                    return (true, "Chest minted successfully. Quantity: " # Nat.toText(reward.amount));
+                    return (true, "Chest minted successfully with Rarity " # Nat.toText(reward.amount));
                 };
                 return (success, message);
             };
             case (#NFT) {
-                let nftDetails: NFTDetails = {
-                    unitType = #Spaceship;  // Example: Customize this as needed
-                    name = "Lazerhawk";
-                    description = "Wow a lazer wow";
-                    image = "image_of_lazerhawk";
-                    faction = #Celestial;
-                    rarity = 4;
-                    level = 1;
-                    health = 0;
-                    damage = 0;
-                    combatExperience = 21;
-                };
-
-                let mintResult = await mintUnit(nftDetails);
-
+                let nftTemplateId = reward.amount; // Use the reward amount as the template ID
+                let mintResult = await mintUnit(nftTemplateId, caller); // Pass caller to mint the NFT for the player
                 switch (mintResult) {
-                    case (#Ok(_tokenId)) {
-                        return (true, "Unit NFT minted successfully.");
+                    case (#Ok(tokenId)) {
+                        return (true, " NFT minted successfully with Token ID: " # Nat.toText(tokenId));
                     };
                     case (#Err(_error)) {
                         return (false, "Minting Unit NFT failed");
@@ -1976,43 +1965,42 @@ public func loadAchievements(): async Bool {
                 };
             };
             case (#Title) {
-                let titleQuantity = reward.amount;
-                var success: Bool = true;
-                var titleMessagesText: Text = "";
-
-                for (_i in Iter.range(0, titleQuantity - 1)) {
-                    let (addSuccess, resultMessage) = await addTitleToUser("TitleName");  // Replace "TitleName" with the actual title
-                    if (titleMessagesText != "") {
-                        titleMessagesText := titleMessagesText # "; ";
-                    };
-                    titleMessagesText := titleMessagesText # resultMessage;
-                    if (not addSuccess) {
-                        success := false;
-                    };
+                let titleId = reward.amount;
+                let userTitles = switch (availableTitles.get(caller)) {
+                    case (null) { [] };
+                    case (?titles) { titles };
                 };
 
-                return (success, titleMessagesText);
+                if (Array.find<Nat>(userTitles, func(t) { t == titleId }) == null) {
+                    let updatedTitlesBuffer = Buffer.Buffer<Nat>(userTitles.size() + 1);
+                    for (titleId in userTitles.vals()) {
+                        updatedTitlesBuffer.add(titleId);
+                    };
+                    updatedTitlesBuffer.add(titleId);
+                    availableTitles.put(caller, Buffer.toArray(updatedTitlesBuffer));
+                    return (true, "Title ID earned: " # Nat.toText(titleId));
+                };
+                return (false, "Title already exists for the user.");
             };
             case (#Avatar) {
-                let avatarQuantity = reward.amount;
-                var success: Bool = true;
-                var avatarMessagesText: Text = "";
-
-                for (_i in Iter.range(0, avatarQuantity - 1)) {
-                    let (addSuccess, resultMessage) = await addAvatarToUser(_i + 1);  // Replace _i + 1 with the actual avatar ID if different
-                    if (avatarMessagesText != "") {
-                        avatarMessagesText := avatarMessagesText # "; ";
-                    };
-                    avatarMessagesText := avatarMessagesText # resultMessage;
-                    if (not addSuccess) {
-                        success := false;
-                    };
+                let avatarId = reward.amount;
+                let userAvatars = switch (availableAvatars.get(caller)) {
+                    case (null) { [] };
+                    case (?avatars) { avatars };
                 };
 
-                return (success, avatarMessagesText);
+                if (Array.find<Nat>(userAvatars, func(a) { a == avatarId }) == null) {
+                    let updatedAvatarsBuffer = Buffer.Buffer<Nat>(userAvatars.size() + 1);
+                    for (avatarId in userAvatars.vals()) {
+                        updatedAvatarsBuffer.add(avatarId);
+                    };
+                    updatedAvatarsBuffer.add(avatarId);
+                    availableAvatars.put(caller, Buffer.toArray(updatedAvatarsBuffer));
+                    return (true, "Avatar ID earned: " # Nat.toText(avatarId));
+                };
+                return (false, "Avatar already exists for the user.");
             };
             case (#XP) {
-                // Handle XP reward
                 var playerStatsOpt = playerGamesStats.get(caller);
                 if (playerStatsOpt == null) {
                     ignore await _initializeNewPlayerStats(caller);
@@ -2029,65 +2017,80 @@ public func loadAchievements(): async Bool {
                         };
                         playerGamesStats.put(caller, updatedStats);
 
-                        // Update player's level based on new total XP
                         await updatePlayerLevel(caller);
 
-                        return (true, "XP minted successfully. XP added: " # Nat.toText(reward.amount));
+                        return (true, "XP earned: " # Nat.toText(reward.amount));
                     };
                 };
+            };
+            case (#Multiplier) {
+                // Convert Nat to Float
+                let rewardAmountFloat = Float.fromInt64(Int64.fromNat64(Nat64.fromNat(reward.amount)));
+                
+                let currentMultiplier = switch (multiplierByPlayer.get(caller)) {
+                    case (null) { 1.0 };
+                    case (?multiplier) { multiplier };
+                };
+                
+                let newMultiplier = currentMultiplier + rewardAmountFloat;
+                
+                // Update the player's multiplier
+                multiplierByPlayer.put(caller, newMultiplier);
+                _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+                
+                return (true, "Multiplier increased by: " # Float.toText(rewardAmountFloat));
             };
         }
     };
 
-public func updateAvatarChangeAchievement(user: PlayerId): async (Bool, Text) {
-    let individualAchievementId: Nat = 3;  // Replace with the actual ID for the Avatar Change Achievement
-    let progressToAdd: Nat = 1;
+    public func updateAvatarChangeAchievement(user: PlayerId): async (Bool, Text) {
+        let individualAchievementId: Nat = 3;  // Replace with the actual ID for the Avatar Change Achievement
+        let progressToAdd: Nat = 1;
 
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
+        // Call the updated addProgressToIndividualAchievement function
+        let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
 
-    if (progressUpdated) {
-        return (true, "Avatar Change Achievement updated successfully.");
-    } else {
-        return (false, "Failed to update Avatar Change Achievement.");
-    }
-};
+        if (progressUpdated) {
+            return (true, "Avatar Change Achievement updated successfully.");
+        } else {
+            return (false, "Failed to update Avatar Change Achievement.");
+        }
+    };
 
-public func updateUpgradeNFTAchievement(user: PlayerId): async (Bool, Text) {
-    let individualAchievementId: Nat = 5;  // Replace with the actual ID for the Upgrade NFT Achievement
-    let progressToAdd: Nat = 1;
+    public func updateUpgradeNFTAchievement(user: PlayerId): async (Bool, Text) {
+        let individualAchievementId: Nat = 5;  // Replace with the actual ID for the Upgrade NFT Achievement
+        let progressToAdd: Nat = 1;
 
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
+        // Call the updated addProgressToIndividualAchievement function
+        let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
 
-    if (progressUpdated) {
-        return (true, "Upgrade NFT Achievement updated successfully.");
-    } else {
-        return (false, "Failed to update Upgrade NFT Achievement.");
-    }
-};
+        if (progressUpdated) {
+            return (true, "Upgrade NFT Achievement updated successfully.");
+        } else {
+            return (false, "Failed to update Upgrade NFT Achievement.");
+        }
+    };
 
-public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
-    let individualAchievementId: Nat = 4;  // Replace with the actual ID for the Add Friend Achievement
-    let progressToAdd: Nat = 1;
+    public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
+        let individualAchievementId: Nat = 4;  // Replace with the actual ID for the Add Friend Achievement
+        let progressToAdd: Nat = 1;
 
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
+        // Call the updated addProgressToIndividualAchievement function
+        let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
 
-    if (progressUpdated) {
-        return (true, "Add Friend Achievement updated successfully.");
-    } else {
-        return (false, "Failed to update Add Friend Achievement.");
-    }
-};
-
+        if (progressUpdated) {
+            return (true, "Add Friend Achievement updated successfully.");
+        } else {
+            return (false, "Failed to update Add Friend Achievement.");
+        }
+    };
     
 //--
 // Progress Manager
 
 
     // Function to update achievement progress manager (cleaned version)
-    func updateAchievementProgressManager(user: Principal, playerStats: {
+    func updateAchievementProgressManager(_user: Principal, _playerStats: {
         secRemaining: Nat;
         energyGenerated: Nat;
         damageDealt: Nat;
@@ -2532,10 +2535,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
 
         stable var _players: [(PlayerId, Player)] = [];
-        stable var _availableTitles: [(Principal, [Text])] = [];
-        stable var _selectedTitles: [(Principal, Text)] = [];
-        stable var _availableAvatars: [(Principal, [Nat])] = [];
-        stable var _selectedAvatars: [(Principal, Nat)] = [];
 
         stable var _friendRequests: [(PlayerId, [FriendRequest])] = [];
         stable var _privacySettings: [(PlayerId, PrivacySetting)] = [];
@@ -2546,10 +2545,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
 
         // Initialize HashMaps using the stable lists
         var players: HashMap.HashMap<PlayerId, Player> = HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
-        var availableTitles: HashMap.HashMap<Principal, [Text]> = HashMap.fromIter(_availableTitles.vals(), 0, Principal.equal, Principal.hash);
-        var selectedTitles: HashMap.HashMap<Principal, Text> = HashMap.fromIter(_selectedTitles.vals(), 0, Principal.equal, Principal.hash);
-        var availableAvatars: HashMap.HashMap<Principal, [Nat]> = HashMap.fromIter(_availableAvatars.vals(), 0, Principal.equal, Principal.hash);
-        var selectedAvatars: HashMap.HashMap<Principal, Nat> = HashMap.fromIter(_selectedAvatars.vals(), 0, Principal.equal, Principal.hash);
 
         var friendRequests: HashMap.HashMap<PlayerId, [FriendRequest]> = HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
         var privacySettings: HashMap.HashMap<PlayerId, PrivacySetting> = HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
@@ -2557,125 +2552,83 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         var mutualFriendships: HashMap.HashMap<(PlayerId, PlayerId), MutualFriendship> = HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
         var notifications: HashMap.HashMap<PlayerId, [Notification]> = HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
         var updateTimestamps: HashMap.HashMap<PlayerId, UpdateTimestamps> = HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
-    
-    public shared(msg) func addAvatarToUser(newAvatar: Nat): async (Bool, Text) {
-        let userAvatars = switch (availableAvatars.get(msg.caller)) {
-            case (null) { [] };
-            case (?avatars) { avatars };
+
+    public shared({ caller: PlayerId }) func registerPlayer(
+        username: Username, 
+        avatar: AvatarID, 
+        referralCode: ReferralCode
+    ): async (Bool, ?Player, Text) {
+        if (username.size() > 12) {
+            return (false, null, "Username must be 12 characters or less");
         };
 
-        if (Array.find<Nat>(userAvatars, func(a) { a == newAvatar }) == null) {
-            let updatedAvatarsBuffer = Buffer.Buffer<Nat>(userAvatars.size() + 1);
-            for (avatar in userAvatars.vals()) {
-                updatedAvatarsBuffer.add(avatar);
+        let playerId = caller;
+
+        // Check if the player is already registered
+        switch (players.get(playerId)) {
+            case (?existingPlayer) {
+                // If the player is already registered, return immediately without making any changes
+                return (false, ?existingPlayer, "User is already registered and cannot register again.");
             };
-            updatedAvatarsBuffer.add(newAvatar);
-            availableAvatars.put(msg.caller, Buffer.toArray(updatedAvatarsBuffer));
-            return (true, "Avatar added successfully: " # Nat.toText(newAvatar));
-        };
-        return (false, "Avatar already exists for the user: " # Nat.toText(newAvatar));
-    };
-
-    public shared(msg) func updateAvatar(avatar: Nat): async (Bool, Text) {
-        let userAvatarsOpt = availableAvatars.get(msg.caller);
-        switch (userAvatarsOpt) {
             case (null) {
-                return (false, "No avatars available for the user.");
-            };
-            case (?userAvatars) {
-                if (Array.find<Nat>(userAvatars, func(a) { a == avatar }) != null) {
-                    selectedAvatars.put(msg.caller, avatar);
+                // Validate the referral code against unassigned or assigned codes
+                let codeAssigned = await assignUnassignedReferralCode(playerId, referralCode);
 
-                    // Update the player's avatar in their profile
-                    switch (players.get(msg.caller)) {
-                        case (?player) {
-                            let updatedPlayer = { player with avatar = avatar };
-                            players.put(msg.caller, updatedPlayer);
-                        };
-                        case (null) {
-                            return (false, "Player not found");
+                var finalCode = referralCode;
+
+                switch (codeAssigned) {
+                    case (#ok(true)) {
+                        // Code was successfully assigned from unassigned codes
+                        // The original referral code should be preserved.
+                        finalCode := referralCode;
+                    };
+                    case (#err(errMsg)) {
+                        return (false, null, errMsg);  // Return error message if code is invalid
+                    };
+                    case (#ok(false)) {
+                        // Code is valid but already assigned; identify the referrer
+                        switch (referralCodes.get(referralCode)) {
+                            case (null) {
+                                return (false, null, "Invalid referral code");
+                            };
+                            case (?referrerId) {
+                                // Update the referrer data and track referrals
+                                trackReferrer(referrerId, playerId);
+                            };
                         };
                     };
-
-                    return (true, "Avatar selected successfully.");
                 };
-                return (false, "Avatar not found in the user's available avatars.");
-            };
-        };
-    };
 
-    public query(msg) func getSelectedAvatar(): async ?Nat {
-        return selectedAvatars.get(msg.caller);
-    };
-
-    public query(msg) func getAvailableAvatars(): async [Nat] {
-        switch (availableAvatars.get(msg.caller)) {
-            case (null) {
-                return [];
-            };
-            case (?avatars) {
-                return avatars;
-            };
-        };
-    };
-
-    public shared(msg) func addTitleToUser(newTitle: Text): async (Bool, Text) {
-        let userTitles = switch (availableTitles.get(msg.caller)) {
-            case (null) { [] };
-            case (?titles) { titles };
-        };
-
-        if (Array.find<Text>(userTitles, func(t) { t == newTitle }) == null) {
-            let updatedTitlesBuffer = Buffer.Buffer<Text>(userTitles.size() + 1);
-            for (title in userTitles.vals()) {
-                updatedTitlesBuffer.add(title);
-            };
-            updatedTitlesBuffer.add(newTitle);
-            availableTitles.put(msg.caller, Buffer.toArray(updatedTitlesBuffer));
-            return (true, "Title added successfully: " # newTitle);
-        };
-        return (false, "Title already exists for the user: " # newTitle);
-    };
-
-    public shared(msg) func updateUserTitle(title: Text): async (Bool, Text) {
-        let userTitlesOpt = availableTitles.get(msg.caller);
-        switch (userTitlesOpt) {
-            case (null) {
-                return (false, "No titles available for the user.");
-            };
-            case (?userTitles) {
-                if (Array.find<Text>(userTitles, func(t) { t == title }) != null) {
-                    selectedTitles.put(msg.caller, title);
-
-                    // Update the player's title in their profile
-                    switch (players.get(msg.caller)) {
-                        case (?player) {
-                            let updatedPlayer = { player with title = title };
-                            players.put(msg.caller, updatedPlayer);
-                        };
-                        case (null) {
-                            return (false, "Player not found");
-                        };
-                    };
-
-                    return (true, "Title selected successfully.");
+                // Proceed with player registration if referral code is valid
+                let registrationDate = Time.now();
+                let newPlayer: Player = {
+                    id = playerId;
+                    username = username;
+                    avatar = avatar;
+                    description = "";
+                    registrationDate = registrationDate;
+                    level = 1;
+                    elo = 1200;
+                    friends = [];
+                    title = "Starbound Initiate";
                 };
-                return (false, "Title not found in the user's available titles.");
-            };
-        };
-    };
+                players.put(playerId, newPlayer);
 
-    public query (msg) func getSelectedTitle(): async ?Text {
-        return selectedTitles.get(msg.caller);
-    };
+                // Initialize the player's multiplier with a base value
+                multiplierByPlayer.put(playerId, 1.0);
+                _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
 
-    public query(msg) func getAvailableTitles(): async [Text] {
-        switch (availableTitles.get(msg.caller)) {
-            case (null) {
-                return [];
-            };
-            case (?titles) {
-                return titles;
+                // Assign default avatars and titles
+                availableAvatars.put(playerId, Iter.toArray(Iter.range(1, 12)));
+                availableTitles.put(playerId, [1]);
+
+                // If the code was from the unassigned list, no need to generate a new one
+                if (codeAssigned != #ok(true)) {
+                    let (assignedCode, _assignedReferrerId) = await assignReferralCode(playerId, null);
+                    finalCode := assignedCode;
+                };
+
+                return (true, ?newPlayer, "User registered successfully with referral code " # finalCode);
             };
         };
     };
@@ -2724,47 +2677,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
             addNotification(to, notification);
         };
         cleanOldNotifications(to); // Clean old notifications after adding a new one
-    };
-
-    public shared({ caller}) func registerPlayer(username: Username, avatar: Nat): async (Bool, ?Player, Text) {
-        if (username.size() > 12) {
-            return (false, null, "Username must be 12 characters or less");
-        };
-        
-        let playerId = caller;
-
-        // Check if the player is already registered
-        switch (players.get(playerId)) {
-            case (?_) {
-                return (false, null, "User is already registered");
-            };
-            case (null) {
-                let registrationDate = Time.now();
-                let newPlayer: Player = {
-                    id = playerId;
-                    username = username;
-                    avatar = avatar;
-                    description = "";
-                    registrationDate = registrationDate;
-                    level = 1;
-                    elo = 1200;
-                    friends = [];
-                    title = "Starbound Initiate";
-                };
-                players.put(playerId, newPlayer);
-
-                // Add default avatars (IDs 1 to 12) to the user's available avatars
-                availableAvatars.put(playerId, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-
-                // Other initializations
-                ignore await mintDeck();
-                ignore await getAchievements();
-                ignore await getGeneralMissions();
-                ignore await getUserMissions();
-
-                return (true, ?newPlayer, "User registered successfully");
-            };
-        };
     };
 
     public shared ({ caller: PlayerId }) func updateUsername(username: Username) : async (Bool, PlayerId, Text) {
@@ -5732,9 +5644,16 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         return (true, "Deck minted and stored successfully", Buffer.toArray(uuids));
     };
 
-    public shared({ caller }) func mintUnit(nftDetails: NFTDetails): async TypesICRC7.MintReceipt {
+    private func mintUnit(templateId: Nat, owner: Principal): async TypesICRC7.MintReceipt {
         let _now = Nat64.fromIntWrap(Time.now());
-        let acceptedTo: TypesICRC7.Account = { owner = caller; subaccount = null };
+        let acceptedTo: TypesICRC7.Account = { owner = owner; subaccount = null };
+
+        // Fetch the NFTDetails from the predefined templates
+        if (templateId < 1 or templateId > nftTemplates.size()) {
+            return #Err(#Unauthorized);
+        };
+        
+        let nftDetails = nftTemplates[templateId - 1];  // Adjust for 0-based indexing
 
         // Check if supply cap is exceeded
         if (supplyCap != null) {
@@ -5785,8 +5704,8 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
                 health = nftDetails.health;
                 damage = nftDetails.damage;
             };
-            skills = null;  // Assuming skills are not provided initially
-            skins = null;   // Assuming skins are not provided initially
+            skills = null;
+            skins = null;
             soul = ?soulMetadata;
         };
 
@@ -5809,6 +5728,36 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
             case (#Err(err)) return #Err(err);
         };
     };
+
+    private let nftTemplates: [NFTDetails] = [
+        {
+            unitType = #Spaceship;
+            name = "Gemini";
+            description = "A glitch on the matrix";
+            image = "imageURL";
+            faction = #Celestial;
+            rarity = 4;
+            level = 1;
+            health = 420;
+            damage = 42;
+            combatExperience = 0;
+        },
+        {
+            unitType = #Spaceship;
+            name = "Lazerhawk";
+            description = "Wow a lazer wow";
+            image = "imageURL";
+            faction = #Celestial;
+            rarity = 4;
+            level = 1;
+            health = 500;
+            damage = 50;
+            combatExperience = 10;
+        },
+        // Add more templates as needed
+    ];
+
+
 
     /*
     Arguments to mint Unit
@@ -6038,790 +5987,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
     };
 
 //--
-// Referrals
-
-    type UUID = Text;
-    type TierID = Nat;
-
-    type RefAccount = {
-        playerID : Principal;
-        refByUUID : UUID;
-        uuid : UUID;
-        alias : Text;
-        tiers : [Tier];
-        tokens : [Token];
-    };
-    type Tier = {
-        id : TierID;
-        title : Text;
-        desc : Text;
-        status : Text;
-        token : Token;
-    };
-    type Token = {
-        title : Text;
-        amount : Nat;
-    };
-    type RefAccView = {
-        playerID : Principal;
-        playerName : Text;
-        currentTier : Tier;
-        multiplier : Float;
-        netWorth : Nat;
-        topPlayers : [TopView];
-        topPosition : Nat;
-        topTokenAmount : (Nat, Text);
-        signupTokenSum : Nat;
-        tierTokenSum : Nat;
-        singupLink : Text;
-    };
-    type TopView = {
-        playerName : Text;
-        multiplier : Float;
-        netWorth : Nat;
-    };
-
-    type Buffer = Buffer.Buffer<Tier>;
-    private var tiers : Buffer = Buffer.Buffer<Tier>(0);
-
-    type HashMapAcc = HashMap.HashMap<Principal, RefAccount>;
-    private stable var _accounts : [(Principal, RefAccount)] = [];
-    private var accounts : HashMapAcc = HashMap.fromIter(
-        Iter.fromArray(_accounts),
-        0,
-        Principal.equal,
-        Principal.hash,
-    );
-
-    public shared ({ caller }) func ref_enroll(signupCode : ?Text, alias : Text) : async (Bool, Text) {
-
-        switch (accounts.get(caller)) {
-        case null {
-            let code : Text = switch (signupCode) {
-            case (null) { "" };
-            case (?value) { value };
-            };
-
-            switch (ref_id_from_uuid(code)) {
-            case (null) {
-
-                accounts.put(
-                caller,
-                {
-                    playerID = caller;
-                    refByUUID = "";
-                    uuid = await ref_uuid_gen();
-                    tiers = ref_tier_all_p();
-                    alias = alias;
-                    tokens = [];
-                    netWorth = 0.0;
-                    multiplier = 0.0; //not implemented
-                },
-                );
-                _accounts := Iter.toArray(accounts.entries());
-
-                let textNotfound = "Referral code not provided or code not found";
-                return (true, "Account enrrolled" # ", " # textNotfound);
-            };
-
-            case (?_) {
-
-                let (minted, text) = await ref_claim_referral(
-                code,
-                {
-                    title = "Referral Signup token";
-                    amount = 5;
-                },
-                );
-
-                if (minted) {
-                accounts.put(
-                    caller,
-                    {
-                    playerID = caller;
-                    refByUUID = if (minted) { code } else { "" };
-                    uuid = await ref_uuid_gen();
-                    alias = alias;
-                    tiers = ref_tier_all_p();
-                    tokens = [{
-                        title = "Referral Signup token";
-                        amount = 5;
-                    }];
-                    netWorth = 0.0;
-                    multiplier = 0.0;
-                    },
-                );
-                _accounts := Iter.toArray(accounts.entries());
-                return (true, "Account enrrolled" # ", " # text);
-                };
-
-                return (false, text);
-
-            };
-            };
-        };
-        case (?_) { return (false, "Error. Account exists.") };
-        };
-    };
-    public func ref_enroll_by(uuid : ?Text, principal : Principal, alias : Text) : async (Bool, Text) {
-
-        switch (accounts.get(principal)) {
-        case null {
-            let code : Text = switch (uuid) {
-            case (null) { "" };
-            case (?value) { value };
-            };
-
-            var id = ref_id_from_uuid(code);
-
-            switch (id) {
-
-            case (null) {
-                accounts.put(
-                principal,
-                {
-                    playerID = principal;
-                    refByUUID = "";
-                    uuid = await ref_uuid_gen();
-                    alias = alias;
-                    tiers = ref_tier_all_p();
-                    tokens = [];
-                    netWorth = 0.0;
-                    multiplier = 0.0; //not implemented
-                },
-                );
-                _accounts := Iter.toArray(accounts.entries());
-                let nullUUID = "Signup code no provided or code not found";
-                return (true, "Account enrrolled" # ", " # nullUUID);
-            };
-
-            case (?_) {
-
-                let (minted, text) = await ref_claim_referral(
-                code,
-                {
-                    title = "Referral Signup token";
-                    amount = 5;
-                },
-                );
-
-                if (minted) {
-                accounts.put(
-                    principal,
-                    {
-                    playerID = principal;
-                    refByUUID = if (minted) { code } else { "" };
-                    uuid = await ref_uuid_gen();
-                    alias = alias;
-                    tiers = ref_tier_all_p();
-                    tokens = [{
-                        title = "Referral Signup token";
-                        amount = 5;
-                    }];
-                    netWorth = 0.0;
-                    multiplier = 0.0;
-                    },
-                );
-                _accounts := Iter.toArray(accounts.entries());
-                return (true, "Account enrrolled" # ", " # text);
-                };
-
-                return (false, text);
-
-            };
-            };
-        };
-        case (?_) { (false, "Error. Account exists.") };
-        };
-    };
-    public query func ref_account_view(id : Principal) : async ?RefAccView {
-
-        let account = switch (accounts.get(id)) {
-        case null { return null };
-        case (?acc) { acc };
-        };
-
-        let currentTier = switch (ref_tier_p(id)) {
-        case null {
-            {
-            id = 3;
-            title = "All tiers defeated";
-            desc = "You reached a Master referral record";
-            status = "Waiting for more tiers";
-            token = { title = "No token"; amount = 0 };
-            };
-        };
-        case (?tier) tier;
-        };
-
-        let (
-        multiplier,
-        networth,
-        tierTokenSum,
-        signupTokenSum,
-        ) = ref_tokenomics(account);
-
-        let pageTop10 = 0;
-
-        return ?({
-        playerID = id;
-        playerName = account.alias;
-        currentTier = currentTier;
-        multiplier = multiplier;
-        netWorth = networth;
-        tierTokenSum = tierTokenSum;
-        signupTokenSum = signupTokenSum;
-        topPlayers = ref_top_view(pageTop10);
-        topPosition = ref_player_rank(id);
-        topTokenAmount = ref_top_prize(id);
-        singupLink = ref_signup_link(id);
-        });
-    };
-    public query func ref_account_by(id : Principal) : async ?RefAccount {
-        return accounts.get(id);
-    };
-    public query ({ caller }) func ref_account() : async ?RefAccount {
-        return accounts.get(caller);
-    };
-    public query func ref_account_all() : async [(Text, Principal)] {
-        let account = Iter.toArray(accounts.vals());
-        let buffer = Buffer.Buffer<(Text, Principal)>(account.size());
-        for (acc in account.vals()) buffer.add(acc.alias, acc.playerID);
-        return Buffer.toArray(buffer);
-    };
-    public func ref_claim_top(id: Principal, day: Nat): async (Bool, Text) {
-        let account = switch (accounts.get(id)) {
-            case null { return (false, "Account not found") };
-            case (?account) { account };
-        };
-
-        if (day == 1) {
-            let (tokenAmount, _) = ref_top_prize(id);
-
-            if (tokenAmount > 0) {
-                let (multiplier, _, _, _) = ref_tokenomics(account);
-                let total = ref_token_amount(multiplier, tokenAmount);
-
-                // Prepare the mint arguments
-                let mintArgs: ICRC1.Mint = {
-                    to = { owner = id; subaccount = null };
-                    amount = total;
-                    memo = null;
-                    created_at_time = ?Nat64.fromNat(Int.abs(Time.now()));
-                };
-
-                let mintResult = await mint(mintArgs);
-
-                switch (mintResult) {
-                    case (#Ok(_txIndex)) {
-                        let token: Token = {
-                            title = "Weekly Top Player Token";
-                            amount = total;
-                        };
-
-                        let updatedTokens = Array.append(account.tokens, [token]);
-
-                        let updatedAccount: RefAccount = {
-                            playerID = account.playerID;
-                            refByUUID = account.refByUUID;
-                            uuid = account.uuid;
-                            alias = account.alias;
-                            tiers = account.tiers;
-                            tokens = updatedTokens;
-                        };
-
-                        accounts.put(id, updatedAccount);
-                        _accounts := Iter.toArray(accounts.entries());
-
-                        return (true, "Weekly top player token claimed");
-                    };
-                    case (#Err(_transferError)) {
-                        return (false, "Error minting weekly top player token");
-                    };
-                };
-            } else {
-                return (false, "Player not in top 10.");
-            };
-        } else {
-            return (false, "Only on Mondays may be claimed");
-        };
-    };
-    public func ref_claim_tier(id: Principal) : async (Bool, Text) {
-
-        let (tierStatus, tierID) = switch (ref_tier_p(id)) {
-            case null { return (false, "Reached all tiers.") };
-            case (?tier) { (tier.status, tier.id) };
-        };
-
-        if (tierStatus == "No more tiers") { return (false, "No more tiers") };
-        if (tierStatus == "complete") { return (false, "Tier already completed") };
-
-        switch (accounts.get(id)) {
-            case null { return (false, "Player not found.") };
-
-            case (?account) {
-                let tokenAmount = account.tiers[tierID].token.amount;
-                let (multiplier, _, _, _) = ref_tokenomics(account);
-                let total = ref_token_amount(multiplier, tokenAmount);
-
-                // Prepare the mint arguments
-                let mintArgs: ICRC1.Mint = {
-                    to = { owner = id; subaccount = null };
-                    amount = total;
-                    memo = null;
-                    created_at_time = ?Nat64.fromNat(Int.abs(Time.now()));
-                };
-
-                let mintResult = await mint(mintArgs);
-
-                switch (mintResult) {
-                    case (#Ok(_txIndex)) {
-                        let updTiers = Array.tabulate<Tier>(
-                            Array.size(account.tiers),
-                            func(i: Nat): Tier {
-                                if (i == tierID) {
-                                    let updTier: Tier = {
-                                        id = account.tiers[i].id;
-                                        title = account.tiers[i].title;
-                                        desc = account.tiers[i].desc;
-                                        status = "Complete";
-                                        token = {
-                                            title = account.tiers[i].token.title;
-                                            amount = total;
-                                        };
-                                    };
-                                    return updTier;
-                                } else {
-                                    return account.tiers[i];
-                                };
-                            }
-                        );
-
-                        let updAcc: RefAccount = {
-                            playerID = account.playerID;
-                            refByUUID = account.refByUUID;
-                            uuid = account.uuid;
-                            alias = account.alias;
-                            tiers = updTiers;
-                            tokens = account.tokens;
-                        };
-
-                        accounts.put(id, updAcc);
-                        _accounts := Iter.toArray(accounts.entries());
-
-                        return (true, "Tier complete, token minted");
-                    };
-                    case (#Err(_transferError)) {
-                        return (false, "Error minting token");
-                    };
-                };
-            };
-        };
-    };
-    public func ref_id_gen() : async Principal {
-
-        let randomBytes = await Random.blob();
-        let randomArray = Blob.toArray(randomBytes);
-
-        let truncatedBytes = Array.tabulate<Nat8>(
-        29,
-        func(i : Nat) : Nat8 {
-            if (i < Array.size(randomArray)) {
-            randomArray[i];
-            } else 0;
-        },
-        );
-
-        return Principal.fromBlob(
-        Blob.fromArray(truncatedBytes)
-        );
-    };
-
-    private func ref_tier_all_p() : [Tier] {
-
-        if (tiers.size() == 0) {
-
-        let missionTier : Tier = {
-            id = 0;
-            title = "Tier 1 Mission";
-            desc = "Complete mission 1 and get 10 tokens free";
-            status = "Progress";
-            token = { title = "Tier 1 mission token"; amount = 10 };
-        };
-        tiers.add(missionTier);
-
-        let discordTier : Tier = {
-            id = 1;
-            title = "Tier 2 Discord";
-            desc = "Join Cosmicrafts Discord server and recieve 10 tokens for free";
-            status = "Progress";
-            token = { title = "Tier 2 Discord token"; amount = 10 };
-        };
-        tiers.add(discordTier);
-
-        let tweeterTier : Tier = {
-            id = 2;
-            title = "Tier 3 Tweeter";
-            desc = "Three Tweeter tags and recieve 20 tokens for free";
-            status = "Progress";
-            token = { title = "Tier 3 Tweeter token"; amount = 10 };
-        };
-        tiers.add(tweeterTier);
-
-        let tiersComplete : Tier = {
-            id = 3;
-            title = "All tiers defeated";
-            desc = "You reached a Master referral record";
-            status = "Waiting for more tiers";
-            token = { title = "No token"; amount = 0 };
-        };
-        tiers.add(tiersComplete);
-
-        };
-
-        return Buffer.toArray(tiers);
-    };
-    private func ref_tier_p(playerId : Principal) : ?Tier {
-        let player = accounts.get(playerId);
-        switch (player) {
-        case (null) { return null };
-        case (?player) {
-            for (
-            tier in player.tiers.vals()
-            ) {
-            if (tier.status == "Progress") {
-                return ?tier;
-            };
-            };
-            return null;
-        };
-        };
-    };
-    private func ref_player_rank(id : Principal) : Nat {
-
-        let playersArray = Buffer.fromArray<(Principal, RefAccount)>(
-        Iter.toArray(accounts.entries())
-        );
-
-        var playersWithTokenSums : [(Principal, Nat)] = [];
-
-        for (i in Iter.range(0, playersArray.size() - 1)) {
-
-        let (principal, account) = playersArray.get(i);
-        let (_, tokenSum, _, _) = ref_tokenomics(account);
-
-        playersWithTokenSums := Array.append(
-            playersWithTokenSums,
-            [(principal, tokenSum)],
-        );
-        };
-
-        let sortedPlayers = Array.sort(
-        playersWithTokenSums,
-        func(
-            a : (Principal, Nat),
-            b : (Principal, Nat),
-        ) : {
-            #less;
-            #equal;
-            #greater;
-        } {
-            if (a.1 > b.1) {
-            #less;
-            } else if (a.1 < b.1) {
-            #greater;
-            } else {
-            #equal;
-            };
-        },
-        );
-
-        var position : Nat = 0;
-        for ((principal, _) in sortedPlayers.vals()) {
-        if (principal == id) {
-            return position + 1;
-        };
-        position += 1;
-        };
-
-        0;
-    };
-    private func ref_top_prize(id : Principal) : (Nat, Text) {
-
-        let topPlayers = ref_top_view(0);
-
-        switch (accounts.get(id)) {
-        case (null) { return (0, "Account not found") };
-
-        case (?account) {
-            for (player in topPlayers.vals()) {
-            if (player.playerName == account.alias) {
-                for (token in account.tokens.vals()) {
-                if (token.title == "Weekly Top Player Token") {
-                    return (token.amount, "Tokens claimed");
-                };
-                };
-                let prizeAmount = 10;
-                let (multiplier, _, _, _) = ref_tokenomics(account);
-                let total = ref_token_amount(multiplier, prizeAmount);
-                return (total, "You are in, waiting for monday.");
-            };
-            };
-
-            return (0, "Not clasified");
-        };
-        };
-    };
-    private func ref_tokenomics(acc : RefAccount) : (Float, Nat, Nat, Nat) {
-
-        var multiplier : Float = 0.0;
-        let tierTokenSum : Nat = ref_tier_token_sum(acc);
-        let signupTokenSum : Nat = ref_token_sum(acc);
-        let networth : Nat = tierTokenSum + signupTokenSum;
-
-        if (networth <= 10) {
-        multiplier := 1.3;
-        } else if (networth <= 20) {
-        multiplier := 2.2;
-        } else {
-        multiplier := 3.7;
-        };
-
-        (
-        multiplier,
-        networth,
-        tierTokenSum,
-        signupTokenSum,
-        );
-    };
-    private func ref_token_amount(multiplier : Float, nTokens : Nat) : Nat {
-        let nat64 = Nat64.fromNat(nTokens);
-        let int64 = Int64.fromNat64(nat64);
-        let totalTokens = Float.fromInt64(int64);
-        let total = Float.toInt64(multiplier * totalTokens);
-        let nat = Int64.toNat64(total);
-        return Nat64.toNat(nat);
-    };
-    private func ref_token_sum(account : RefAccount) : Nat {
-        return Array.foldLeft<Token, Nat>(
-        account.tokens,
-        0,
-        func(acc, token) {
-            acc + token.amount;
-        },
-        );
-    };
-    private func ref_tier_token_sum(account : RefAccount) : Nat {
-        return Array.foldLeft<Tier, Nat>(
-        account.tiers,
-        0,
-        func(acc, tier) {
-            if (tier.status == "Complete") {
-            acc + tier.token.amount;
-            } else {
-            acc;
-            };
-        },
-        );
-    };
-    private func ref_top_view(page : Nat) : [TopView] {
-
-        var playersWithTokenSums : [(Principal, RefAccount, Nat)] = [];
-        let playersArray = Buffer.fromArray<(Principal, RefAccount)>(
-        Iter.toArray(accounts.entries())
-        );
-
-        for (i in Iter.range(0, playersArray.size() - 1)) {
-
-        let (principal, account) = playersArray.get(i);
-        let (multiplier, networth, _, _) = ref_tokenomics(account);
-        let tokenSum = networth;
-
-        playersWithTokenSums := Array.append(
-            playersWithTokenSums,
-            [(
-            principal,
-            {
-                playerID = account.playerID;
-                refByUUID = account.refByUUID;
-                uuid = account.uuid;
-                alias = account.alias;
-                tiers = account.tiers;
-                tokens = account.tokens;
-                netWorth = networth;
-                multiplier = multiplier;
-            },
-            tokenSum,
-            )],
-        );
-        };
-
-        let sorted = Array.sort(
-        playersWithTokenSums,
-        func(
-            a : (Principal, RefAccount, Nat),
-            b : (Principal, RefAccount, Nat),
-        ) : {
-            #less;
-            #equal;
-            #greater;
-        } {
-            if (a.2 > b.2) {
-            #less;
-            } else if (a.2 < b.2) {
-            #greater;
-            } else {
-            #equal;
-            };
-        },
-        );
-
-        let start = page * 10;
-        let end = if (
-        start + 10 > Array.size(sorted)
-        ) {
-        Array.size(sorted);
-        } else { start + 10 };
-
-        let paginated = Iter.toArray(
-        Array.slice(
-            sorted,
-            start,
-            end,
-        )
-        );
-
-        var viewArray : [TopView] = [];
-
-        for ((_, refAccount, _) in paginated.vals()) {
-        let (m, n, _, _) = ref_tokenomics(refAccount);
-        let rowView : TopView = {
-            playerName = refAccount.alias;
-            multiplier = m;
-            netWorth = n;
-        };
-        viewArray := Array.append(viewArray, [rowView]);
-        };
-
-        viewArray;
-
-    };
-    private func ref_claim_referral(code: UUID, token: Token) : async (Bool, Text) {
-        let signupToken: Token = {
-            title = "Referral Signup token";
-            amount = 5;
-        };
-
-        let id = switch (ref_id_from_uuid(code)) {
-            case null { return (false, "Code not found") };
-            case (?id) { id };
-        };
-
-        switch (accounts.get(id)) {
-            case null { return (false, "Player principal not found.") };
-
-            case (?account) {
-                if (account.refByUUID == code) {
-                    return (false, "Error. Code already redeemed");
-                };
-
-                let size = Array.size(account.tokens);
-
-                if (size > 3) {
-                    return (false, "Reached max referral per player");
-                };
-
-                let (multiplier, _, _, _) = ref_tokenomics(account);
-                let total = ref_token_amount(multiplier, signupToken.amount);
-
-                // Prepare the mint arguments
-                let mintArgs: ICRC1.Mint = {
-                    to = { owner = id; subaccount = null };
-                    amount = total;
-                    memo = null;
-                    created_at_time = ?Nat64.fromNat(Int.abs(Time.now()));
-                };
-
-                let mintResult = await mint(mintArgs);
-
-                switch (mintResult) {
-                    case (#Ok(_txIndex)) {
-                        let newToken = { title = token.title; amount = total };
-
-                        let updatedTokens = if (size > 0) {
-                            Array.append(account.tokens, [newToken])
-                        } else {
-                            [newToken]
-                        };
-
-                        let updatedAccount: RefAccount = {
-                            playerID = account.playerID;
-                            refByUUID = account.refByUUID;
-                            uuid = account.uuid;
-                            alias = account.alias;
-                            tiers = account.tiers;
-                            tokens = updatedTokens;
-                        };
-
-                        accounts.put(account.playerID, updatedAccount);
-                        _accounts := Iter.toArray(accounts.entries());
-
-                        if (size > 0) {
-                            return (true, "Referral token added to account.");
-                        } else {
-                            return (true, "First referral token added to account.");
-                        }
-                    };
-                    case (#Err(_transferError)) {
-                        return (false, "Error minting tokens.");
-                    };
-                };
-            };
-        };
-    };
-    private func ref_signup_link(id : Principal) : Text {
-        let route = "https://cosmicrafts.com/signup_prom/";
-        let err = "Account not found";
-        switch (accounts.get(id)) {
-        case (?refAccount) {
-            let uuid : Text = refAccount.uuid;
-            route # uuid;
-        };
-        case null err;
-        };
-    };
-    private func ref_id_from_uuid(uuid : UUID) : ?Principal {
-        let mappedIter = Iter.filter<(Principal, RefAccount)>(
-        Iter.fromArray(_accounts),
-        func(x : (Principal, RefAccount)) : Bool {
-            let acc = x.1;
-            if (acc.uuid == uuid) {
-            return true;
-            };
-            return false;
-        },
-        );
-        switch (mappedIter.next()) {
-        case (null) { null };
-        case (?(principal, _)) { ?principal };
-        };
-    };
-    private func ref_uuid_gen() : async Text {
-        var uuid : Nat = 0;
-        let randomBytes = await Random.blob();
-        let byteArray = Blob.toArray(randomBytes);
-        for (i in Iter.range(0, 7)) {
-        uuid := Nat.add(
-            Nat.bitshiftLeft(uuid, 8),
-            Nat8.toNat(
-            byteArray[i]
-            ),
-        );
-        };
-        uuid := uuid % 2147483647;
-        return Nat.toText(uuid);
-    };
-//--
 //Logging
 
     // Types
@@ -7030,7 +6195,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         _inProgress := Iter.toArray(inProgress.entries());
         _finishedGames := Iter.toArray(finishedGames.entries());
 
-        _accounts := Iter.toArray(accounts.entries());
     };
 
     // Post-upgrade hook to restore the state
@@ -7066,13 +6230,6 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         inProgress := HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
         finishedGames := HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
 
-        accounts := HashMap.fromIter(
-        Iter.fromArray(_accounts),
-        0,
-        Principal.equal,
-        Principal.hash,
-        );
-        _accounts := [];
     };
 
 //--
@@ -7407,6 +6564,933 @@ public func updateAddFriendAchievement(user: PlayerId): async (Bool, Text) {
         #Ok;
         #Err: Text;
     };
+
+//--
+// Avatars and Titles
+
+    // Types for Avatars and Titles
+    public type Avatar = {
+        id: Nat;
+        description: Text;
+    };
+
+    public type Title = {
+        id: Nat;
+        title: Text;
+        description: Text;
+    };
+
+    private let avatars: [Avatar] = [
+        { id = 1; description = "Default avatar" },
+        { id = 2; description = "Galactic Explorer" },
+        { id = 3; description = "Stellar Voyager" },
+        { id = 4; description = "Nebula Wanderer" },
+        { id = 5; description = "Cosmic Drifter" },
+        { id = 6; description = "Asteroid Miner" },
+        { id = 7; description = "Meteor Hunter" },
+        { id = 8; description = "Celestial Scout" },
+        { id = 9; description = "Orbital Mechanic" },
+        { id = 10; description = "Starship Engineer" },
+        { id = 11; description = "Quantum Navigator" },
+        { id = 12; description = "Space Pioneer" },
+        { id = 98; description = "Cosmicrafts Ambassador Avatar, awarded for finishing referrals program" },
+        { id = 99; description = "An awesome Avatar, rewarded for finishing the Tiers Referral Program" }
+    ];
+
+    private let titles: [Title] = [
+        { id = 1; title = "Starbound Initiate"; description = "Welcome to Cosmicrafts commander, you are now in the Metaverse" },
+        { id = 98; title = "Cosmicrafts Ambassador"; description = "The Spiral is strong in you, thank you for your service commander" },
+        { id = 99; title = "Cosmicrafts Founder"; description = "Founder of Cosmicrafts you will be remembered forever across the Metaverse" },
+        { id = 91; title = "Twitter Ambassador"; description = "Awarded for your outstanding presence on Twitter." },
+        { id = 92; title = "Discord Ambassador"; description = "Awarded for your strong community engagement on Discord." },
+        { id = 93; title = "DSCVR Ambassador"; description = "Awarded for your active participation on DSCVR." },
+        { id = 94; title = "Tiktok Ambassador"; description = "Awarded for spreading the word on Tiktok." },
+        { id = 95; title = "Facebook Ambassador"; description = "Awarded for your influence on Facebook." },
+        { id = 96; title = "Instagram Ambassador"; description = "Awarded for your visual storytelling on Instagram." }
+    ];
+
+    // Stable variables to store player-specific data
+        stable var _availableTitles: [(Principal, [Nat])] = [];
+        stable var _selectedTitles: [(Principal, Nat)] = [];
+        stable var _availableAvatars: [(Principal, [Nat])] = [];
+        stable var _selectedAvatars: [(Principal, Nat)] = [];
+
+        // HashMaps to manage player-specific data
+        var availableTitles: HashMap.HashMap<Principal, [Nat]> = HashMap.fromIter(_availableTitles.vals(), 0, Principal.equal, Principal.hash);
+        var selectedTitles: HashMap.HashMap<Principal, Nat> = HashMap.fromIter(_selectedTitles.vals(), 0, Principal.equal, Principal.hash);
+        var availableAvatars: HashMap.HashMap<Principal, [Nat]> = HashMap.fromIter(_availableAvatars.vals(), 0, Principal.equal, Principal.hash);
+        var selectedAvatars: HashMap.HashMap<Principal, Nat> = HashMap.fromIter(_selectedAvatars.vals(), 0, Principal.equal, Principal.hash);
+
+    // Functions to get avatar and title by ID
+    public func getAvatarById(id: Nat): async Avatar {
+        return switch (Array.find<Avatar>(avatars, func(a) { a.id == id })) {
+            case (?avatar) avatar;
+            case (null) {
+                // Handle the case where the ID is not found, but since this shouldn't happen, we return a default avatar or an error
+                { id = 0; description = "Unknown Avatar" }
+            }
+        };
+    };
+
+    public func getTitleById(id: Nat): async Title {
+        return switch (Array.find<Title>(titles, func(t) { t.id == id })) {
+            case (?title) title;
+            case (null) {
+                // Handle the case where the ID is not found, but since this shouldn't happen, we return a default title or an error
+                { id = 0; title = "Unknown Title"; description = "Unknown Description" }
+            }
+        };
+    };
+
+    // Function to add an avatar to a user
+    public shared(msg) func addAvatarToUser(newAvatarId: Nat): async (Bool, Text) {
+        let avatar = await getAvatarById(newAvatarId); // Ensure this is correctly awaited if needed
+        let userAvatars = switch (availableAvatars.get(msg.caller)) {
+            case (null) { [] };
+            case (?avatars) { avatars };
+        };
+
+        if (Array.find<Nat>(userAvatars, func(a) { a == newAvatarId }) == null) {
+            let updatedAvatarsBuffer = Buffer.Buffer<Nat>(userAvatars.size() + 1);
+            for (avatarId in userAvatars.vals()) {
+                updatedAvatarsBuffer.add(avatarId);
+            };
+            updatedAvatarsBuffer.add(newAvatarId);
+            availableAvatars.put(msg.caller, Buffer.toArray(updatedAvatarsBuffer));
+            return (true, "Avatar added successfully: " # avatar.description);
+        };
+        return (false, "Avatar already exists for the user: " # avatar.description);
+    };
+
+    // Function to update the selected avatar for a user
+    public shared(msg) func updateAvatar(avatarId: Nat): async (Bool, Text) {
+        let userAvatarsOpt = availableAvatars.get(msg.caller);
+        switch (userAvatarsOpt) {
+            case (null) {
+                return (false, "No avatars available for the user.");
+            };
+            case (?userAvatars) {
+                if (Array.find<Nat>(userAvatars, func(a) { a == avatarId }) != null) {
+                    selectedAvatars.put(msg.caller, avatarId);
+
+                    // Update the player's avatar in their profile
+                    switch (players.get(msg.caller)) {
+                        case (?player) {
+                            let updatedPlayer = { player with avatar = avatarId };
+                            players.put(msg.caller, updatedPlayer);
+                        };
+                        case (null) {
+                            return (false, "Player not found");
+                        };
+                    };
+
+                    return (true, "Avatar selected successfully.");
+                };
+                return (false, "Avatar not found in the user's available avatars.");
+            };
+        };
+    };
+
+    // Function to add a title to a user
+    public shared(msg) func addTitleToUser(newTitleId: Nat): async (Bool, Text) {
+        let title = await getTitleById(newTitleId);
+        let userTitles = switch (availableTitles.get(msg.caller)) {
+            case (null) { [] };
+            case (?titles) { titles };
+        };
+
+        if (Array.find<Nat>(userTitles, func(t) { t == newTitleId }) == null) {
+            let updatedTitlesBuffer = Buffer.Buffer<Nat>(userTitles.size() + 1);
+            for (titleId in userTitles.vals()) {
+                updatedTitlesBuffer.add(titleId);
+            };
+            updatedTitlesBuffer.add(newTitleId);
+            availableTitles.put(msg.caller, Buffer.toArray(updatedTitlesBuffer));
+            return (true, "Title added successfully: " # title.description);
+        };
+        return (false, "Title already exists for the user: " # title.description);
+    };
+
+    // Function to update the selected title for a user
+    public shared(msg) func updateTitle(titleId: Nat): async (Bool, Text) {
+        let userTitlesOpt = availableTitles.get(msg.caller);
+        switch (userTitlesOpt) {
+            case (null) {
+                return (false, "No titles available for the user.");
+            };
+            case (?userTitles) {
+                if (Array.find<Nat>(userTitles, func(t) { t == titleId }) != null) {
+                    // Retrieve the title text using the titleId
+                    let title = await getTitleById(titleId);
+                    selectedTitles.put(msg.caller, titleId);
+
+                    // Update the player's title in their profile with the actual title text
+                    switch (players.get(msg.caller)) {
+                        case (?player) {
+                            let updatedPlayer = { player with title = title.title };
+                            players.put(msg.caller, updatedPlayer);
+                        };
+                        case (null) {
+                            return (false, "Player not found");
+                        };
+                    };
+
+                    return (true, "Title selected successfully: " # title.title);
+                };
+                return (false, "Title not found in the user's available titles.");
+            };
+        };
+    };
+
+    // Query function to get the selected avatar for a user
+    public query(msg) func getSelectedAvatar(): async ?Nat {
+        return selectedAvatars.get(msg.caller);
+    };
+
+    // Query function to get the selected title for a user
+    public query(msg) func getSelectedTitle(): async ?Nat {
+        return selectedTitles.get(msg.caller);
+    };
+
+    // Query function to get available avatars for a user
+    public query(msg) func getAvailableAvatars(): async [Nat] {
+        switch (availableAvatars.get(msg.caller)) {
+            case (null) {
+                return [];
+            };
+            case (?avatars) {
+                return avatars;
+            };
+        };
+    };
+
+    // Query function to get available titles for a user
+    public query(msg) func getAvailableTitles(): async [Nat] {
+        switch (availableTitles.get(msg.caller)) {
+            case (null) {
+                return [];
+            };
+            case (?titles) {
+                return titles;
+            };
+        };
+    };
+
+    // Query function to get the complete Avatar details for the user
+    public query(msg) func getAvailableAvatarDetails(): async [Avatar] {
+        let avatarIds = switch (availableAvatars.get(msg.caller)) {
+            case (null) { [] };
+            case (?avatars) { avatars };
+        };
+        
+        let avatarDetails: [Avatar] = Array.flatten(Array.map<Nat, [Avatar]>(avatarIds, func(id: Nat): [Avatar] {
+            switch (Array.find<Avatar>(avatars, func(a) { a.id == id })) {
+                case (?avatar) [avatar];
+                case (null) [];  // Return an empty list for unmatched IDs
+            }
+        }));
+        
+        return avatarDetails;
+    };
+
+    // Query function to get the complete Title details for the user
+    public query(msg) func getAvailableTitleDetails(): async [Title] {
+        let titleIds = switch (availableTitles.get(msg.caller)) {
+            case (null) { [] };
+            case (?titles) { titles };
+        };
+        
+        let titleDetails: [Title] = Array.flatten(Array.map<Nat, [Title]>(titleIds, func(id: Nat): [Title] {
+            switch (Array.find<Title>(titles, func(t) { t.id == id })) {
+                case (?title) [title];
+                case (null) [];  // Return an empty list for unmatched IDs
+            }
+        }));
+        
+        return titleDetails;
+    };
+
+
+//--
+// Referrals
+
+    public type ReferralCode = Text;
+
+    public type ReferralInfo = {
+        directReferrals: Nat;
+        indirectReferrals: Nat;
+        beyondReferrals: Nat;
+        multiplier: Float;
+        referredPlayers: [(PlayerId, Bool, Float)];
+    };
+
+    // Stable Variables
+    stable var _referralCodes: [(ReferralCode, PlayerId)] = [];
+    stable var _unassignedReferralCodes: [ReferralCode] = [];
+    stable var _referralsByPlayer: [(PlayerId, ReferralInfo)] = [];
+    stable var _referrerOfPlayer: [(PlayerId, PlayerId)] = [];
+    stable var _multiplierByPlayer: [(PlayerId, Float)] = [];
+    stable var _grandReferrerOfPlayer: [(PlayerId, PlayerId)] = [];
+
+
+    // HashMaps for fast access
+    var referralCodes: HashMap.HashMap<ReferralCode, PlayerId> = HashMap.fromIter(_referralCodes.vals(), 0, Text.equal, Text.hash);
+    var referralsByPlayer: HashMap.HashMap<PlayerId, ReferralInfo> = HashMap.fromIter(_referralsByPlayer.vals(), 0, Principal.equal, Principal.hash);
+    var referrerOfPlayer: HashMap.HashMap<PlayerId, PlayerId> = HashMap.fromIter(_referrerOfPlayer.vals(), 0, Principal.equal, Principal.hash);
+    var multiplierByPlayer: HashMap.HashMap<PlayerId, Float> = HashMap.fromIter(_multiplierByPlayer.vals(), 0, Principal.equal, Principal.hash);
+    var grandReferrerOfPlayer: HashMap.HashMap<PlayerId, PlayerId> = HashMap.fromIter(_grandReferrerOfPlayer.vals(), 0, Principal.equal, Principal.hash);
+
+    // Predefined list of cosmic-themed words
+    let cosmicWords = ["PUMP", "WAGMI", "SHILL", "GWEI", "SATOSHI", "MOON", "WHALE", "LAMBO", "HODL", "FOMO"];
+
+    // Generate a shorter UUID-based referral code (4 digits)
+    func generateShortUUID(): async Nat {
+        let randomBytes = await Random.blob();
+        var uuid: Nat = 0;
+        let byteArray = Blob.toArray(randomBytes);
+
+        for (i in Iter.range(0, 3)) {  // Limiting to 3 bytes for a shorter code
+            uuid := Nat.add(Nat.bitshiftLeft(uuid, 8), Nat8.toNat(byteArray[i]));
+        };
+
+        // Limiting the UUID to a 4-digit number
+        uuid := uuid % 10000;
+        return uuid;
+    };
+
+    // Generate a referral code by merging a shuffled cosmic word with the short UUID
+    func generateReferralCode(): async ReferralCode {
+        let uuid = await generateShortUUID();
+
+        // Shuffle the cosmicWords array
+        let indices: [Nat] = Array.tabulate(cosmicWords.size(), func(i: Nat): Nat { i });
+        let shuffledIndices = Utils.shuffleArray(indices);
+
+        // Pick the first word after shuffling
+        let word = cosmicWords[shuffledIndices[0]];
+
+        // Combine the word with the UUID to form the final referral code
+        let referralCode = word # Nat.toText(uuid);
+        referralCode;
+    };
+
+    // Assign a referral code to a player and manage referrers and grand referrers
+    func assignReferralCode(player: PlayerId, referrerId: ?PlayerId): async (ReferralCode, ?PlayerId) {
+        let code = await generateReferralCode();
+        referralCodes.put(code, player);
+        _referralCodes := Iter.toArray(referralCodes.entries());
+
+        // If there's a referrer, update the referrer and grand referrer data
+        switch (referrerId) {
+            case (?refId) {
+                // Store the referrer of the new player
+                referrerOfPlayer.put(player, refId);
+                _referrerOfPlayer := Iter.toArray(referrerOfPlayer.entries());
+
+                // Check if the referrer has a grand referrer and update accordingly
+                let grandReferrer = referrerOfPlayer.get(refId);
+                switch (grandReferrer) {
+                    case (?grandRefId) {
+                        grandReferrerOfPlayer.put(player, grandRefId);
+                        _grandReferrerOfPlayer := Iter.toArray(grandReferrerOfPlayer.entries());
+                    };
+                    case (null) {};  // No grand referrer found
+                };
+            };
+            case (null) {};  // No referrer, do nothing
+        };
+
+        // Return both the referral code and the referrer ID
+        return (code, referrerId);
+    };
+
+    // Assign an unassigned referral code to a new player
+    func assignUnassignedReferralCode(player: PlayerId, code: ReferralCode): async Result<Bool, Text> {
+        if (Utils.arrayContains<ReferralCode>(_unassignedReferralCodes, code, Text.equal)) {
+            // Remove the code from the unassigned list
+            _unassignedReferralCodes := Array.filter<ReferralCode>(_unassignedReferralCodes, func(c: ReferralCode) { c != code });
+
+            // Assign the code to the player
+            referralCodes.put(code, player);
+            _referralCodes := Iter.toArray(referralCodes.entries());
+
+            // Code successfully assigned and now it's in the assigned list
+            return #ok(true);
+        } else if (referralCodes.get(code) != null) {
+            // Code is already assigned and valid for registration
+            return #ok(false);  // Indicate that the code is valid but not newly assigned
+        } else {
+            // The code is neither in the unassigned nor in the assigned list
+            return #err("Invalid referral code.");
+        }
+    };
+
+    // Function to create a batch of 10 unassigned referral codes
+    public func createBatchOfUnassignedCodes(): async [ReferralCode] {
+        var newCodes: [ReferralCode] = [];
+
+        for (i in Iter.range(0, 1)) {  // Creating 10 codes
+            let code = await generateReferralCode();
+            newCodes := Array.append(newCodes, [code]);
+        };
+
+        // Add the new codes to the unassigned list
+        _unassignedReferralCodes := Array.append(_unassignedReferralCodes, newCodes);
+
+        return newCodes;
+    };
+
+    // Helper function to check if a referral is direct (second element is true)
+    func isDirectReferral(ref: (PlayerId, Bool, Float)): Bool {
+        return ref.1 == true;
+    };
+    
+    // Helper function to check if a player is already referred
+    func isPlayerAlreadyReferred(referrerInfo: { directReferrals: Nat; indirectReferrals: Nat; beyondReferrals: Nat; multiplier: Float; referredPlayers: [(PlayerId, Bool, Float)] }, newPlayerId: PlayerId): Bool {
+        let playerIds = Array.map(referrerInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : PlayerId { ref.0 });
+        return Utils.arrayContains(playerIds, newPlayerId, Principal.equal);
+    };
+
+    // Calculate the diminishing return based on the referral count and tier
+    func calculateDiminishingReturn(count: Nat, tier: Text): Float {
+        if (tier == "direct") {
+            if (count <= 3) return 1.0;
+            if (count <= 10) return 0.5;
+            if (count <= 25) return 0.25;
+            return 0.1;
+        } else if (tier == "indirect") {
+            if (count <= 25) return 0.25;
+            if (count <= 50) return 0.1;
+            return 0.05;
+        } else if (tier == "beyond") {
+            if (count <= 25) return 0.1;
+            if (count <= 100) return 0.05;
+            return 0.01;
+        };
+        return 0.0;  // Default case if something goes wrong
+    };
+
+    // Update the multiplier based on the type of referral (direct, indirect, or beyond)
+    func updateMultiplier(referrerId: PlayerId, newPlayerId: PlayerId) {
+        var isDirectReferralFlag = false;
+
+        // Check if the new player is a direct referral
+        switch (referralsByPlayer.get(referrerId)) {
+            case (null) { isDirectReferralFlag := false };
+            case (?info) {
+                for (ref in info.referredPlayers.vals()) {
+                    if (ref.0 == newPlayerId and isDirectReferral(ref)) {
+                        isDirectReferralFlag := true;
+                    };
+                };
+            };
+        };
+
+        // Update the multiplier for the direct referrer
+        let directReferrerInfo = referralsByPlayer.get(referrerId);
+        let directCount = switch (directReferrerInfo) {
+            case (null) { 0 };
+            case (?info) { info.directReferrals };
+        };
+
+        let multiplierIncrement = calculateDiminishingReturn(directCount, "direct");
+
+        let currentMultiplier = switch (multiplierByPlayer.get(referrerId)) {
+            case (null) { 1.0 };  // Default multiplier
+            case (?multiplier) { multiplier };
+        };
+
+        let updatedMultiplier = currentMultiplier + multiplierIncrement;
+        let cappedMultiplier = if (updatedMultiplier > 100.0) { 100.0 } else { updatedMultiplier };
+
+        multiplierByPlayer.put(referrerId, cappedMultiplier);
+        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+
+        // Apply the multiplier increment to the grand referrer (if exists)
+        let grandReferrer = referrerOfPlayer.get(referrerId);
+        switch (grandReferrer) {
+            case (?grandReferrerId) {
+                let grandReferrerInfo = referralsByPlayer.get(grandReferrerId);
+                let indirectCount = switch (grandReferrerInfo) {
+                    case (null) { 0 };
+                    case (?info) { info.indirectReferrals };
+                };
+
+                let grandIncrement = calculateDiminishingReturn(indirectCount, "indirect");
+                let grandCurrentMultiplier = switch (multiplierByPlayer.get(grandReferrerId)) {
+                    case (null) { 1.0 };  // Default multiplier
+                    case (?grandMultiplier) { grandMultiplier };
+                };
+
+                let grandUpdatedMultiplier = grandCurrentMultiplier + grandIncrement;
+                let grandCappedMultiplier = if (grandUpdatedMultiplier > 100.0) { 100.0 } else { grandUpdatedMultiplier };
+
+                multiplierByPlayer.put(grandReferrerId, grandCappedMultiplier);
+                _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+
+                // Now, check if there's a beyond referrer (i.e., the referrer of the grand referrer)
+                let beyondReferrer = referrerOfPlayer.get(grandReferrerId);
+                switch (beyondReferrer) {
+                    case (?beyondReferrerId) {
+                        let beyondReferrerInfo = referralsByPlayer.get(beyondReferrerId);
+                        let beyondCount = switch (beyondReferrerInfo) {
+                            case (null) { 0 };
+                            case (?info) { info.beyondReferrals };
+                        };
+
+                        let beyondIncrement = calculateDiminishingReturn(beyondCount, "beyond");
+                        let beyondCurrentMultiplier = switch (multiplierByPlayer.get(beyondReferrerId)) {
+                            case (null) { 1.0 };  // Default multiplier
+                            case (?beyondMultiplier) { beyondMultiplier };
+                        };
+
+                        let beyondUpdatedMultiplier = beyondCurrentMultiplier + beyondIncrement;
+                        let beyondCappedMultiplier = if (beyondUpdatedMultiplier > 100.0) { 100.0 } else { beyondUpdatedMultiplier };
+
+                        multiplierByPlayer.put(beyondReferrerId, beyondCappedMultiplier);
+                        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+                    };
+                    case (null) { /* No beyond referrer, do nothing */ };
+                };
+            };
+            case (null) { /* No grand referrer, do nothing */ };
+        };
+    };
+
+    func trackReferrer(referrerId: PlayerId, newPlayerId: PlayerId) {
+        var referrerInfo = switch (referralsByPlayer.get(referrerId)) {
+            case (null) {
+                {
+                    directReferrals = 0;
+                    indirectReferrals = 0;
+                    beyondReferrals = 0; // Initialize beyond referrals
+                    multiplier = 1.0;
+                    referredPlayers = []
+                }
+            };
+            case (?info) { info };
+        };
+
+        if (not isPlayerAlreadyReferred(referrerInfo, newPlayerId)) {
+            // Calculate the increment based on the current number of referrals
+            let directCount = referrerInfo.directReferrals + 1;
+            let increment = if (directCount <= 3) {
+                1.0
+            } else if (directCount <= 10) {
+                0.75
+            } else {
+                0.5
+            };
+
+            // Debug output for increment
+            Debug.print("Direct Count: " # Nat.toText(directCount) # ", Increment: " # Float.toText(increment));
+
+            // Update direct referrals
+            let updatedReferrerInfo = {
+                directReferrals = directCount;
+                indirectReferrals = referrerInfo.indirectReferrals;
+                beyondReferrals = referrerInfo.beyondReferrals;
+                multiplier = referrerInfo.multiplier + increment;
+                referredPlayers = Array.append(referrerInfo.referredPlayers, [(newPlayerId, true, increment)]);
+            };
+
+            // Debug output for updated referredPlayers list
+            for (ref in updatedReferrerInfo.referredPlayers.vals()) {
+                Debug.print("Updated Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
+            };
+
+            referralsByPlayer.put(referrerId, updatedReferrerInfo);
+            _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
+
+            // Set the referrer for the new player
+            referrerOfPlayer.put(newPlayerId, referrerId);
+            _referrerOfPlayer := Iter.toArray(referrerOfPlayer.entries());
+
+            // Ensure the referrer's multiplier is updated
+            multiplierByPlayer.put(referrerId, updatedReferrerInfo.multiplier);
+            _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+
+            // Handle grand referrer (indirect referrals)
+            let grandReferrer = referrerOfPlayer.get(referrerId);
+            switch (grandReferrer) {
+                case (?grandReferrerId) {
+                    grandReferrerOfPlayer.put(newPlayerId, grandReferrerId);
+                    _grandReferrerOfPlayer := Iter.toArray(grandReferrerOfPlayer.entries());
+
+                    // Calculate the indirect increment
+                    let indirectCount = switch (referralsByPlayer.get(grandReferrerId)) {
+                        case (null) { 0 };
+                        case (?info) { info.indirectReferrals + 1 };
+                    };
+
+                    let indirectIncrement = if (indirectCount <= 3) {
+                        0.5
+                    } else if (indirectCount <= 10) {
+                        0.25
+                    } else {
+                        0.1
+                    };
+
+                    // Debug output for indirect increment
+                    Debug.print("Indirect Count: " # Nat.toText(indirectCount) # ", Increment: " # Float.toText(indirectIncrement));
+
+                    // Update grand referrer
+                    var grandReferrerInfo = switch (referralsByPlayer.get(grandReferrerId)) {
+                        case (null) {
+                            {
+                                directReferrals = 0;
+                                indirectReferrals = indirectCount;
+                                beyondReferrals = 0;
+                                multiplier = 1.0 + indirectIncrement;
+                                referredPlayers = []
+                            }
+                        };
+                        case (?info) {
+                            {
+                                directReferrals = info.directReferrals;
+                                indirectReferrals = indirectCount;
+                                beyondReferrals = info.beyondReferrals;
+                                multiplier = info.multiplier + indirectIncrement;
+                                referredPlayers = Array.append(info.referredPlayers, [(newPlayerId, false, indirectIncrement)]);
+                            }
+                        };
+                    };
+
+                    // Debug output for updated grand referrer referredPlayers list
+                    for (ref in grandReferrerInfo.referredPlayers.vals()) {
+                        Debug.print("Updated Grand Referrer Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
+                    };
+
+                    referralsByPlayer.put(grandReferrerId, grandReferrerInfo);
+                    _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
+
+                    // Ensure the grand referrer's multiplier is updated
+                    multiplierByPlayer.put(grandReferrerId, grandReferrerInfo.multiplier);
+                    _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+
+                    // Handle beyond referrer
+                    let beyondReferrer = referrerOfPlayer.get(grandReferrerId);
+                    switch (beyondReferrer) {
+                        case (?beyondReferrerId) {
+                            // Calculate the beyond increment
+                            let beyondCount = switch (referralsByPlayer.get(beyondReferrerId)) {
+                                case (null) { 0 };
+                                case (?info) { info.beyondReferrals + 1 };
+                            };
+
+                            let beyondIncrement = if (beyondCount <= 3) {
+                                0.25
+                            } else if (beyondCount <= 10) {
+                                0.1
+                            } else {
+                                0.05
+                            };
+
+                            // Debug output for beyond increment
+                            Debug.print("Beyond Count: " # Nat.toText(beyondCount) # ", Increment: " # Float.toText(beyondIncrement));
+
+                            // Update beyond referrer
+                            var beyondReferrerInfo = switch (referralsByPlayer.get(beyondReferrerId)) {
+                                case (null) {
+                                    {
+                                        directReferrals = 0;
+                                        indirectReferrals = 0;
+                                        beyondReferrals = beyondCount;
+                                        multiplier = 1.0 + beyondIncrement;
+                                        referredPlayers = []
+                                    }
+                                };
+                                case (?info) {
+                                    {
+                                        directReferrals = info.directReferrals;
+                                        indirectReferrals = info.indirectReferrals;
+                                        beyondReferrals = beyondCount;
+                                        multiplier = info.multiplier + beyondIncrement;
+                                        referredPlayers = Array.append(info.referredPlayers, [(newPlayerId, false, beyondIncrement)]);
+                                    }
+                                };
+                            };
+
+                            // Debug output for updated beyond referrer referredPlayers list
+                            for (ref in beyondReferrerInfo.referredPlayers.vals()) {
+                                Debug.print("Updated Beyond Referrer Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
+                            };
+
+                            referralsByPlayer.put(beyondReferrerId, beyondReferrerInfo);
+                            _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
+
+                            // Ensure the beyond referrer's multiplier is updated
+                            multiplierByPlayer.put(beyondReferrerId, beyondReferrerInfo.multiplier);
+                            _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+                        };
+                        case (null) { /* No beyond referrer, do nothing */ };
+                    };
+                };
+                case (null) { /* No grand referrer, do nothing */ };
+            };
+        };
+
+        // Finally, update the multiplier for the current player
+        updateMultiplier(referrerId, newPlayerId);
+    };
+
+    // Get a player's referral code
+    public query func getReferralCode(player: PlayerId): async ?ReferralCode {
+        for ((code, id) in referralCodes.entries()) {
+            if (id == player) {
+                return ?code;
+            };
+        };
+        return null;
+    };
+
+    public query func getGrandReferrer(playerId: PlayerId): async ?PlayerId {
+        switch (referrerOfPlayer.get(playerId)) {
+            case (?referrerId) {
+                return referrerOfPlayer.get(referrerId);  // Return the referrer of the referrer
+            };
+            case (null) { return null; };  // No referrer found
+        }
+    };
+
+    public query func getReferrer(playerId: PlayerId): async ?PlayerId {
+        return referrerOfPlayer.get(playerId);  // Return the direct referrer
+    };
+
+    public query func getDirectReferrals(playerId: PlayerId): async [PlayerId] {
+        switch (referralsByPlayer.get(playerId)) {
+            case (null) { return []; };  // No direct referrals found
+            case (?info) {
+                // Filter for direct referrals
+                let directRefs = Array.filter(info.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                    ref.1 == true;
+                });
+                
+                // Map to extract the PlayerIds
+                return Array.map(directRefs, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                    ref.0;
+                });
+            };
+        }
+    };
+
+    public query func getIndirectReferrals(playerId: PlayerId): async [PlayerId] {
+        var indirectReferrals: [PlayerId] = [];
+
+        // Retrieve the direct referrals of the player
+        switch (referralsByPlayer.get(playerId)) {
+            case (null) { return []; };  // No direct referrals found
+            case (?info) {
+                let directRefs = Array.filter(info.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                    ref.1 == true;  // Only direct referrals
+                });
+
+                // For each direct referral, check if they have their own direct referrals (which are indirect for the original player)
+                for (directRef in directRefs.vals()) {
+                    switch (referralsByPlayer.get(directRef.0)) {
+                        case (null) {};  // No referrals found for this direct referral
+                        case (?directInfo) {
+                            let indirects = Array.filter(directInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                                ref.1 == true;  // Only direct referrals of the direct referral
+                            });
+
+                            // Append these indirect referrals to the result
+                            indirectReferrals := Array.append(indirectReferrals, Array.map(indirects, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                                ref.0;
+                            }));
+                        };
+                    };
+                };
+            };
+        };
+
+        return indirectReferrals;
+    };
+
+    public query func getBeyondReferrals(playerId: PlayerId): async [PlayerId] {
+        var beyondReferrals: [PlayerId] = [];
+
+        // Retrieve the direct referrals of the player
+        switch (referralsByPlayer.get(playerId)) {
+            case (null) { return []; };  // No direct referrals found
+            case (?info) {
+                let directRefs = Array.filter(info.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                    ref.1 == true;  // Only direct referrals
+                });
+
+                // For each direct referral, check for their indirect referrals
+                for (directRef in directRefs.vals()) {
+                    switch (referralsByPlayer.get(directRef.0)) {
+                        case (null) {};  // No referrals found for this direct referral
+                        case (?directInfo) {
+                            let indirectRefs = Array.filter(directInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                                ref.1 == true;  // Only direct referrals of the direct referral (indirect for the original player)
+                            });
+
+                            // For each indirect referral, check if they have their own direct referrals (which are beyond for the original player)
+                            for (indirectRef in indirectRefs.vals()) {
+                                switch (referralsByPlayer.get(indirectRef.0)) {
+                                    case (null) {};  // No referrals found for this indirect referral
+                                    case (?indirectInfo) {
+                                        let beyonds = Array.filter(indirectInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                                            ref.1 == true;  // Only direct referrals of the indirect referral (beyond for the original player)
+                                        });
+
+                                        // Append these beyond referrals to the result
+                                        beyondReferrals := Array.append(beyondReferrals, Array.map(beyonds, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                                            ref.0;
+                                        }));
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        return beyondReferrals;
+    };
+
+    public query func getTotalReferralNetwork(playerId: PlayerId): async {
+        directReferrals: [PlayerId];
+        indirectReferrals: [PlayerId];
+        beyondReferrals: [PlayerId];
+    } {
+        var directReferrals: [PlayerId] = [];
+        var indirectReferrals: [PlayerId] = [];
+        var beyondReferrals: [PlayerId] = [];
+
+        // Retrieve the direct referrals of the player
+        switch (referralsByPlayer.get(playerId)) {
+            case (null) { return { directReferrals = []; indirectReferrals = []; beyondReferrals = []; }; };
+            case (?info) {
+                // Filter for direct referrals
+                let filteredDirectRefs = Array.filter(info.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                    ref.1 == true;  // Only direct referrals
+                });
+
+                // Map to extract the PlayerIds
+                directReferrals := Array.map(filteredDirectRefs, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                    ref.0;
+                });
+
+                // For each direct referral, gather indirect and beyond referrals
+                for (directRef in directReferrals.vals()) {
+                    switch (referralsByPlayer.get(directRef)) {
+                        case (null) {};  // No referrals found for this direct referral
+                        case (?directInfo) {
+                            // Filter for indirect referrals
+                            let filteredIndirectRefs = Array.filter(directInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                                ref.1 == true;  // Only direct referrals of the direct referral (indirect for the original player)
+                            });
+
+                            // Append indirect referrals
+                            indirectReferrals := Array.append(indirectReferrals, Array.map(filteredIndirectRefs, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                                ref.0;
+                            }));
+
+                            // For each indirect referral, gather beyond referrals
+                            for (indirectRef in filteredIndirectRefs.vals()) {
+                                switch (referralsByPlayer.get(indirectRef.0)) {
+                                    case (null) {};  // No referrals found for this indirect referral
+                                    case (?indirectInfo) {
+                                        // Filter for beyond referrals
+                                        let filteredBeyonds = Array.filter(indirectInfo.referredPlayers, func(ref: (PlayerId, Bool, Float)) : Bool {
+                                            ref.1 == true;  // Only direct referrals of the indirect referral (beyond for the original player)
+                                        });
+
+                                        // Append beyond referrals
+                                        beyondReferrals := Array.append(beyondReferrals, Array.map(filteredBeyonds, func(ref: (PlayerId, Bool, Float)) : PlayerId {
+                                            ref.0;
+                                        }));
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        return {
+            directReferrals = directReferrals;
+            indirectReferrals = indirectReferrals;
+            beyondReferrals = beyondReferrals;
+        };
+    };
+
+    // Query function to retrieve the multiplier for a specific player
+    public query func getMultiplier(playerId: PlayerId): async Float {
+        switch (multiplierByPlayer.get(playerId)) {
+            case (null) { return 1.0; };  // Default multiplier
+            case (?multiplier) { return multiplier; };
+        }
+    };
+
+
+//--
+// Tops
+
+    public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
+        let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
+        for ((playerId, multiplier) in multiplierByPlayer.entries()) {
+            buffer.add((playerId, multiplier));
+        };
+        return Buffer.toArray(buffer);
+    };
+
+    public query func topPlayersByMultiplier(page: Nat) : async [(PlayerId, Float)] {
+        // Initialize a buffer to collect all player multipliers
+        let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
+
+        // Collect all players with their multipliers
+        for ((playerId, multiplier) in multiplierByPlayer.entries()) {
+            buffer.add((playerId, multiplier));
+        };
+
+        // Convert buffer to array
+        let allPlayersWithMultipliers = Buffer.toArray(buffer);
+
+        // Sort the players by multiplier in descending order
+        let sortedPlayers = Array.sort(
+            allPlayersWithMultipliers,
+            func(
+                a: (PlayerId, Float),
+                b: (PlayerId, Float)
+            ): {
+                #less;
+                #equal;
+                #greater;
+            } {
+                if (a.1 > b.1) {
+                    #less;   // 'a' comes before 'b'
+                } else if (a.1 < b.1) {
+                    #greater; // 'b' comes before 'a'
+                } else {
+                    #equal; // 'a' and 'b' are equal
+                };
+            }
+        );
+
+        // Define pagination parameters
+        let start = page * 10;
+        let end = if (start + 10 > Array.size(sortedPlayers)) {
+            Array.size(sortedPlayers); // Ensure we don't go out of bounds
+        } else {
+            start + 10;
+        };
+
+        // Slice the sorted array for the current page and convert to array
+        let paginatedPlayers = Iter.toArray(
+            Array.slice(sortedPlayers, start, end)
+        );
+
+        // Return the paginated list
+        return paginatedPlayers;
+    };
+
+
 
 //--
 }
