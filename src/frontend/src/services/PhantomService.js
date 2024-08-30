@@ -6,7 +6,7 @@ class PhantomService {
   }
 
   async connectWallet() {
-    if (window.solana && window.solana.isPhantom) {
+    if (true) {
       console.log('Phantom wallet found.');
       try {
         const response = await window.solana.connect();

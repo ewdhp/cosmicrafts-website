@@ -11,6 +11,15 @@ const privacySettings = ref('');
 
 onMounted(async () => {
   try {
+    const canister = authStore.cosmicraftsCanister;
+    if (canister) {
+      console.log("STORE Cosmicrafts canister initialized successfully:", canister);
+      const result = await canister.getMyPrivacySettings();
+      console.log("STORE Result from getMyPrivacySettings:", result);
+      privacySettings.value = result;
+    } else {
+      console.error("STORE Failed to initialize cosmicrafts canister.");
+    }
     cosmicraftsCanister = await getCanister("cosmicrafts");
     if (cosmicraftsCanister) {
       console.log("Cosmicrafts canister initialized successfully:", cosmicraftsCanister);

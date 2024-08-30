@@ -1,11 +1,4 @@
-
-
-
-//fix google login and restructure the code removing no needed functions
-//like getting a canister from here...
-
-
-
+import { Principal } from '@dfinity/principal';
 import { defineStore } from 'pinia';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
@@ -15,7 +8,7 @@ import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import { AuthClient } from '@dfinity/auth-client';
 //import { cosmicrafts } from '../../../declarations/cosmicrafts/index';
-import { createActor } from '../../../declarations/cosmicrafts/index.js';
+import { createActor, canisterId } from '../../../declarations/cosmicrafts/index.js';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -23,6 +16,7 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: false,
     googleSub: '',
     principalId: '',
+    identity: null,
     cosmicrafts: null,
     authClient: null,
     cosmicraftsCanister: null,
@@ -36,65 +30,36 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = data.isAuthenticated;
         this.googleSub = data.googleSub;
         this.principalId = data.principalId;
-
-        if (data.authClient) {
-          this.authClient = await AuthClient.create();
-        }
-
-        if (this.isAuthenticated && this.user) {
-          const identity = Ed25519KeyIdentity.fromKeyPair(
-            base64ToUint8Array(this.user.publicKey),
-            base64ToUint8Array(this.user.privateKey)
-          );
-          const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
-
-          if (process.env.DFX_NETWORK !== "ic") {
-            agent.fetchRootKey().catch((err) => {
-              console.warn(
-                "Unable to fetch root key. Check to ensure that your local replica is running"
-              );
-              console.error(err);
-            });
-          }
-          console.log('cosmicraftsCanister', this.cosmicraftsCanister);
-          // Initialize the cosmicrafts canister
-          this.cosmicraftsCanister = createActor(
-            process.env.COSMICRAFTS_CANISTER_ID,
-            {
-              agent,
-            });
-
-
-        }
+        this.identity = data.identity;
       }
     },
-    async loginWithGoogle(response, router) {
+    async loginWithGoogle(response) {
       const decodedIdToken = response.credential.split('.')[1];
       const payload = JSON.parse(atob(decodedIdToken));
       this.googleSub = payload.sub;
-      await this.generateKeysFromSub(this.googleSub, router);
+      await this.generateKeysFromSub(this.googleSub);
     },
-    async loginWithMetaMask(router) {
+    async loginWithMetaMask() {
       const uniqueMessage = 'Sign this message to log in with your Ethereum wallet';
       const signature = await MetaMaskService.signMessage(uniqueMessage);
       if (signature) {
-        await this.generateKeysFromSignature(signature, router);
+        await this.generateKeysFromSignature(signature);
       }
     },
-    async loginWithPhantom(router) {
+    async loginWithPhantom() {
       const message = 'Sign this message to log in with your Phantom Wallet';
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
-        await this.generateKeysFromSignature(signature, router);
+        await this.generateKeysFromSignature(signature);
       }
     },
-    async loginWithInternetIdentity(router) {
-      await this.loginWithAuthClient('https://identity.ic0.app', router);
+    async loginWithInternetIdentity() {
+      await this.loginWithAuthClient('https://identity.ic0.app');
     },
-    async loginWithNFID(router) {
-      await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize', router);
+    async loginWithNFID() {
+      await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize');
     },
-    async loginWithAuthClient(identityProviderUrl, router) {
+    async loginWithAuthClient(identityProviderUrl) {
       const authClient = await AuthClient.create();
       this.authClient = authClient;
       await authClient.login({
@@ -102,38 +67,82 @@ export const useAuthStore = defineStore('auth', {
         windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
         onSuccess: async () => {
           const identity = authClient.getIdentity();
-          await this.createIdentityFromAuthClient(identity, router);
+          await this.createCanistersFromAuthClient(identity);
           this.isAuthenticated = true;
+          this.identity = identity;
           this.saveStateToLocalStorage();
-          router.push({ path: '/dashboard' });
         },
         onError: (error) => {
           console.error('Authentication error:', error);
         },
       });
     },
-    async createIdentityFromAuthClient(identity, router) {
-      const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
+    async createCanisters(publicKey, privateKey) {
+      this.authClient = await AuthClient.create();
+      this.user = { publicKey, privateKey };
+      const identity = Ed25519KeyIdentity.fromKeyPair(
+        base64ToUint8Array(this.user.publicKey),
+        base64ToUint8Array(this.user.privateKey)
+      );
 
-      if (process.env.DFX_NETWORK !== "ic") {
-        agent.fetchRootKey().catch((err) => {
+      const isLocal = process.env.DFX_NETWORK !== 'ic';
+      const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
+      const agent = new HttpAgent({ identity, host });
+
+      if (isLocal) {
+        try {
+          await agent.fetchRootKey();
+        } catch (err) {
           console.warn(
             "Unable to fetch root key. Check to ensure that your local replica is running"
           );
           console.error(err);
-        });
+        }
       }
 
-      const canisterIds = {
-        cosmicrafts: process.env.CANISTER_ID_COSMICRAFTS,
-      };
+      console.log('Host:', host);
+      console.log('COSMICRAFTS_CANISTER_ID:', canisterId);
 
+      try {
+        this.cosmicraftsCanister = createActor(canisterId, { agent });
+        console.log('cosmicraftsCanister initialized successfully:', this.cosmicraftsCanister);
+      } catch (error) {
+        console.error("Error initializing cosmicrafts canister:", error);
+      }
       this.principalId = identity.getPrincipal().toText();
-      this.user = { publicKey: '', privateKey: '' };
       this.saveStateToLocalStorage();
-      router.push({ path: '/dashboard' });
+
     },
-    async generateKeysFromSignature(signature, router) {
+    async createCanistersFromAuthClient(identity) {
+      const isLocal = process.env.DFX_NETWORK !== 'ic';
+      const host = 'https://ic0.app';
+      const agent = new HttpAgent({ identity, host });
+
+      if (isLocal) {
+        try {
+          await agent.fetchRootKey();
+        } catch (err) {
+          console.warn(
+            "Unable to fetch root key. Check to ensure that your local replica is running"
+          );
+          console.error(err);
+        }
+      }
+
+      console.log('Host:', host);
+      console.log('COSMICRAFTS_CANISTER_ID:', canisterId);
+
+      try {
+        this.cosmicraftsCanister = createActor(canisterId, { agent });
+        console.log('cosmicraftsCanister initialized successfully:', this.cosmicraftsCanister);
+      } catch (error) {
+        console.error("Error initializing cosmicrafts canister:", error);
+      }
+      this.identity = identity;
+      this.principalId = identity.getPrincipal().toText();
+      this.saveStateToLocalStorage();
+    },
+    async generateKeysFromSignature(signature) {
       const encoder = new TextEncoder();
       const encodedSignature = encoder.encode(signature);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSignature);
@@ -141,12 +150,11 @@ export const useAuthStore = defineStore('auth', {
       const keyPair = nacl.sign.keyPair.fromSeed(seed);
       const publicKeyBase64 = base64Encode(keyPair.publicKey);
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
-      await this.createIdentity(publicKeyBase64, privateKeyBase64, router);
+      await this.createCanisters(publicKeyBase64, privateKeyBase64);
       this.isAuthenticated = true;
       this.saveStateToLocalStorage();
-      router.push({ path: '/dashboard' });
     },
-    async generateKeysFromSub(sub, router) {
+    async generateKeysFromSub(sub) {
       const encoder = new TextEncoder();
       const encodedSub = encoder.encode(sub);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSub);
@@ -154,58 +162,9 @@ export const useAuthStore = defineStore('auth', {
       const keyPair = nacl.sign.keyPair.fromSeed(seed);
       const publicKeyBase64 = base64Encode(keyPair.publicKey);
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
-      await this.createIdentity(publicKeyBase64, privateKeyBase64, router);
+      await this.createCanisters(publicKeyBase64, privateKeyBase64);
       this.isAuthenticated = true;
       this.saveStateToLocalStorage();
-      router.push({ path: '/dashboard' });
-    },
-    async createIdentity(publicKey, privateKey, router) {
-      const identity = Ed25519KeyIdentity.fromKeyPair(
-        base64ToUint8Array(publicKey),
-        base64ToUint8Array(privateKey)
-      );
-      const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
-
-      if (process.env.DFX_NETWORK !== "ic") {
-        agent.fetchRootKey().catch((err) => {
-          console.warn(
-            "Unable to fetch root key. Check to ensure that your local replica is running"
-          );
-          console.error(err);
-        });
-      }
-
-      const canisterIds = {
-        cosmicrafts: process.env.CANISTER_ID_COSMICRAFTS,
-      };
-
-      this.principalId = identity.getPrincipal().toText();
-      this.user = { publicKey, privateKey };
-
-      this.saveStateToLocalStorage();
-      router.push({ path: '/dashboard' });
-    },
-    async initializeAdditionalActor(canisterId, idlFactory) {
-      if (!this.user) {
-        throw new Error("User is not authenticated");
-      }
-
-      const identity = Ed25519KeyIdentity.fromKeyPair(
-        base64ToUint8Array(this.user.publicKey),
-        base64ToUint8Array(this.user.privateKey)
-      );
-
-      const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
-
-      if (process.env.DFX_NETWORK !== "ic") {
-        agent.fetchRootKey().catch((err) => {
-          console.warn(
-            "Unable to fetch root key. Check to ensure that your local replica is running"
-          );
-          console.error(err);
-        });
-      }
-      return Actor.createActor(idlFactory, { agent, canisterId });
     },
     saveStateToLocalStorage() {
       const authData = {
@@ -213,7 +172,9 @@ export const useAuthStore = defineStore('auth', {
         isAuthenticated: this.isAuthenticated,
         googleSub: this.googleSub,
         principalId: this.principalId,
+        cosmicrafts: this.cosmicrafts,
         authClient: this.authClient ? true : false,
+        identity: this.identity,
       };
       localStorage.setItem('authStore', JSON.stringify(authData));
     },
@@ -223,6 +184,8 @@ export const useAuthStore = defineStore('auth', {
       this.googleSub = '';
       this.principalId = '';
       this.cosmicrafts = null;
+      this.authClient = false,
+        this.identity = null;
       localStorage.removeItem('authStore');
     }
   },

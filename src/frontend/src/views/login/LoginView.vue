@@ -78,26 +78,6 @@ onMounted(() => {
   }
 });
 
-const generateKeysFromSignature = async (signature) => {
-  const encoder = new TextEncoder();
-  const encodedSignature = encoder.encode(signature);
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', encodedSignature);
-  const seed = new Uint8Array(hashBuffer.slice(0, 32));
-  const keyPair = nacl.sign.keyPair.fromSeed(seed);
-
-  const publicKeyBase64 = base64Encode(keyPair.publicKey);
-  const privateKeyBase64 = base64Encode(keyPair.secretKey);
-
-  authStore.createIdentity(publicKeyBase64, privateKeyBase64, router);
-  authStore.isAuthenticated = true;
-  handleAfterLogin();
-};
-
-const loginWithMetaMask = async () => {
-  const uniqueMessage = 'Sign this message to log in with your Ethereum wallet';
-  const signature = await MetaMaskService.signMessage(uniqueMessage);
-  await generateKeysFromSignature(signature).then(handleAfterLogin);
-};
 
 const loginWithPhantom = async () => {
   const message = 'Sign this message to log in with your Phantom Wallet';
@@ -109,17 +89,17 @@ const authMethods = [
   {
     logo: nfidLogo,
     text: 'NFID',
-    onClick: () => authStore.loginWithNFID(router).then(handleAfterLogin),
+    onClick: () => authStore.loginWithNFID().then(handleAfterLogin),
   },
   {
     logo: icpLogo,
     text: 'Internet Identity',
-    onClick: () => authStore.loginWithInternetIdentity(router).then(handleAfterLogin),
+    onClick: () => authStore.loginWithInternetIdentity().then(handleAfterLogin),
   },
   {
     logo: metaMaskLogo,
     text: 'MetaMask',
-    onClick: loginWithMetaMask,
+    onClick: () => authStore.loginWithMetaMask().then(handleAfterLogin),
   },
   {
     logo: phantomLogo,
