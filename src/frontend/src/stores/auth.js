@@ -1,16 +1,54 @@
-import { Principal } from '@dfinity/principal';
+//use a factory instead of creating the canisters here.
+//
+//
+//
+//
+//
 import { defineStore } from 'pinia';
-import { Actor, HttpAgent } from '@dfinity/agent';
+import { HttpAgent } from '@dfinity/agent';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 import nacl from 'tweetnacl';
 import { encode as base64Encode, decode as base64Decode } from 'base64-arraybuffer';
 import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import { AuthClient } from '@dfinity/auth-client';
-//import { cosmicrafts } from '../../../declarations/cosmicrafts/index';
 import { createActor, canisterId } from '../../../declarations/cosmicrafts/index.js';
 
 export const useAuthStore = defineStore('auth', {
+
+  /**
+   * 
+   * Making readonly state variables private
+   *
+   *
+   * 
+   * 
+   *  
+  const state = (() => {
+  // Private variable to hold the state
+  let _isAuthenticated = false;
+
+  return {
+  user: null,
+  get isAuthenticated() {
+  return _isAuthenticated;
+},
+  googleSub: '',
+  principalId: '',
+  identity: null,
+  cosmicrafts: null,
+  authClient: null,
+  cosmicraftsCanister: null,
+
+  // Internal method to update the isAuthenticated state
+  _setIsAuthenticated(newValue) {
+  _isAuthenticated = newValue;
+}
+};
+}) ();
+  */
+
+
   state: () => ({
     user: null,
     isAuthenticated: false,
@@ -38,12 +76,16 @@ export const useAuthStore = defineStore('auth', {
       const payload = JSON.parse(atob(decodedIdToken));
       this.googleSub = payload.sub;
       await this.generateKeysFromSub(this.googleSub);
+      this.isAuthenticated = true;
+      this.saveStateToLocalStorage();
     },
     async loginWithMetaMask() {
       const uniqueMessage = 'Sign this message to log in with your Ethereum wallet';
       const signature = await MetaMaskService.signMessage(uniqueMessage);
       if (signature) {
         await this.generateKeysFromSignature(signature);
+        this.isAuthenticated = true;
+        this.saveStateToLocalStorage();
       }
     },
     async loginWithPhantom() {
@@ -51,6 +93,8 @@ export const useAuthStore = defineStore('auth', {
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
         await this.generateKeysFromSignature(signature);
+        this.isAuthenticated = true;
+        this.saveStateToLocalStorage();
       }
     },
     async loginWithInternetIdentity() {
@@ -151,7 +195,6 @@ export const useAuthStore = defineStore('auth', {
       const publicKeyBase64 = base64Encode(keyPair.publicKey);
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
       await this.createCanisters(publicKeyBase64, privateKeyBase64);
-      this.isAuthenticated = true;
       this.saveStateToLocalStorage();
     },
     async generateKeysFromSub(sub) {
@@ -163,7 +206,6 @@ export const useAuthStore = defineStore('auth', {
       const publicKeyBase64 = base64Encode(keyPair.publicKey);
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
       await this.createCanisters(publicKeyBase64, privateKeyBase64);
-      this.isAuthenticated = true;
       this.saveStateToLocalStorage();
     },
     saveStateToLocalStorage() {
