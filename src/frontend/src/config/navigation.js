@@ -1,4 +1,5 @@
 import DashboardIcon from '@/assets/icons/dashboard.svg';
+
 const navItems = [
   {
     path: '/login',

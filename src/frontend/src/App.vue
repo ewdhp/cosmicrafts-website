@@ -35,10 +35,20 @@ watchEffect(() => {
   currentSection.value = matchingSection || navItems.find(item => item.path === '/'); // Default to the root if no match
   childNavItems.value = currentSection.value?.children || [];
 });
+
+/**
+ * 
+ * Remove login and register from the nav items
+ * 
+ * 
+ * 
+ */
+
 </script>
 
 <template>
   <div id="app">
+    
     <LoginView v-if="!isAuthenticated" />
     <div v-else class="dashboard-container">
       <aside class="left-panel">
