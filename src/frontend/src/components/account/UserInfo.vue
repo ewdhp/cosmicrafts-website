@@ -3,6 +3,12 @@ import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../../stores/auth.js';
 
 const authStore = useAuthStore();
+
+if (!authStore.initialized) {
+   console.log("authStore not initialized");
+  authStore.initializeStore();
+}
+
 const principalId = computed(() => authStore.principalId);
 
 const privacySettings = ref('');

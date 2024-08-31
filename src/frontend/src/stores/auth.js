@@ -12,7 +12,7 @@ import { encode as base64Encode, decode as base64Decode } from 'base64-arraybuff
 import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import { AuthClient } from '@dfinity/auth-client';
-import { createActor, canisterId } from '../../../declarations/cosmicrafts/index.js';
+import { createActor, canisterId, cosmicrafts } from '../../../declarations/cosmicrafts/index.js';
 
 export const useAuthStore = defineStore('auth', {
 
@@ -58,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
     cosmicrafts: null,
     authClient: null,
     cosmicraftsCanister: null,
+    initialized: false
   }),
   actions: {
     async initializeStore() {
@@ -69,6 +70,8 @@ export const useAuthStore = defineStore('auth', {
         this.googleSub = data.googleSub;
         this.principalId = data.principalId;
         this.identity = data.identity;
+        this.initialized = true;
+        this.saveStateToLocalStorage();
       }
     },
     async loginWithGoogle(response) {
@@ -159,7 +162,7 @@ export const useAuthStore = defineStore('auth', {
     },
     async createCanistersFromAuthClient(identity) {
       const isLocal = process.env.DFX_NETWORK !== 'ic';
-      const host = 'https://ic0.app';
+      const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
       const agent = new HttpAgent({ identity, host });
 
       if (isLocal) {
@@ -177,7 +180,7 @@ export const useAuthStore = defineStore('auth', {
       console.log('COSMICRAFTS_CANISTER_ID:', canisterId);
 
       try {
-        this.cosmicraftsCanister = createActor(canisterId, { agent });
+        this.cosmicraftsCanister = cosmicrafts;
         console.log('cosmicraftsCanister initialized successfully:', this.cosmicraftsCanister);
       } catch (error) {
         console.error("Error initializing cosmicrafts canister:", error);
@@ -217,6 +220,7 @@ export const useAuthStore = defineStore('auth', {
         cosmicrafts: this.cosmicrafts,
         authClient: this.authClient ? true : false,
         identity: this.identity,
+        initialized: this.initialized
       };
       localStorage.setItem('authStore', JSON.stringify(authData));
     },
