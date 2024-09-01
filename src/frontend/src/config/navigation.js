@@ -2,6 +2,13 @@ import DashboardIcon from '@/assets/icons/dashboard.svg';
 
 const navItems = [
   {
+    path: '/account',
+    name: "Register",
+    component: 'RegisterView',
+    icon: DashboardIcon,
+    children: []
+  },
+  {
     path: '/login',
     name: "Login",
     component: 'LoginView',

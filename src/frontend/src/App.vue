@@ -9,6 +9,9 @@ import { ref, computed, watchEffect } from 'vue';
 import { useAuthStore } from './stores/auth.js';
 import { useRouter, useRoute } from 'vue-router';
 
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
+
+
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
@@ -47,8 +50,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div id="app">
-    
+  <div id="app">    
     <LoginView v-if="!isAuthenticated" />
     <div v-else class="dashboard-container">
       <aside class="left-panel">
@@ -72,6 +74,7 @@ watchEffect(() => {
 
         <main class="main-content">
           <div>
+            
             <RouterView />
           </div>
         </main>

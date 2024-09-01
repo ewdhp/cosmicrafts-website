@@ -138,16 +138,16 @@ async def main():
     """Main function to run the initial commands and then register users."""
     # Initial commands
     initial_commands = [
-        "dfx identity use bizkit",
+        "dfx identity use default",
         "dfx canister uninstall-code cosmicrafts",
-        "dfx deploy"
+        "dfx deploy cosmicrafts"
     ]
     
     for command in initial_commands:
         await execute_dfx_command(command)
 
     # Switch to bizkit identity
-    await switch_identity("bizkit")
+    await switch_identity("default")
 
     num_users = 46  # Number of players matching the hardcoded tree
 
@@ -170,7 +170,7 @@ async def main():
 
     # Switch back to the bizkit identity at the end
     print("Switching back to bizkit identity")
-    await switch_identity("bizkit")
+    await switch_identity("dafault")
 
     # Step 4: Check referrals for the first player
     principal_id = await switch_identity(user_data[0][0])

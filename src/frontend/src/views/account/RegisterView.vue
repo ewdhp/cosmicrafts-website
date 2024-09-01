@@ -22,8 +22,8 @@
 
 <script>
 import { useRouter } from 'vue-router';
-import AvatarSelector from './AvatarSelector.vue';
-import { getCanister } from '../../services/CanisterFactoryService.js';
+import { useAuthStore } from '@/stores/auth';
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
 
 export default {
   components: {
@@ -38,28 +38,30 @@ export default {
   },
   setup() {
     const router = useRouter();
-    return { router };
+    const authStore = useAuthStore();
+    return { router, authStore };
   },
   methods: {
     onAvatarSelected(avatar) {
       this.selectedAvatar = avatar;
     },
     async registerPlayer() {
-      try {
-        const canister = await getCanister("cosmicrafts");
-        if (canister) {
-          const result = await canister.registerPlayer(this.username, this.referralCode, this.selectedAvatar);
-          console.log("Player registered:", result);
-          if (result === true) {
-            this.router.push('/dashboard');
-          } else {
-            console.error("Registration failed.");
-          }
-        } else {
-          console.error("Failed to initialize canister.");
+
+      const cosmicrafts = this.authStore.cosmicraftsCanister;
+      if (cosmicrafts) {
+        console.log("Registering player...");
+        try {
+          const [result, var1, var2] = await cosmicrafts.registerPlayer(
+            this.username,
+            this.selectedAvatar,
+            this.referralCode
+          );
+          console.log("Player registered");
+          this.router.push('/dashboard');
+
+        } catch (error) {
+          console.log("Error registering player:", error);
         }
-      } catch (error) {
-        console.error("Error registering player:", error);
       }
     }
   }

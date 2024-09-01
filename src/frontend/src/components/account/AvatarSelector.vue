@@ -1,10 +1,10 @@
 <template>
   <div>
-    <button @click="showGrid = true">Select Avatar</button>
+    <button @click="toggleGrid">Toggle Avatar Grid</button>
     <transition name="fade">
       <div v-if="showGrid" class="avatar-grid">
-        <div v-for="(src, index) in avatarSrcArray" :key="index" class="avatar-item">
-          <img :src="src" :alt="'Avatar ' + index" @click="selectAvatar(index)" />
+        <div v-for="(avatar, index) in avatarSrcArray" :key="index" @click="selectAvatar(index)">
+          <img :src="avatar" alt="Avatar" class="avatar-image"/>
         </div>
       </div>
     </transition>
@@ -12,19 +12,33 @@
 </template>
 
 <script>
+import DashboardIcon from '@/assets/icons/dashboard.svg';
+
 export default {
-  props: {
-    avatarSrcArray: {
-      type: Array,
-      required: true
-    }
-  },
   data() {
     return {
-      showGrid: false
+      showGrid: false, // Set to false to hide the grid initially
+      avatarSrcArray: [
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        DashboardIcon,
+        // Add more avatar paths here
+      ]
     };
   },
   methods: {
+    toggleGrid() {
+      this.showGrid = !this.showGrid;
+    },
     selectAvatar(index) {
       this.$emit('avatar-selected', index);
       this.showGrid = false;
@@ -40,19 +54,15 @@ export default {
   gap: 10px;
   margin-top: 20px;
 }
-.avatar-item img {
+.avatar-image {
   width: 100%;
+  height: auto;
   cursor: pointer;
-  border-radius: 50%;
-  transition: transform 0.2s;
-}
-.avatar-item img:hover {
-  transform: scale(1.1);
 }
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s;
 }
-.fade-enter, .fade-leave-to {
+.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
   opacity: 0;
 }
 </style>

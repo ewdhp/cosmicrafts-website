@@ -1,32 +1,8 @@
-<template>
-  <div class="main-div">
-    <img src="@/assets/login/Cosmicrafts_Logo.svg" class="cosmic-logo-img" alt="Cosmicrafts Logo" />
-    <label class="cosmic-label-connect">Connect with:</label>
-    <div id="buttonDiv" class="google-button"></div>
-    <div class="inner-div">
-      <div class="btn-div" v-for="method in authMethods" :key="method.text" @click="method.onClick">
-        <label class="btn-label">
-          <img :src="method.logo" class="button-account-icon" :alt="method.text" />
-          Login with {{ method.text }}
-        </label>
-      </div>
-    </div>
-    <div class="bottom-div">
-      <img src="@/assets/login/wou_logo.svg" alt="wou-icon" class="bottom-wou-icon" />
-      <label class="bottom-label">
-        &copy;&nbsp;2023 World of Unreal<br />
-        All trademarks referenced herein are the properties of their respective owners.
-      </label>
-    </div>
-  </div>
-</template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '../../stores/auth.js';
-import MetaMaskService from '@/services/MetaMaskService';
-import PhantomService from '@/services/PhantomService';
+import { useAuthStore } from '@/stores/auth';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 import nacl from 'tweetnacl';
 import { encode as base64Encode } from 'base64-arraybuffer';
@@ -41,7 +17,12 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const handleAfterLogin = () => {
-  router.push({ path: '/dashboard' });
+
+  if(authStore.isregistered) {
+    router.push({ path: '/dashboard' });
+  } else {
+    router.push({ path: '/account' });
+  }
 };
 
 const loadGoogleIdentityServices = () => {
@@ -78,13 +59,6 @@ onMounted(() => {
   }
 });
 
-
-const loginWithPhantom = async () => {
-  const message = 'Sign this message to log in with your Phantom Wallet';
-  const signature = await PhantomService.signAndSend(message);
-  await generateKeysFromSignature(signature).then(handleAfterLogin);
-};
-
 const authMethods = [
   {
     logo: nfidLogo,
@@ -104,10 +78,33 @@ const authMethods = [
   {
     logo: phantomLogo,
     text: 'Phantom',
-    onClick: loginWithPhantom,
+    onClick: () => authStore.loginWithPhantom().then(handleAfterLogin),
   },
 ];
 </script>
+
+<template>
+  <div class="main-div">
+    <img src="@/assets/login/Cosmicrafts_Logo.svg" class="cosmic-logo-img" alt="Cosmicrafts Logo" />
+    <label class="cosmic-label-connect">Connect with:</label>
+    <div id="buttonDiv" class="google-button"></div>
+    <div class="inner-div">
+      <div class="btn-div" v-for="method in authMethods" :key="method.text" @click="method.onClick">
+        <label class="btn-label">
+          <img :src="method.logo" class="button-account-icon" :alt="method.text" />
+          Login with {{ method.text }}
+        </label>
+      </div>
+    </div>
+    <div class="bottom-div">
+      <img src="@/assets/login/wou_logo.svg" alt="wou-icon" class="bottom-wou-icon" />
+      <label class="bottom-label">
+        &copy;&nbsp;2023 World of Unreal<br />
+        All trademarks referenced herein are the properties of their respective owners.
+      </label>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Ubuntu&display=swap');

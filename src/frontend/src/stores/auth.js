@@ -74,6 +74,19 @@ export const useAuthStore = defineStore('auth', {
         this.saveStateToLocalStorage();
       }
     },
+    async isPlayerRegistered() {
+      const player = await this.cosmicraftsCanister.getPlayer();
+      console.log('Player:', player);
+      if (player &&
+        player.playerId == this.principalId) {
+        console.log('Player is registered:');
+        return true;
+      }
+      else {
+        console.log('Player is not registered:');
+        return false;
+      }
+    },
     async loginWithGoogle(response) {
       const decodedIdToken = response.credential.split('.')[1];
       const payload = JSON.parse(atob(decodedIdToken));

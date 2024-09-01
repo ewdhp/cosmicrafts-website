@@ -1,8 +1,10 @@
 <script setup>
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
+
 </script>
 <template>
     <div>
-        Statistics
+         <AvatarSelector/>
     </div>
 </template>
 <style>
