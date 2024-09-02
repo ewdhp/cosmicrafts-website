@@ -33,10 +33,11 @@ export default {
             this.selectedAvatar,
             this.referralCode
           );
-          console.log("Player registered: " + result);
+
           if (result) {
-            this.router.push('/dashboard');
-            return
+            console.log("Player registered: " + result);
+            this.authStore.isRegistered = true;
+            this.router.push('/home');
           }
           console.log("Player not registered");
 

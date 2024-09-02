@@ -13,7 +13,7 @@ import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import { AuthClient } from '@dfinity/auth-client';
 import { createActor, canisterId, cosmicrafts } from '../../../declarations/cosmicrafts/index.js';
-
+import { Principal } from '@dfinity/principal';
 export const useAuthStore = defineStore('auth', {
 
   /**
@@ -52,13 +52,14 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     isAuthenticated: false,
+    isRegistered: false,
     googleSub: '',
     principalId: '',
     identity: null,
     cosmicrafts: null,
     authClient: null,
     cosmicraftsCanister: null,
-    initialized: false
+    initialized: true
   }),
   actions: {
     async initializeStore() {
@@ -67,23 +68,27 @@ export const useAuthStore = defineStore('auth', {
         const data = JSON.parse(storedData);
         this.user = data.user;
         this.isAuthenticated = data.isAuthenticated;
+        this.isRegistered = data.isRegistered;
         this.googleSub = data.googleSub;
         this.principalId = data.principalId;
         this.identity = data.identity;
-        this.initialized = true;
+        this.initialized = data.initialized;
         this.saveStateToLocalStorage();
       }
     },
     async isPlayerRegistered() {
-      const player = await this.cosmicraftsCanister.getPlayer();
-
-      if (player &&
-        player.playerId == this.principalId) {
-        console.log('Player is registered:');
+      const principal = Principal.fromText(this.principalId);
+      console.log("Principal:" + principal);
+      const [result, player] = await this.cosmicraftsCanister.getPlayer(principal);
+      console.log("authStore getPlayer:" + result);
+      if (result) {
+        this.isRegistered = true;
+        console.log('AuthStore: Player is registered');
         return true;
       }
       else {
-        console.log('Player is not registered');
+        this.isRegistered = false;
+        console.log('AuthStore: Player is not registered');
         return false;
       }
     },
@@ -92,7 +97,6 @@ export const useAuthStore = defineStore('auth', {
       const payload = JSON.parse(atob(decodedIdToken));
       this.googleSub = payload.sub;
       await this.generateKeysFromSub(this.googleSub);
-      this.isAuthenticated = true;
       this.saveStateToLocalStorage();
     },
     async loginWithMetaMask() {
@@ -109,7 +113,6 @@ export const useAuthStore = defineStore('auth', {
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
         await this.generateKeysFromSignature(signature);
-        this.isAuthenticated = true;
         this.saveStateToLocalStorage();
       }
     },
@@ -128,7 +131,6 @@ export const useAuthStore = defineStore('auth', {
         onSuccess: async () => {
           const identity = authClient.getIdentity();
           await this.createCanistersFromAuthClient(identity);
-          this.isAuthenticated = true;
           this.identity = identity;
           this.saveStateToLocalStorage();
         },
@@ -228,6 +230,7 @@ export const useAuthStore = defineStore('auth', {
       const authData = {
         user: this.user,
         isAuthenticated: this.isAuthenticated,
+        isRegistered : this.isRegistered,
         googleSub: this.googleSub,
         principalId: this.principalId,
         cosmicrafts: this.cosmicrafts,
@@ -240,11 +243,12 @@ export const useAuthStore = defineStore('auth', {
     async logout() {
       this.user = null;
       this.isAuthenticated = false;
+      this.isregistered = false;
       this.googleSub = '';
       this.principalId = '';
       this.cosmicrafts = null;
       this.authClient = false,
-        this.identity = null;
+      this.identity = null;
       localStorage.removeItem('authStore');
     }
   },

@@ -4,12 +4,23 @@ import RegisterView from '@/views/account/RegisterView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 import DashboardView from '@/views/dashboard/DashboardView.vue';
 import ReferralsView from '@/views/referrals/ReferralsView.vue';
+import NFTSView from '@/views/nfts/NFTSView.vue';
+import HomeView from '@/views/home/HomeView.vue';
 
 const navItems = [
+    {
+    path: '/dashboard',
+    name: "Dashboard",
+    component: DashboardView,
+    meta: { requiresAuth: true },
+    icon: DashboardIcon,
+    children: []
+  },
   {
     path: '/account/register',
     name: "Register",
     component: RegisterView,
+    meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: []
   },
@@ -21,25 +32,17 @@ const navItems = [
     children: []
   },
   {
-    path: '/dashboard',
-    name: "Dashboard",
-    component: DashboardView,
-    meta: { requiresAuth: true },
-    icon: DashboardIcon,
-    children: []
-  },
-  {
     path: '/nfts',
     name: "NFTS",
-    component: 'NFTSView',
+    component: NFTSView,
     meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: []
   },
   {
-    path: '/tokens',
-    name: "Tokens",
-    component: 'TokensView',
+    path: '/home',
+    name: "Home",
+    component: HomeView,
     meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: []

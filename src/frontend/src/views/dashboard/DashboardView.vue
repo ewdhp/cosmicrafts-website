@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '../../stores/auth';
+import { useAuthStore } from '@/stores/auth';
 import UserInfo from '@/components/account/UserInfo.vue';
 import { useRouter } from 'vue-router';
 
@@ -16,7 +16,7 @@ const router = useRouter();
 
 const logout = async () => {
     await authStore.logout();
-    router.push({ name: 'Login' });
+    router.push({ path: '/login' });
 };
 </script>
 

@@ -11,18 +11,25 @@ import nfidLogo from '@/assets/login/NFID_logo.svg';
 import icpLogo from '@/assets/login/icp_logo.svg';
 import metaMaskLogo from '@/assets/login/metaMask_icon.svg';
 import phantomLogo from '@/assets/login/Phantom_icon.svg';
+import RegisterView from '../account/RegisterView.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 
+const showRegister = ref(false);
+
 const handleAfterLogin = async () => {
 
-  if (await authStore.isPlayerRegistered()) {
-    console.log("isPlayerRegistered() = true")
+  if (
+    await authStore.isPlayerRegistered()
+    && authStore.isAuthenticated) {
+    console.log("LoginView: Player is registered and authenticated");
     router.push({ path: '/dashboard' });
+
   } else {
-    console.log("isPlayerRegistered() = false")
-    router.push({ path: '/account/register' });
+    console.log("LoginView: Player not registered, setting showregister = true");
+    showRegister.value = true;
+
   }
 };
 
@@ -54,10 +61,6 @@ const handleCredentialResponse = (response) => {
 
 onMounted(() => {
   loadGoogleIdentityServices();
-  // Check for existing session and handle redirection
-  if (authStore.isAuthenticated) {
-    handleAfterLogin();
-  }
 });
 
 const authMethods = [
@@ -85,6 +88,7 @@ const authMethods = [
 </script>
 
 <template>
+
   <div class="main-div">
     <img src="@/assets/login/Cosmicrafts_Logo.svg" class="cosmic-logo-img" alt="Cosmicrafts Logo" />
     <label class="cosmic-label-connect">Connect with:</label>
