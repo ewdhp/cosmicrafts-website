@@ -1,32 +1,29 @@
 import DashboardIcon from '@/assets/icons/dashboard.svg';
 
+import RegisterView from '@/views/account/RegisterView.vue';
+import LoginView from '@/views/login/LoginView.vue';
+import DashboardView from '@/views/dashboard/DashboardView.vue';
+import ReferralsView from '@/views/referrals/ReferralsView.vue';
+
 const navItems = [
   {
-    path: '/account',
+    path: '/account/register',
     name: "Register",
-    component: 'RegisterView',
+    component: RegisterView,
     icon: DashboardIcon,
     children: []
   },
   {
     path: '/login',
     name: "Login",
-    component: 'LoginView',
-    icon: DashboardIcon,
-    children: []
-  },
-  {
-    path: '/',
-    name: "Home",
-    component: 'HomeView',
-    meta: { requiresAuth: true },
+    component: LoginView,
     icon: DashboardIcon,
     children: []
   },
   {
     path: '/dashboard',
     name: "Dashboard",
-    component: 'DashboardView',
+    component: DashboardView,
     meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: []
@@ -50,7 +47,7 @@ const navItems = [
   {
     path: '/referrals',
     name: "Referrals",
-    component: 'ReferralsView',
+    component: ReferralsView,
     meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: [

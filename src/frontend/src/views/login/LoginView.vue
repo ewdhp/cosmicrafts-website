@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -16,12 +15,14 @@ import phantomLogo from '@/assets/login/Phantom_icon.svg';
 const authStore = useAuthStore();
 const router = useRouter();
 
-const handleAfterLogin = () => {
+const handleAfterLogin = async () => {
 
-  if(authStore.isregistered) {
+  if (await authStore.isPlayerRegistered()) {
+    console.log("isPlayerRegistered() = true")
     router.push({ path: '/dashboard' });
   } else {
-    router.push({ path: '/account' });
+    console.log("isPlayerRegistered() = false")
+    router.push({ path: '/account/register' });
   }
 };
 

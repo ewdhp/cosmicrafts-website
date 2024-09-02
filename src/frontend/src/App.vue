@@ -50,7 +50,7 @@ watchEffect(() => {
 </script>
 
 <template>
-  <div id="app">    
+  <div id="app">
     <LoginView v-if="!isAuthenticated" />
     <div v-else class="dashboard-container">
       <aside class="left-panel">
@@ -74,7 +74,7 @@ watchEffect(() => {
 
         <main class="main-content">
           <div>
-            
+
             <RouterView />
           </div>
         </main>

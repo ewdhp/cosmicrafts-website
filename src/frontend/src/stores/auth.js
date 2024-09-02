@@ -76,14 +76,14 @@ export const useAuthStore = defineStore('auth', {
     },
     async isPlayerRegistered() {
       const player = await this.cosmicraftsCanister.getPlayer();
-      console.log('Player:', player);
+
       if (player &&
         player.playerId == this.principalId) {
         console.log('Player is registered:');
         return true;
       }
       else {
-        console.log('Player is not registered:');
+        console.log('Player is not registered');
         return false;
       }
     },

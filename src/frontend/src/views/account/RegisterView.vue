@@ -1,25 +1,3 @@
-<template>
-  <div class="login-view">
-    <h1>Register</h1>
-    <AvatarSelector @avatar-selected="onAvatarSelected" />
-    <form @submit.prevent="registerPlayer">
-      <div>
-        <label for="username">Username:</label>
-        <input type="text" id="username" v-model="username" required />
-      </div>
-      <div>
-        <label for="referralCode">Referral Code:</label>
-        <input type="text" id="referralCode" v-model="referralCode" />
-      </div>
-      <div>
-        <label for="selectedAvatar">Selected Avatar:</label>
-        <input type="text" id="selectedAvatar" v-model="selectedAvatar" readonly />
-      </div>
-      <button type="submit">Submit</button>
-    </form>
-  </div>
-</template>
-
 <script>
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
@@ -46,7 +24,6 @@ export default {
       this.selectedAvatar = avatar;
     },
     async registerPlayer() {
-
       const cosmicrafts = this.authStore.cosmicraftsCanister;
       if (cosmicrafts) {
         console.log("Registering player...");
@@ -56,8 +33,12 @@ export default {
             this.selectedAvatar,
             this.referralCode
           );
-          console.log("Player registered");
-          this.router.push('/dashboard');
+          console.log("Player registered: " + result);
+          if (result) {
+            this.router.push('/dashboard');
+            return
+          }
+          console.log("Player not registered");
 
         } catch (error) {
           console.log("Error registering player:", error);
@@ -67,6 +48,28 @@ export default {
   }
 };
 </script>
+
+<template>
+  <div class="login-view">
+    <h1>Register</h1>
+    <AvatarSelector @avatar-selected="onAvatarSelected" />
+    <form @submit.prevent="registerPlayer">
+      <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" v-model="username" required />
+      </div>
+      <div>
+        <label for="referralCode">Referral Code:</label>
+        <input type="text" id="referralCode" v-model="referralCode" />
+      </div>
+      <div>
+        <label for="selectedAvatar">Selected Avatar:</label>
+        <input type="text" id="selectedAvatar" v-model="selectedAvatar" readonly />
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+</template>
 
 <style scoped>
 .login-view {
