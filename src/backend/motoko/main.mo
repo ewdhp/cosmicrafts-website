@@ -6853,7 +6853,8 @@ shared actor class Cosmicrafts() = Self {
   var claimedAchievementLineRewards : HashMap.HashMap<PlayerId, [Nat]> = HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
   var claimedCategoryAchievementRewards : HashMap.HashMap<PlayerId, [Nat]> = HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
 
-  public func loadAchievements() : async Bool {
+  //Init Achievements
+  public func initAchievements() : async Bool {
     // Get the pre-defined "Tiers" category from the AchievementData module
     let tiersCategory = AchievementData.getTiersCategory();
 
@@ -6888,6 +6889,230 @@ shared actor class Cosmicrafts() = Self {
     return true;
   };
 
+  //Assign Achievements
+  public func assignAchievementsToUser(user : PlayerId) : async ([AchievementCategory]) {
+    let userProgressOpt = userProgress.get(user);
+
+    var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
+      case (null) { [] };
+      case (?categories) { categories };
+    };
+
+    let categorySet = Set.new<Nat>(
+      userCategoriesList.size(),
+      func(a, b) { a == b },
+      func(a) { Utils._natHash(a) },
+    );
+
+    // Add existing category IDs to the set
+    for (category in userCategoriesList.vals()) {
+      Set.put(categorySet, category.id);
+    };
+
+    // Assign only new categories that are not already in the user's progress
+    for ((id, category) in achievementCategories.entries()) {
+      if (not Set.contains(categorySet, id)) {
+        userCategoriesList := Array.append(userCategoriesList, [category]);
+      };
+    };
+
+    // Update the unified progress map with the assigned categories
+    userProgress.put(user, userCategoriesList);
+    Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(user)));
+    userCategoriesList;
+  };
+  public shared ({ caller }) func assignAchievementsToUserByCaller() : async ([AchievementCategory]) {
+    let userProgressOpt = userProgress.get(caller);
+
+    var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
+      case (null) { [] };
+      case (?categories) { categories };
+    };
+
+    let categorySet = Set.new<Nat>(
+      userCategoriesList.size(),
+      func(a, b) { a == b },
+      func(a) { Utils._natHash(a) },
+    );
+
+    // Add existing category IDs to the set
+    for (category in userCategoriesList.vals()) {
+      Set.put(categorySet, category.id);
+    };
+
+    // Assign only new categories that are not already in the user's progress
+    for ((id, category) in achievementCategories.entries()) {
+      if (not Set.contains(categorySet, id)) {
+        userCategoriesList := Array.append(userCategoriesList, [category]);
+      };
+    };
+
+    // Update the unified progress map with the assigned categories
+    userProgress.put(caller, userCategoriesList);
+    Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(caller)));
+    userCategoriesList;
+  };
+
+  //Get Achievements
+  public func getUserAchievements(user : PlayerId) : async [AchievementCategory] {
+    let userProgressOpt = userProgress.get(user);
+    switch (userProgressOpt) {
+      case (null) {
+        return await assignAchievementsToUser(user);
+      };
+      case (?userCategoriesList) {
+        return userCategoriesList;
+      };
+    };
+  };
+  public shared ({ caller }) func getUserAchievementsByCaller() : async [AchievementCategory] {
+    let userProgressOpt = userProgress.get(caller);
+
+    switch (userProgressOpt) {
+      case (null) {
+        return await assignAchievementsToUser(caller);
+      };
+      case (?userCategoriesList) {
+        return userCategoriesList;
+      };
+    };
+  };
+  public query func getAllAchievements() : async [AchievementCategory] {
+    var categories : [AchievementCategory] = [];
+    let iter = achievementCategories.vals();
+    var nextItem = iter.next();
+
+    // Iterar sobre todos los elementos y agregarlos a la lista
+    while (nextItem != null) {
+      switch (nextItem) {
+        case (?value) {
+          categories := Array.append(categories, [value]);
+        };
+        case (null) {};
+      };
+      nextItem := iter.next();
+    };
+
+    return categories;
+  };
+  private func findIndividualAchievement(userCategoriesList : [AchievementCategory], individualAchievementId : Nat) : (?AchievementCategory, ?AchievementLine, ?IndividualAchievement) {
+
+    for (category in userCategoriesList.vals()) {
+      for (achievementLine in category.achievements.vals()) {
+        for (individualAchievement in achievementLine.individualAchievements.vals()) {
+          if (individualAchievement.id == individualAchievementId) {
+            return (?category, ?achievementLine, ?individualAchievement);
+          };
+        };
+      };
+    };
+
+    return (null, null, null);
+  };
+  public func getAchievementsView() : async ([AchievementCategory], [AchievementLine], [IndividualAchievement]) {
+
+    let data = await getUserAchievementsByCaller();
+
+    var categories : [AchievementCategory] = [];
+    var lines : [AchievementLine] = [];
+    var individuals : [IndividualAchievement] = [];
+
+    for (category in data.vals()) {
+      categories := Array.append(categories, [category]);
+      for (line in category.achievements.vals()) {
+        lines := Array.append(lines, [line]);
+        for (achievement in line.individualAchievements.vals()) {
+          individuals := Array.append(individuals, [achievement]);
+        };
+      };
+    };
+
+    (categories, lines, individuals);
+  };
+
+  //Register Achievements
+  public func createAchievement(categoryId : Nat, name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
+    let id = achievementIDCounter;
+    achievementIDCounter += 1;
+    let newAchievement : AchievementLine = {
+      id = id;
+      name = name;
+      individualAchievements = [];
+      categoryId = categoryId;
+      reward = rewards;
+      requiredProgress = 0;
+      completed = false;
+      progress = 0;
+      claimed = false;
+    };
+    achievements.put(id, newAchievement);
+    let categoryOpt = achievementCategories.get(categoryId);
+    switch (categoryOpt) {
+      case (null) return (false, "Category not found", id);
+      case (?category) {
+        let updatedCategory = {
+          category with
+          achievements = Array.append(category.achievements, [newAchievement])
+        };
+        achievementCategories.put(categoryId, updatedCategory);
+      };
+    };
+    Debug.print("[createAchievement] Achievement created with ID: " # Nat.toText(id));
+    return (true, "Achievement created successfully", id);
+  };
+  public func createIndividualAchievement(achievementId : Nat, name : Text, achievementType : AchievementType, requiredProgress : Nat, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
+    let id = individualAchievementIDCounter;
+    individualAchievementIDCounter += 1;
+    let newIndividualAchievement : IndividualAchievement = {
+      id = id;
+      name = name;
+      achievementType = achievementType;
+      requiredProgress = requiredProgress;
+      reward = rewards;
+      achievementId = achievementId;
+      completed = false;
+      progress = 0;
+      claimed = false;
+    };
+    individualAchievements.put(id, newIndividualAchievement);
+    var achievementOpt = achievements.get(achievementId);
+    switch (achievementOpt) {
+      case (null) return (false, "Achievement not found", id);
+      case (?achievement) {
+        let updatedAchievement = {
+          achievement with
+          individualAchievements = Array.append(achievement.individualAchievements, [newIndividualAchievement])
+        };
+        let updatedAchievementsArray = await updateAchievementsArray(updatedAchievement.categoryId, updatedAchievement);
+        achievements.put(achievementId, updatedAchievement);
+        updateCategoryWithAchievement(updatedAchievement.categoryId, updatedAchievementsArray);
+      };
+    };
+    Debug.print("[createIndividualAchievement] Individual Achievement created with ID: " # Nat.toText(id));
+    return (true, "Individual Achievement created successfully", id);
+  };
+  public func createAchievementCategory(name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
+    let id = achievementCategoryIDCounter;
+    achievementCategoryIDCounter += 1;
+
+    let newCategory : AchievementCategory = {
+      id = id;
+      name = name;
+      achievements = [];
+      reward = rewards;
+      requiredProgress = 0;
+      completed = false;
+      progress = 0;
+      claimed = false;
+    };
+
+    achievementCategories.put(id, newCategory);
+    Debug.print("[createAchievementCategory] Category created with ID: " # Nat.toText(id));
+
+    return (true, "Category created successfully", id);
+  };
+
+  //Update Achievements
   public shared func addProgressToIndividualAchievement(user : PlayerId, individualAchievementId : Nat, progressToAdd : Nat) : async Bool {
     // Get the user's progress structure from the unified HashMap
     let userProgressOpt = userProgress.get(user);
@@ -7012,135 +7237,46 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+  public func updateAvatarChangeAchievement(user : PlayerId) : async (Bool, Text) {
+    let individualAchievementId : Nat = 3; // Replace with the actual ID for the Avatar Change Achievement
+    let progressToAdd : Nat = 1;
 
-  public func getUserAchievementsStructure(user : PlayerId) : async [AchievementCategory] {
-    let userProgressOpt = userProgress.get(user);
-    switch (userProgressOpt) {
-      case (null) {
-        return await assignAchievementsToUser(user);
-      };
-      case (?userCategoriesList) {
-        return userCategoriesList;
-      };
+    // Call the updated addProgressToIndividualAchievement function
+    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
+
+    if (progressUpdated) {
+      return (true, "Avatar Change Achievement updated successfully.");
+    } else {
+      return (false, "Failed to update Avatar Change Achievement.");
     };
   };
+  public func updateUpgradeNFTAchievement(user : PlayerId) : async (Bool, Text) {
+    let individualAchievementId : Nat = 5; // Replace with the actual ID for the Upgrade NFT Achievement
+    let progressToAdd : Nat = 1;
 
-  public shared ({ caller }) func getUserAchievementsStructureByCaller() : async [AchievementCategory] {
-    let userProgressOpt = userProgress.get(caller);
+    // Call the updated addProgressToIndividualAchievement function
+    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
 
-    switch (userProgressOpt) {
-      case (null) {
-        return await assignAchievementsToUser(caller);
-      };
-      case (?userCategoriesList) {
-        return userCategoriesList;
-      };
+    if (progressUpdated) {
+      return (true, "Upgrade NFT Achievement updated successfully.");
+    } else {
+      return (false, "Failed to update Upgrade NFT Achievement.");
     };
   };
+  public func updateAddFriendAchievement(user : PlayerId) : async (Bool, Text) {
+    let individualAchievementId : Nat = 4; // Replace with the actual ID for the Add Friend Achievement
+    let progressToAdd : Nat = 1;
 
-  public func createAchievement(categoryId : Nat, name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
-    let id = achievementIDCounter;
-    achievementIDCounter += 1;
-    let newAchievement : AchievementLine = {
-      id = id;
-      name = name;
-      individualAchievements = [];
-      categoryId = categoryId;
-      reward = rewards;
-      requiredProgress = 0;
-      completed = false;
-      progress = 0;
-      claimed = false;
+    // Call the updated addProgressToIndividualAchievement function
+    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
+
+    if (progressUpdated) {
+      return (true, "Add Friend Achievement updated successfully.");
+    } else {
+      return (false, "Failed to update Add Friend Achievement.");
     };
-    achievements.put(id, newAchievement);
-    let categoryOpt = achievementCategories.get(categoryId);
-    switch (categoryOpt) {
-      case (null) return (false, "Category not found", id);
-      case (?category) {
-        let updatedCategory = {
-          category with
-          achievements = Array.append(category.achievements, [newAchievement])
-        };
-        achievementCategories.put(categoryId, updatedCategory);
-      };
-    };
-    Debug.print("[createAchievement] Achievement created with ID: " # Nat.toText(id));
-    return (true, "Achievement created successfully", id);
   };
-
-  public func createIndividualAchievement(achievementId : Nat, name : Text, achievementType : AchievementType, requiredProgress : Nat, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
-    let id = individualAchievementIDCounter;
-    individualAchievementIDCounter += 1;
-    let newIndividualAchievement : IndividualAchievement = {
-      id = id;
-      name = name;
-      achievementType = achievementType;
-      requiredProgress = requiredProgress;
-      reward = rewards;
-      achievementId = achievementId;
-      completed = false;
-      progress = 0;
-      claimed = false;
-    };
-    individualAchievements.put(id, newIndividualAchievement);
-    var achievementOpt = achievements.get(achievementId);
-    switch (achievementOpt) {
-      case (null) return (false, "Achievement not found", id);
-      case (?achievement) {
-        let updatedAchievement = {
-          achievement with
-          individualAchievements = Array.append(achievement.individualAchievements, [newIndividualAchievement])
-        };
-        let updatedAchievementsArray = updateAchievementsArray(updatedAchievement.categoryId, updatedAchievement);
-        achievements.put(achievementId, updatedAchievement);
-        updateCategoryWithAchievement(updatedAchievement.categoryId, updatedAchievementsArray);
-      };
-    };
-    Debug.print("[createIndividualAchievement] Individual Achievement created with ID: " # Nat.toText(id));
-    return (true, "Individual Achievement created successfully", id);
-  };
-
-  public query func getAllAchievementsData() : async [AchievementCategory] {
-    var categories : [AchievementCategory] = [];
-    let iter = achievementCategories.vals();
-    var nextItem = iter.next();
-
-    // Iterar sobre todos los elementos y agregarlos a la lista
-    while (nextItem != null) {
-      switch (nextItem) {
-        case (?value) {
-          categories := Array.append(categories, [value]);
-        };
-        case (null) {};
-      };
-      nextItem := iter.next();
-    };
-
-    return categories;
-  };
-
-  public func createAchievementCategory(name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
-    let id = achievementCategoryIDCounter;
-    achievementCategoryIDCounter += 1;
-
-    let newCategory : AchievementCategory = {
-      id = id;
-      name = name;
-      achievements = [];
-      reward = rewards;
-      requiredProgress = 0;
-      completed = false;
-      progress = 0;
-      claimed = false;
-    };
-
-    achievementCategories.put(id, newCategory);
-    Debug.print("[createAchievementCategory] Category created with ID: " # Nat.toText(id));
-
-    return (true, "Category created successfully", id);
-  };
-
-  func updateAchievementsArray(categoryId : Nat, updatedAchievement : AchievementLine) : [AchievementLine] {
+  public func updateAchievementsArray(categoryId : Nat, updatedAchievement : AchievementLine) : async [AchievementLine] {
     let categoryOpt = achievementCategories.get(categoryId);
     switch (categoryOpt) {
       case (null) {
@@ -7160,8 +7296,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
-  func updateCategoryWithAchievement(categoryId : Nat, updatedAchievementsArray : [AchievementLine]) {
+  public func updateCategoryWithAchievement(categoryId : Nat, updatedAchievementsArray : [AchievementLine]) {
     let categoryOpt = achievementCategories.get(categoryId);
     switch (categoryOpt) {
       case (null) Debug.print("Category not found");
@@ -7176,85 +7311,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  public func assignAchievementsToUser(user : PlayerId) : async ([AchievementCategory]) {
-    let userProgressOpt = userProgress.get(user);
-
-    var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
-      case (null) { [] };
-      case (?categories) { categories };
-    };
-
-    let categorySet = Set.new<Nat>(
-      userCategoriesList.size(),
-      func(a, b) { a == b },
-      func(a) { Utils._natHash(a) },
-    );
-
-    // Add existing category IDs to the set
-    for (category in userCategoriesList.vals()) {
-      Set.put(categorySet, category.id);
-    };
-
-    // Assign only new categories that are not already in the user's progress
-    for ((id, category) in achievementCategories.entries()) {
-      if (not Set.contains(categorySet, id)) {
-        userCategoriesList := Array.append(userCategoriesList, [category]);
-      };
-    };
-
-    // Update the unified progress map with the assigned categories
-    userProgress.put(user, userCategoriesList);
-    Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(user)));
-    userCategoriesList;
-  };
-
-  public shared ({ caller }) func assignAchievementsToUserByCaller() : async ([AchievementCategory]) {
-    let userProgressOpt = userProgress.get(caller);
-
-    var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
-      case (null) { [] };
-      case (?categories) { categories };
-    };
-
-    let categorySet = Set.new<Nat>(
-      userCategoriesList.size(),
-      func(a, b) { a == b },
-      func(a) { Utils._natHash(a) },
-    );
-
-    // Add existing category IDs to the set
-    for (category in userCategoriesList.vals()) {
-      Set.put(categorySet, category.id);
-    };
-
-    // Assign only new categories that are not already in the user's progress
-    for ((id, category) in achievementCategories.entries()) {
-      if (not Set.contains(categorySet, id)) {
-        userCategoriesList := Array.append(userCategoriesList, [category]);
-      };
-    };
-
-    // Update the unified progress map with the assigned categories
-    userProgress.put(caller, userCategoriesList);
-    Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(caller)));
-    userCategoriesList;
-  };
-
-  private func findIndividualAchievement(userCategoriesList : [AchievementCategory], individualAchievementId : Nat) : (?AchievementCategory, ?AchievementLine, ?IndividualAchievement) {
-
-    for (category in userCategoriesList.vals()) {
-      for (achievementLine in category.achievements.vals()) {
-        for (individualAchievement in achievementLine.individualAchievements.vals()) {
-          if (individualAchievement.id == individualAchievementId) {
-            return (?category, ?achievementLine, ?individualAchievement);
-          };
-        };
-      };
-    };
-
-    return (null, null, null);
-  };
-
+  //Claim Achievements
   public shared (msg) func claimIndividualAchievementReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -7397,7 +7454,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared (msg) func claimAchievementLineReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -7501,7 +7557,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared (msg) func claimCategoryAchievementReward(categoryId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -7580,6 +7635,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
+  //Mint Achievements
   public shared func mintAchievementRewards(reward : AchievementReward, caller : Types.PlayerId) : async (Bool, Text) {
     switch (reward.rewardType) {
       case (#Stardust) {
@@ -7695,48 +7751,6 @@ shared actor class Cosmicrafts() = Self {
 
         return (true, "Multiplier increased by: " # Float.toText(rewardAmountFloat));
       };
-    };
-  };
-
-  public func updateAvatarChangeAchievement(user : PlayerId) : async (Bool, Text) {
-    let individualAchievementId : Nat = 3; // Replace with the actual ID for the Avatar Change Achievement
-    let progressToAdd : Nat = 1;
-
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
-
-    if (progressUpdated) {
-      return (true, "Avatar Change Achievement updated successfully.");
-    } else {
-      return (false, "Failed to update Avatar Change Achievement.");
-    };
-  };
-
-  public func updateUpgradeNFTAchievement(user : PlayerId) : async (Bool, Text) {
-    let individualAchievementId : Nat = 5; // Replace with the actual ID for the Upgrade NFT Achievement
-    let progressToAdd : Nat = 1;
-
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
-
-    if (progressUpdated) {
-      return (true, "Upgrade NFT Achievement updated successfully.");
-    } else {
-      return (false, "Failed to update Upgrade NFT Achievement.");
-    };
-  };
-
-  public func updateAddFriendAchievement(user : PlayerId) : async (Bool, Text) {
-    let individualAchievementId : Nat = 4; // Replace with the actual ID for the Add Friend Achievement
-    let progressToAdd : Nat = 1;
-
-    // Call the updated addProgressToIndividualAchievement function
-    let progressUpdated = await addProgressToIndividualAchievement(user, individualAchievementId, progressToAdd);
-
-    if (progressUpdated) {
-      return (true, "Add Friend Achievement updated successfully.");
-    } else {
-      return (false, "Failed to update Add Friend Achievement.");
     };
   };
 };
