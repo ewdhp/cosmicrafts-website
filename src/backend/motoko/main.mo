@@ -1180,7 +1180,24 @@ shared actor class Cosmicrafts() = Self {
         var claimedCategoryAchievementRewards: HashMap.HashMap<PlayerId, [Nat]> = HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
 
     //-- Functions
-
+/**
+public func getAchievementsRightWay(userId: UserId): async [Achievement] {
+  switch (users.get(userId)) {
+    case (?user) {
+      if (user.achievements.size() == 0) {
+        let achievements = await assignAchievementsToUser(userId);
+        return achievements;
+      } else {
+        return user.achievements.vals();
+      }
+    };
+    case null {
+      let achievements = await assignAchievementsToUser(userId);
+      return achievements;
+    };
+  }
+};
+**/
     public query func getAllAchievementsData(): async [AchievementCategory] {
         var categories: [AchievementCategory] = [];
         let iter = achievementCategories.vals();
@@ -1418,6 +1435,39 @@ shared actor class Cosmicrafts() = Self {
         userProgress.put(user, userCategoriesList);
 
         Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show(userProgress.get(user)));
+    };
+
+    public shared({caller}) func assignAchievementsToUserByCaller(): async (Bool) {
+        let userProgressOpt = userProgress.get(caller);
+
+            var userCategoriesList: [AchievementCategory] = switch (userProgressOpt) {
+            case (null) { [] };
+            case (?categories) { categories };
+        };
+
+        let categorySet = Set.new<Nat>(
+            userCategoriesList.size(),
+            func(a, b) { a == b },
+            func(a) { Utils._natHash(a) }
+        );
+
+        // Add existing category IDs to the set
+        for (category in userCategoriesList.vals()) {
+            Set.put(categorySet, category.id);
+        };
+
+        // Assign only new categories that are not already in the user's progress
+        for ((id, category) in achievementCategories.entries()) {
+            if (not Set.contains(categorySet, id)) {
+                userCategoriesList := Array.append(userCategoriesList, [category]);
+            }
+        };
+
+        // Update the unified progress map with the assigned categories
+        userProgress.put(caller, userCategoriesList);
+
+        Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show(userProgress.get(caller)));
+        return true
     };
 
     public shared ({ caller }) func getAchievements(): async [AchievementCategory] {

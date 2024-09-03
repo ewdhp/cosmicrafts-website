@@ -37,7 +37,7 @@ export default {
           if (result) {
             console.log("Player registered: " + result);
             this.authStore.isRegistered = true;
-            this.router.push('/home');
+            this.router.push('/dashboard');
           }
           console.log("Player not registered");
 

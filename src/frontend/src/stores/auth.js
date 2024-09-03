@@ -59,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
     cosmicrafts: null,
     authClient: null,
     cosmicraftsCanister: null,
-    initialized: true
+    initialized: false
   }),
   actions: {
     async initializeStore() {
@@ -73,6 +73,7 @@ export const useAuthStore = defineStore('auth', {
         this.principalId = data.principalId;
         this.identity = data.identity;
         this.initialized = data.initialized;
+        this.cosmicraftsCanister = data.cosmicraftsCanister;
         this.saveStateToLocalStorage();
       }
     },
@@ -233,7 +234,7 @@ export const useAuthStore = defineStore('auth', {
         isRegistered : this.isRegistered,
         googleSub: this.googleSub,
         principalId: this.principalId,
-        cosmicrafts: this.cosmicrafts,
+        cosmicraftsCanister: this.cosmicraftsCanister,
         authClient: this.authClient ? true : false,
         identity: this.identity,
         initialized: this.initialized
@@ -246,7 +247,7 @@ export const useAuthStore = defineStore('auth', {
       this.isregistered = false;
       this.googleSub = '';
       this.principalId = '';
-      this.cosmicrafts = null;
+      this.cosmicraftsCanister= null;
       this.authClient = false,
       this.identity = null;
       localStorage.removeItem('authStore');
