@@ -17,6 +17,14 @@ export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
+    if(authStore.isAuthenticated && authStore.isPlayerRegistered()) {
+      authStore.initializeStore();
+      authStore.isAuthenticated = true;
+      authStore.isRegistered = true;
+      //missing initialize canister depending on the login type
+      authStore.saveStateToLocalStorage();
+      router.push('/dashboard');
+    }
     return { router, authStore };
   },
   methods: {
@@ -33,13 +41,17 @@ export default {
             this.selectedAvatar,
             this.referralCode
           );
+          console.log("Result: " + result + var1, + var2)
 
           if (result) {
             console.log("Player registered: " + result);
             this.authStore.isRegistered = true;
+            this.authStore.saveStateToLocalStorage();
             this.router.push('/dashboard');
+          }else {
+            console.log("Player not registered");
           }
-          console.log("Player not registered");
+          
 
         } catch (error) {
           console.log("Error registering player:", error);

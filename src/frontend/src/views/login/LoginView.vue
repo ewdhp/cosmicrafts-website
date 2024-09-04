@@ -20,9 +20,9 @@ const showRegister = ref(false);
 
 const handleAfterLogin = async () => {
 
-  if (
+  if (authStore.isAuthenticated && 
     await authStore.isPlayerRegistered()
-    && authStore.isAuthenticated) {
+    ) {
     console.log("LoginView: Player is registered and authenticated");
     router.push({ path: '/dashboard' });
 

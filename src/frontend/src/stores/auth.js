@@ -14,74 +14,39 @@ import PhantomService from '../services/PhantomService';
 import { AuthClient } from '@dfinity/auth-client';
 import { createActor, canisterId, cosmicrafts } from '../../../declarations/cosmicrafts/index.js';
 import { Principal } from '@dfinity/principal';
+
+
 export const useAuthStore = defineStore('auth', {
-
-  /**
-   * 
-   * Making readonly state variables private
-   *
-   *
-   * 
-   * 
-   *  
-  const state = (() => {
-  // Private variable to hold the state
-  let _isAuthenticated = false;
-
-  return {
-  user: null,
-  get isAuthenticated() {
-  return _isAuthenticated;
-},
-  googleSub: '',
-  principalId: '',
-  identity: null,
-  cosmicrafts: null,
-  authClient: null,
-  cosmicraftsCanister: null,
-
-  // Internal method to update the isAuthenticated state
-  _setIsAuthenticated(newValue) {
-  _isAuthenticated = newValue;
-}
-};
-}) ();
-  */
-
-
   state: () => ({
     user: null,
     isAuthenticated: false,
     isRegistered: false,
     googleSub: '',
     principalId: '',
-    identity: null,
-    cosmicrafts: null,
-    authClient: null,
     cosmicraftsCanister: null,
-    initialized: false
+    initialized: false,
   }),
   actions: {
     async initializeStore() {
+      
       const storedData = localStorage.getItem('authStore');
+      
       if (storedData) {
         const data = JSON.parse(storedData);
         this.user = data.user;
         this.isAuthenticated = data.isAuthenticated;
-        this.isRegistered = data.isRegistered;
         this.googleSub = data.googleSub;
         this.principalId = data.principalId;
-        this.identity = data.identity;
-        this.initialized = data.initialized;
         this.cosmicraftsCanister = data.cosmicraftsCanister;
+        this.initialized = true;
         this.saveStateToLocalStorage();
       }
     },
     async isPlayerRegistered() {
-      const principal = Principal.fromText("2vxsx-fae");
-      console.log("Principal:" + principal);
-      const [result, player] = await this.cosmicraftsCanister.getPlayer(principal);
-      console.log("authStore getPlayer:" + result);
+
+      const [result, player] = 
+      await this.cosmicraftsCanister.getPlayer(this.principalId);
+
       if (result) {
         this.isRegistered = true;
         console.log('AuthStore: Player is registered');
@@ -98,6 +63,7 @@ export const useAuthStore = defineStore('auth', {
       const payload = JSON.parse(atob(decodedIdToken));
       this.googleSub = payload.sub;
       await this.generateKeysFromSub(this.googleSub);
+      this.isAuthenticated = true;
       this.saveStateToLocalStorage();
     },
     async loginWithMetaMask() {
@@ -114,26 +80,37 @@ export const useAuthStore = defineStore('auth', {
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
         await this.generateKeysFromSignature(signature);
+        this.isAuthenticated = true;
         this.saveStateToLocalStorage();
       }
     },
     async loginWithInternetIdentity() {
       await this.loginWithAuthClient('https://identity.ic0.app');
+      
     },
     async loginWithNFID() {
       await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize');
     },
     async loginWithAuthClient(identityProviderUrl) {
+
       const authClient = await AuthClient.create();
-      this.authClient = authClient;
+
+      if(authClient !== null){ 
+        this.authClient = authClient;
+        console.log('AuthStore: AuthClient initialized from loginWithAuthClient');
+      }else{
+        console.log('AuthStore: AuthClient not initialized loginWithAuthClient');
+        return false;
+      }
+
       await authClient.login({
         identityProvider: identityProviderUrl,
         windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
         onSuccess: async () => {
-          const identity = authClient.getIdentity();
-          await this.createCanistersFromAuthClient(identity);
-          this.identity = identity;
-          this.saveStateToLocalStorage();
+          const identityFromAuthClient = authClient.getIdentity();
+          const agent = new HttpAgent({ identityFromAuthClient, host: 'http://localhost:3000' });    
+         await this.createCanistersFromAuthClient(identityFromAuthClient, agent); 
+         
         },
         onError: (error) => {
           console.error('Authentication error:', error);
@@ -141,7 +118,7 @@ export const useAuthStore = defineStore('auth', {
       });
     },
     async createCanisters(publicKey, privateKey) {
-      this.authClient = await AuthClient.create();
+      
       this.user = { publicKey, privateKey };
       const identity = Ed25519KeyIdentity.fromKeyPair(
         base64ToUint8Array(this.user.publicKey),
@@ -149,7 +126,7 @@ export const useAuthStore = defineStore('auth', {
       );
 
       const isLocal = process.env.DFX_NETWORK !== 'ic';
-      const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
+      const host = isLocal ?  'http://127.0.0.1:4943': 'https://ic0.app' ;
       const agent = new HttpAgent({ identity, host });
 
       if (isLocal) {
@@ -157,53 +134,66 @@ export const useAuthStore = defineStore('auth', {
           await agent.fetchRootKey();
         } catch (err) {
           console.warn(
-            "Unable to fetch root key. Check to ensure that your local replica is running"
+            "Unable to fetch root key."+ 
+            "Check to ensure that your local replica is running"
           );
           console.error(err);
         }
       }
 
-      console.log('Host:', host);
-      console.log('COSMICRAFTS_CANISTER_ID:', canisterId);
+      console.log(
+        'AuthStore: Host:'+ host + ' , ' + 
+        'COSMICRAFTS_CANISTER_ID:' + canisterId
+      );
 
       try {
         this.cosmicraftsCanister = createActor(canisterId, { agent });
-        console.log('cosmicraftsCanister initialized successfully:', this.cosmicraftsCanister);
+        console.log('AuthStore: cosmicraftsCanister initialized with keys');
       } catch (error) {
-        console.error("Error initializing cosmicrafts canister:", error);
+        console.error("Error initializing cosmicraftsCanister:", error);
       }
-      this.principalId = identity.getPrincipal().toText();
+
+      this.principalId = identity.getPrincipal();     
       this.saveStateToLocalStorage();
 
     },
-    async createCanistersFromAuthClient(identity) {
-      const isLocal = process.env.DFX_NETWORK !== 'ic';
-      const host = isLocal ? 'http://127.0.0.1:4943' : 'https://ic0.app';
-      const agent = new HttpAgent({ identity, host });
+    async createCanistersFromAuthClient(identity, agent) {
 
-      if (isLocal) {
         try {
-          await agent.fetchRootKey();
-        } catch (err) {
-          console.warn(
-            "Unable to fetch root key. Check to ensure that your local replica is running"
+          const isLocal = process.env.DFX_NETWORK !== 'ic';
+          const host = isLocal ?  'https://ic0.app': 'http://127.0.0.1:4943' ;
+    
+          if (isLocal) {
+            try {
+              await agent.fetchRootKey();
+            } catch (err) {
+              console.warn(
+                "Unable to fetch root key."+ 
+                "Check to ensure that your local replica is running"
+              );
+              console.error(err);
+            }
+          }
+    
+          console.log(
+            'AuthStore: Host:'+ host + ' , ' + 
+            'COSMICRAFTS_CANISTER_ID:' + canisterId
           );
-          console.error(err);
-        }
-      }
-
-      console.log('Host:', host);
-      console.log('COSMICRAFTS_CANISTER_ID:', canisterId);
-
-      try {
-        this.cosmicraftsCanister = cosmicrafts;
-        console.log('cosmicraftsCanister initialized successfully:', this.cosmicraftsCanister);
-      } catch (error) {
-        console.error("Error initializing cosmicrafts canister:", error);
-      }
-      this.identity = identity;
-      this.principalId = identity.getPrincipal().toText();
-      this.saveStateToLocalStorage();
+    
+          try {
+            this.cosmicraftsCanister = createActor(canisterId, { agent });
+            console.log('AuthStore: From Authclient, cosmicraftsCanister initialized');
+          } catch (error) {
+            console.error("AuthStore: Error initializing cosmicraftsCanister:", error);
+          }
+    
+          this.principalId = identity.getPrincipal(); 
+          this.isAuthenticated= true;     
+          this.saveStateToLocalStorage();
+         
+        } catch (error) {
+          console.log("AuthStore: Error initializing cosmicraftsCanister:", error);
+        }     
     },
     async generateKeysFromSignature(signature) {
       const encoder = new TextEncoder();
@@ -250,6 +240,7 @@ export const useAuthStore = defineStore('auth', {
       this.cosmicraftsCanister= null;
       this.authClient = false,
       this.identity = null;
+      this.initialized = false;
       localStorage.removeItem('authStore');
     }
   },
