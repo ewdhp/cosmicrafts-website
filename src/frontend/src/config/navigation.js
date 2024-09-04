@@ -6,12 +6,20 @@ import DashboardView from '@/views/dashboard/DashboardView.vue';
 import ReferralsView from '@/views/referrals/ReferralsView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
 import HomeView from '@/views/home/HomeView.vue';
-
+import ACHView from '@/views/achievements/ACHView.vue';
 const navItems = [
     {
     path: '/dashboard',
     name: "Dashboard",
     component: DashboardView,
+    meta: { requiresAuth: true },
+    icon: DashboardIcon,
+    children: []
+  },
+  {
+    path: '/achievements',
+    name: "Achievements", 
+    component: ACHView,
     meta: { requiresAuth: true },
     icon: DashboardIcon,
     children: []

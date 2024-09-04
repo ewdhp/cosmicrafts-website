@@ -78,7 +78,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async isPlayerRegistered() {
-      const principal = Principal.fromText(this.principalId);
+      const principal = Principal.fromText("2vxsx-fae");
       console.log("Principal:" + principal);
       const [result, player] = await this.cosmicraftsCanister.getPlayer(principal);
       console.log("authStore getPlayer:" + result);
