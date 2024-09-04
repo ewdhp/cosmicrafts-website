@@ -62,7 +62,6 @@ export default {
 .account-menu {
   position: relative;
   display: flex;
-  border: 1px solid;
 }
 
 .avatar-wrapper {
@@ -80,7 +79,7 @@ export default {
 .avatar {
   width: 100%;
   height: 100%;
-  color: #333;
+  color: #ffffff;
 }
 
 .menu {
@@ -89,7 +88,7 @@ export default {
   right: 0;
   background: white;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 2px 2px 4px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
 
@@ -100,7 +99,7 @@ export default {
 }
 
 .menu ul li {
-  border-bottom: 1px solid #ddd;
+  border: 0.1px solid #7a7a7a;
 }
 
 .menu ul li:last-child {
@@ -109,23 +108,26 @@ export default {
 
 .menu ul li a {
   display: block;
+  background: linear-gradient(to right, #151927, #1f222f);
   padding: 10px 20px;
   text-decoration: none;
-  color: #333;
+  color: #79829B;
 }
 
 .menu ul li a:hover {
-  background-color: #f0f0f0;
+  background: linear-gradient(to left, #151927, #1f222f);
+
+  color: #009df8;
 }
 
 .slide-fade-enter-active,
 .slide-fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 .slide-fade-enter,
 .slide-fade-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-12px);
 }
 </style>
