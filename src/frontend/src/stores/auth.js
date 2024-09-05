@@ -154,7 +154,7 @@ export const useAuthStore = defineStore('auth', {
         console.error("Error initializing cosmicraftsCanister:", error);
       }
 
-      this.principalId = identity.getPrincipal();     
+      this.principalId = identity.getPrincipal().toText();     
       this.saveStateToLocalStorage();
 
     },

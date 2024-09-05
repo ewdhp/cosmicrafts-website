@@ -73,8 +73,8 @@ export default {
       <form @submit.prevent="registerPlayer" class="form-grid">
         <!-- Avatar selection on the left -->
         <div class="avatar-section">
-          <!-- Clicking the avatar image opens the AvatarSelector -->
-          <img :src="selectedAvatar" alt="Selected Avatar" class="selected-avatar" @click="openAvatarSelector" />
+          <AvatarSelector  />
+         
         </div>
 
         <!-- Inputs and Texts on the right -->
@@ -108,7 +108,7 @@ export default {
       <button type="submit" class="submit-button">Register</button>
     </div>
     <!-- Avatar Selector Component (conditionally rendered) -->
-    <AvatarSelector v-if="showAvatarSelector" @avatar-selected="onAvatarSelected" @close="closeAvatarSelector" />
+    
   </div>
 </template>
 
@@ -117,22 +117,21 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 600px; /* Set fixed width */
-  height: 800px; /* Set fixed height */
-  position: relative;
-  margin: auto; /* Center horizontally */
+  min-height: 100vh;
+  background-image: url('@/assets/login/fondo.jpg'); /* Add your background image here */
+  background-size: cover;
+  background-position: center;
 }
 
 .register-panel {
-  background: linear-gradient(to bottom right, #040F24, #0a3c5b); /* Set the gradient background */
+  background: rgba(4, 15, 36, 0.9); /* Add some transparency for the background */
   padding: 40px;
   border-radius: 10px;
-  position: relative; /* Ensure relative positioning for the pseudo-element */
-  z-index: 1; /* Ensure the panel content is above other elements */
-  border: 3px solid rgba(255, 255, 255, 0.5); /* Inner stroke */
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2); /* Inner shadow */
+  position: relative;
+  z-index: 1;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2);
   max-width: 600px;
-  max-height: 900px;
   width: 100%;
 }
 
