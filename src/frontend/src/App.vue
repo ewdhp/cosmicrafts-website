@@ -14,7 +14,6 @@ import RegisterView from '@/views/account/RegisterView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 
 
-
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
@@ -181,7 +180,24 @@ watchEffect(() => {
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
   overflow-y: auto; /* Scrollable */
   position: relative; /* Needed for watermark positioning */
+  z-index: 1; /* Ensure the content panel has a higher z-index */
+
+  &::before {
+  content: '';
+  background: url('@/assets/logos/logo.svg') no-repeat center center;
+  background-size: 100%;
+  opacity: 0.015;
+  position: absolute;
+  width: 512px;
+  height: 512px;
+  top: 50%;
+  right: 0;
+  right: 12px;
+  transform: translateY(-50%);
 }
+}
+
+
 
 .right-panel {
   width: 20%;
@@ -198,20 +214,5 @@ watchEffect(() => {
   transition: width 0.3s ease;
 }
 
-/* Watermark styling */
-.content-panel::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 10%;
-  transform: translateY(-50%);
-  width: 80%;
-  height: auto;
-  background-image: url('@/assets/logos/logo.svg');
-  background-repeat: no-repeat;
-  background-size: contain;
-  opacity: 0.75; /* Low opacity for watermark */
-  z-index: 0;
-}
 
 </style>
