@@ -94,7 +94,7 @@ export default {
   height: 48px;
   cursor: pointer;
   /* Ensure smooth transition for all properties */
-  transition: background 0.2s ease-in-out, border 0.2s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.5s ease-in-out;
+  transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
   margin-bottom: 12px;
 }
 
@@ -107,22 +107,23 @@ export default {
 /* Scaling the SVG only on hover */
 .link-list li:not(.active):hover .nav-icon {
   transform: scale(1.25);
-  transition: transform 0.25s ease-in-out; 
+  transition: background 0.4s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.1s ease-in-out;
+
 }
 
-/* Scale the SVG when the button is active */
+/* SVG Animation when switch to active */
 .link-list li.active .nav-icon {
-  transform: scale(1.45);
-  transition: transform 0.25s ease-in-out; 
+  transform: scale(1.25);
+  transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
 }
 
-/* Active state for the button */
+/* Button Animation when switch to active */
 .link-list li.active .section {
   background: linear-gradient(to bottom, #00C0FC, #0039BA);
   border: 2px solid #00FFFF;
-  box-shadow: 0 0 10px cyan;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.457);
   transform: scale(1.1);
-  transition: transform 0.25s ease-in-out; 
+  transition: background 0.6s ease-in-out, border 0.2s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
 }
 
 /* Default inactive state */
@@ -130,6 +131,7 @@ export default {
   background: linear-gradient(to bottom, #151927, #171C2B);
   border: 2px solid #252C3F;
   box-shadow: 0 0 5px black;
+  transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
 }
 
 /* Hover state for non-active buttons */
@@ -138,6 +140,7 @@ export default {
   border: 2px solid #252C3F;
   box-shadow: 0 0 16px cyan;
   transform: scale(1.05); /* Slightly bigger on hover */
+  transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
 }
 
 /* Ensure all buttons have the same base size */
