@@ -30,10 +30,12 @@ export default {
       try {
         const authStore = useAuthStore();
         const cosmicrafts = await authStore.cosmicraftsCanister;
+        console.log("Achievements: " + cosmicrafts);
         const [categories, lines, individualAchievements] = await cosmicrafts.getAchievementsView();
         this.categories = categories;
         this.lines = lines;
         this.individualAchievements = individualAchievements;
+        console.log(cosmicrafts);
       } catch (error) {
         console.error('Error fetching achievements:', error);
       }

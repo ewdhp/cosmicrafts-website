@@ -6,7 +6,7 @@
     <transition name="fade">
       <div v-if="showGrid" class="overlay">
         <div class="avatar-grid">
-          <div v-for="(avatar, index) in avatarSrcArray" :key="index" @click="selectAvatar(avatar)">
+          <div v-for="(avatar, index) in avatarSrcArray" :key="index" @click="selectAvatar(index)">
             <img :src="avatar" alt="Avatar" class="avatar-image" />
           </div>
         </div>
@@ -14,8 +14,6 @@
     </transition>
   </div>
 </template>
-
-
 
 <script>
 import avatar1 from '@/assets/avatars/Avatar_01.jpg';
@@ -34,33 +32,38 @@ import avatar12 from '@/assets/avatars/Avatar_12.jpg';
 export default {
   data() {
     return {
-      showGrid: false, // Set to false to hide the grid initially
-      selectedAvatar: avatar1,
+      showGrid: false,
+      selectedAvatarIndex: 0,
       avatarSrcArray: [
-      avatar1,
-      avatar2,
-      avatar3,
-      avatar4,
-      avatar5,
-      avatar6,
-      avatar7,
-      avatar8,
-      avatar9,
-      avatar10,
-      avatar11,
-      avatar12,
+        avatar1,
+        avatar2,
+        avatar3,
+        avatar4,
+        avatar5,
+        avatar6,
+        avatar7,
+        avatar8,
+        avatar9,
+        avatar10,
+        avatar11,
+        avatar12,
         // Add more avatar paths here
       ]
     };
+  },
+  computed: {
+    selectedAvatar() {
+      return this.avatarSrcArray[this.selectedAvatarIndex];
+    }
   },
   methods: {
     toggleGrid() {
       this.showGrid = !this.showGrid;
     },
-    selectAvatar(avatar) {
-      this.selectedAvatar = avatar; // Update the selected avatar
+    selectAvatar(index) {
+      this.selectedAvatarIndex = index; // Update the selected avatar index
       this.showGrid = false; // Hide the grid after selection
-      this.$emit('avatar-selected', avatar); // Emit the selected avatar to the parent component
+      this.$emit('avatar-selected', index); // Emit the selected avatar index to the parent component
     }
   }
 };
@@ -104,7 +107,6 @@ export default {
   border-radius: 5px;
 }
 
-
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s;
 }
@@ -112,5 +114,4 @@ export default {
 .fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
   opacity: 0;
 }
-
 </style>

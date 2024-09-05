@@ -50,11 +50,13 @@ export const useAuthStore = defineStore('auth', {
       console.log('AuthStore: result: ', result, player);
       if (result) {
         this.isRegistered = true;
+        this.saveStateToLocalStorage();
         console.log('AuthStore: Player is registered');
         return true;
       }
       else {
         this.isRegistered = false;
+        this.saveStateToLocalStorage();
         console.log('AuthStore: Player is not registered');
         return false;
       }

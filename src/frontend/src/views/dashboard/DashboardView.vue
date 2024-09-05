@@ -11,9 +11,10 @@ import { useAuthStore } from '@/stores/auth';
 import UserInfo from '@/components/account/UserInfo.vue';
 import { useRouter } from 'vue-router';
 
-const authStore = useAuthStore();
-authStore.initializeStore();
+
 const router = useRouter();
+
+const authStore = useAuthStore();
 
 const logout = async () => {
     await authStore.logout();
