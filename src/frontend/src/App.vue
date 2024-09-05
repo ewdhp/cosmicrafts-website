@@ -58,8 +58,8 @@ watchEffect(() => {
 
 </script>
 
-<template>
 
+<template>
   <div v-if="isAuthenticated == false">
     <LoginView />
   </div>
@@ -69,102 +69,149 @@ watchEffect(() => {
   </div>
 
   <div v-else-if="isAuthenticated == true && isRegistered == true">
-    <div id="app">
-      <div class="dashboard-container">
+    <div id="app" class="app-container">
+      <!-- Full-width header -->
+      <header class="header">
+        <div class="link-nav">
+          <img src="@/assets/logos/logo_menu.svg" alt="Logo" class="logo-menu" />
+          <LinkList :items="childNavItems" />
+        </div>
+        <div class="account-nav">
+          <AccountSearch />
+          <AccountNav />
+        </div>
+      </header>
+
+      <!-- Main layout with left menu, middle content, and right-side menu -->
+      <div class="layout-container">
+        <!-- Left-side navigation panel -->
         <aside class="left-panel">
           <div class="nav-wrapper">
             <SLinkList :items="mainNavItems" />
           </div>
         </aside>
 
-        <div class="right-panel">
-          <div class="nav-right">
-            <div class="top-nav">
-              <div class="link-nav">
-                <LinkList :items="childNavItems" />
-              </div>
-              <div class="account-nav">
-                <AccountSearch />
-                <AccountNav />
-              </div>
-            </div>
+        <!-- Middle dynamic content panel -->
+        <main class="content-panel">
+          <RouterView />
+        </main>
+
+        <!-- Right-side secondary minimized menu -->
+        <aside class="right-panel">
+          <div class="right-menu minimized">
+            <!-- Placeholder for minimized secondary features like chat, friends list -->
           </div>
-
-          <main class="main-content">
-            <div>
-
-              <RouterView />
-            </div>
-          </main>
-        </div>
+        </aside>
       </div>
     </div>
   </div>
-
-
-
-
 </template>
 
 <style scoped lang="scss">
-.dashboard-container {
+
+.app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
-  background: linear-gradient(to left, rgb(254, 254, 255), #fafbfc);
-}
-
-.left-panel {
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #49d8d8;
-  background-color: #f3f5f7;
-
-  .nav-wrapper {
+  background: linear-gradient(to bottom, #171F2B, #16191F);
+  
+  .layout-container {
     display: flex;
+    flex-grow: 1;
+    margin-top: 8vh; /* Ensure the content starts after the header */
+    height: calc(100vh - 8vh); /* Remaining height after header */
+    padding: 20px; /* Add padding to avoid overlapping the edge */
   }
 }
 
-.right-panel {
+.header {
+  width: 100%;
+  height: 8vh;
   display: flex;
-  flex-grow: 1;
-  flex-direction: column;
-
-  .nav-right {
-    display: flex;
-    flex-direction: row;
-    background-color: #f3f5f7;
-    border: 1px solid black;
-    padding: 5px;
-  }
-
-  .top-nav {
-    display: flex;
-    width: 100%;
-  }
-
+  justify-content: space-between;
+  background: linear-gradient(to bottom, #080A0D, #171D25);
+  padding: 4px;
+  position: fixed;
+  z-index: 10;
+  border-bottom: 0.5px solid #4F4F4F;
+  box-shadow: inset 0px 2px 12px rgba(255, 255, 255, 0.1);
+  
   .link-nav {
     display: flex;
-    padding: 5px;
-    border: 1px solid black;
+    padding: 8px;
   }
 
   .account-nav {
     display: flex;
-    flex-direction: row;
-    width: 100%;
-    border: 1px solid black;
-    justify-content: flex-end;
-    padding: 5px;
-  }
-
-  .main-content {
-    display: flex;
-    flex-direction: row;
-    flex-grow: 1;
-    margin-top: 15px;
-    margin-left: 15px;
-    margin-right: 15px;
-    margin-bottom: 15px;
+    align-items: center;
+    padding: 8px 16px;
   }
 }
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
+  pointer-events: none;
+}
+
+.left-panel {
+  width: 10%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 10vh;
+  bottom: 0;
+  left: 0;
+}
+
+.content-panel {
+  flex-grow: 1;
+  margin-left: 10%; /* Space for the left panel */
+  margin-right: 20%; /* Space for the right panel */
+  padding: 20px;
+  background: linear-gradient(to bottom, #262A32, #202328); /* Vertical gradient */
+  color: #79829B; /* Text color */
+  border-radius: 20px; /* Rounded corners */
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
+  overflow-y: auto; /* Scrollable */
+  position: relative; /* Needed for watermark positioning */
+}
+
+.right-panel {
+  width: 20%;
+  position: fixed;
+  top: 10vh;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.right-menu.minimized {
+  width: 5%;
+  transition: width 0.3s ease;
+}
+
+/* Watermark styling */
+.content-panel::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10%;
+  transform: translateY(-50%);
+  width: 80%;
+  height: auto;
+  background-image: url('@/assets/logos/logo.svg');
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.75; /* Low opacity for watermark */
+  z-index: 0;
+}
+
 </style>

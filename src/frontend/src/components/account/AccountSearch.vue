@@ -65,10 +65,10 @@ export default {
 </script>
 
 <template>
-
   <div class="search">
-    <div class="search-input" @click="toggleMenu">
-      <input v-model="query" @input="handleInput" />
+    <div class="search-input">
+      <input v-model="query" @input="handleInput" placeholder="Search..." />
+      <img src="@/assets/icons/search_icon.svg" class="search-icon" />
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
       <div v-if="isMenuVisible" class="search-results">
@@ -77,61 +77,103 @@ export default {
             <FriendQuery :avatarUrl="result.avatarUrl" :name="result.playerName" />
           </li>
         </ul>
-        <p v-else-if="query.length > 0">No results found</p>
+        <p v-else-if="query.length > 0" class="no-results">No results found</p>
       </div>
     </transition>
-  </div>
-
-
+  </div>  
 </template>
 
 <style scoped>
 .search {
   position: relative;
   display: flex;
-  border: 1px solid;
-
-
+  background: linear-gradient(to bottom, #282828, #252525);
+  border-radius: 18px;
+  border-color: #6A6A6A;
+  box-shadow: 0 2px 4px rgb(0, 0, 0);
+  box-shadow: inset 1px 1px 2px 2px rgba(255, 255, 255, 0.025);
 }
 
 .search-input {
+  position: relative; /* Add relative positioning to control the icon */
   display: flex;
-  padding: 10px;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.search-input input {
+  padding: 8px 42px 8px 16px;
+  background: none;
+  border: none;
+  color: #b4b4b4;
+}
+
+.search-input input::placeholder {
+  color: #747474;
+}
+
+.search-input input:focus {
+  background: linear-gradient(to top, #2d2d2d, rgb(43, 43, 43));
+  padding: 8px 42px 8px 16px;
+  border-radius: 25px;
+  outline: none;
+  box-shadow: none;
+}
+
+.search-input .search-icon {
+  position: absolute;
+  right: 15px;
+  width: 20px;
+  height: 20px;
+  pointer-events: none; /* Ensure the icon doesn't interfere with input */
+  transition: opacity 0.2s ease;
 }
 
 .search-results {
   position: absolute;
-  top: 100%;
+  top: 110%;
+  left: 0;
   right: 0;
   background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
 }
 
-.menu ul {
+.search-results ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.menu ul li {
+.search-results ul li {
+  padding: 10px;
   border-bottom: 1px solid #ddd;
 }
 
-.menu ul li:last-child {
+.search-results ul li:last-child {
   border-bottom: none;
 }
 
-.menu ul li a {
-  display: block;
-  padding: 10px 20px;
+.search-results ul li a {
   text-decoration: none;
   color: #333;
+  display: block;
+  width: 100%;
+  padding: 10px;
 }
 
-.menu ul li a:hover {
+.search-results ul li a:hover {
   background-color: #f0f0f0;
+}
+
+.no-results {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
 }
 
 .slide-fade-enter-active,
@@ -144,4 +186,5 @@ export default {
   opacity: 0;
   transform: translateY(-10px);
 }
+
 </style>
