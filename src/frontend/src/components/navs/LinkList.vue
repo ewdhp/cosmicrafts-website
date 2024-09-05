@@ -134,6 +134,6 @@ export default {
 }
 
 .nav-sections span {
-  font-size: 12px;
+  font-size: 32px;
 }
 </style>

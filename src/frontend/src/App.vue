@@ -32,7 +32,7 @@ const mainNavItems = computed(() =>
   navItems.map(item => ({
     path: item.path,
     name: item.name,
-    icon: item.icon
+    icons: item.icons
   }))
 );
 
@@ -117,9 +117,8 @@ watchEffect(() => {
   .layout-container {
     display: flex;
     flex-grow: 1;
-    margin-top: 8vh; /* Ensure the content starts after the header */
-    height: calc(100vh - 8vh); /* Remaining height after header */
-    padding: 20px; /* Add padding to avoid overlapping the edge */
+    margin-top: 10vh; /* Ensure the content starts after the header */
+    padding: 16px; /* Add padding to avoid overlapping the edge */
   }
 }
 
@@ -159,26 +158,26 @@ watchEffect(() => {
 }
 
 .left-panel {
-  width: 10%;
-  padding: 10px;
+  width: 8%;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   position: fixed;
-  top: 10vh;
+  top: 12vh;
   bottom: 0;
   left: 0;
 }
 
 .content-panel {
   flex-grow: 1;
-  margin-left: 10%; /* Space for the left panel */
+  margin-left: 8%; /* Space for the left panel */
   margin-right: 20%; /* Space for the right panel */
   padding: 20px;
   background: linear-gradient(to bottom, #262A32, #202328); /* Vertical gradient */
   color: #79829B; /* Text color */
   border-radius: 20px; /* Rounded corners */
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
-  overflow-y: auto; /* Scrollable */
+  box-shadow: 8px 8px 8px rgba(0, 0, 0.5, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
+  //overflow-y: auto; /* Scrollable */
   position: relative; /* Needed for watermark positioning */
   z-index: 1; /* Ensure the content panel has a higher z-index */
 
@@ -197,12 +196,10 @@ watchEffect(() => {
 }
 }
 
-
-
 .right-panel {
   width: 20%;
   position: fixed;
-  top: 10vh;
+  top: 12vh;
   bottom: 0;
   right: 0;
   display: flex;

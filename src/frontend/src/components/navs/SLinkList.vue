@@ -1,25 +1,27 @@
 <template>
-  <div  class="nav-container">   
-
-    <div 
-    :class="['nav-sections', 
-    'link-list', 
-    orientationClass
-    ]">     
+  <div class="nav-container">
+    <div :class="['nav-sections', 'link-list', orientationClass]">
       <ul>
-        <li v-for="item in items" :key="item.path"  
-          :class="{ 
-          active: isActive(item.path) }"
+        <li
+          v-for="item in items"
+          :key="item.path"
+          :class="{ active: isActive(item.path) }"
+          @mouseenter="hoveredItem = item.path"
+          @mouseleave="hoveredItem = null"
         >
           <router-link :to="item.path">
             <div class="section">
-              <img class="section-content" :src="item.icon"/>
-              <span class="section-content" >{{ item.name }}</span>
+              <img
+                v-if="getIcon(item)"
+                :src="getIcon(item)"
+                alt="icon"
+                class="nav-icon"
+              />
             </div>
           </router-link>
         </li>
       </ul>
-    </div> 
+    </div>
   </div>
 </template>
 
@@ -32,14 +34,15 @@ export default {
       required: true,
       validator: (items) => {
         return items.every(
-          item => 'name' in item && 
-          'path' in item);
+          item => 'name' in item && 'path' in item && 'icons' in item
+        );
       }
     }
   },
   data() {
     return {
-      activeLink: this.$route.path
+      activeLink: this.$route.path,
+      hoveredItem: null
     };
   },
   computed: {
@@ -50,6 +53,18 @@ export default {
   methods: {
     isActive(path) {
       return this.activeLink === path;
+    },
+    getIcon(item) {
+      if (item.icons) {
+        if (this.isActive(item.path)) {
+          return item.icons.active;
+        } else if (this.hoveredItem === item.path) {
+          return item.icons.hover;
+        } else {
+          return item.icons.inactive;
+        }
+      }
+      return null;
     }
   },
   watch: {
@@ -66,58 +81,76 @@ export default {
 <style scoped>
 .nav-container {
   display: flex;
-
+  justify-content: center;
 }
+
 .section {
-  display:flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
-    padding: 5px;
+  padding: 8px;
+  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  /* Ensure smooth transition for all properties */
+  transition: background 0.2s ease-in-out, border 0.2s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.5s ease-in-out;
+  margin-bottom: 12px;
 }
-.section-content {
-  margin-right: 5px;
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.2s ease-in-out; /* Consistent transition for icon scaling */
 }
+
+/* Scaling the SVG only on hover */
+.link-list li:not(.active):hover .nav-icon {
+  transform: scale(1.25);
+  transition: transform 0.25s ease-in-out; 
+}
+
+/* Scale the SVG when the button is active */
+.link-list li.active .nav-icon {
+  transform: scale(1.45);
+  transition: transform 0.25s ease-in-out; 
+}
+
+/* Active state for the button */
+.link-list li.active .section {
+  background: linear-gradient(to bottom, #00C0FC, #0039BA);
+  border: 2px solid #00FFFF;
+  box-shadow: 0 0 10px cyan;
+  transform: scale(1.1);
+  transition: transform 0.25s ease-in-out; 
+}
+
+/* Default inactive state */
+.link-list li .section {
+  background: linear-gradient(to bottom, #151927, #171C2B);
+  border: 2px solid #252C3F;
+  box-shadow: 0 0 5px black;
+}
+
+/* Hover state for non-active buttons */
+.link-list li:not(.active):hover .section {
+  background: linear-gradient(to bottom, #151927, #293547);
+  border: 2px solid #252C3F;
+  box-shadow: 0 0 16px cyan;
+  transform: scale(1.05); /* Slightly bigger on hover */
+}
+
+/* Ensure all buttons have the same base size */
+.link-list li .section,
+.link-list li.active .section,
+.link-list li:not(.active):hover .section {
+  width: 48px;
+  height: 48px;
+}
+
 .link-list ul {
-  display: flex;
-  flex-direction: column;
-}
-
-.link-list li.active {
-  color: rgb(33, 95, 230);
-}
-
-.nav-sections {
-  display: flex;
-  border-radius: 5px;
-
-}
-
-.nav-sections ul {
-  list-style: none;
+  list-style-type: none;
   padding: 0;
   margin: 0;
-  display: flex;
-}
-
-.nav-sections li {
-  display: flex;
-  border: 1px solid black;
-
-}
-
-.nav-sections a {
-  text-decoration: none;
-  color: rgb(99, 99, 104);
-}
-
-.nav-sections a:hover {
-  color: #111e66;
-}
-
-.nav-sections img {
-  vertical-align: middle;
-}
-
-.nav-sections span {
-  font-size: 12px;
 }
 </style>
