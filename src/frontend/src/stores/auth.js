@@ -35,6 +35,7 @@ export const useAuthStore = defineStore('auth', {
         const data = JSON.parse(storedData);
         this.user = data.user;
         this.isAuthenticated = data.isAuthenticated;
+        this.isRegistered = data.isRegistered;
         this.googleSub = data.googleSub;
         this.principalId = data.principalId;
         this.cosmicraftsCanister = data.cosmicraftsCanister;
@@ -45,8 +46,8 @@ export const useAuthStore = defineStore('auth', {
     async isPlayerRegistered() {
 
       const [result, player] = 
-      await this.cosmicraftsCanister.getPlayer(this.principalId);
-
+      await this.cosmicraftsCanister.getPlayerByCaller();
+      console.log('AuthStore: result: ', result, player);
       if (result) {
         this.isRegistered = true;
         console.log('AuthStore: Player is registered');

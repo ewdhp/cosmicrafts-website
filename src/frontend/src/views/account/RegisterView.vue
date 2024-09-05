@@ -17,14 +17,6 @@ export default {
   setup() {
     const router = useRouter();
     const authStore = useAuthStore();
-    if(authStore.isAuthenticated && authStore.isPlayerRegistered()) {
-      authStore.initializeStore();
-      authStore.isAuthenticated = true;
-      authStore.isRegistered = true;
-      //missing initialize canister depending on the login type
-      authStore.saveStateToLocalStorage();
-      router.push('/dashboard');
-    }
     return { router, authStore };
   },
   methods: {
@@ -47,7 +39,7 @@ export default {
             console.log("Player registered: " + result);
             this.authStore.isRegistered = true;
             this.authStore.saveStateToLocalStorage();
-            this.router.push('/dashboard');
+            this.router.push('/');
           }else {
             console.log("Player not registered");
           }

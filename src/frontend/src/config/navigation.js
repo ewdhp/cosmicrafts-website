@@ -7,16 +7,9 @@ import REFView from '@/views/referrals/ReferralsView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
 import ACHView from '@/views/achievements/ACHView.vue';
 const navItems = [
-  {
-    path: '/',
-    name: "Dashboard",
-    component: DBView,
-    meta: { requiresAuth: true },
-    icon: DashboardIcon,
-    children: []
-  },
+
     {
-    path: '/dashboard',
+    path: '/',
     name: "Dashboard",
     component: DBView,
     meta: { requiresAuth: true },
