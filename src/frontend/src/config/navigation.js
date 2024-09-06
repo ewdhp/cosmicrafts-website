@@ -11,6 +11,10 @@ import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
 import DashboardHoverIcon from '@/assets/icons/dashboard-hover.svg';
 import DashboardInactiveIcon from '@/assets/icons/dashboard-inactive.svg';
 
+import AchievementsActiveIcon from '@/assets/icons/achievements-active.svg';
+import AchievementsHoverIcon from '@/assets/icons/achievements-hover.svg';
+import AchievementsInactiveIcon from '@/assets/icons/achievements-inactive.svg';
+
 import RegisterActiveIcon from '@/assets/icons/friends-active.svg';
 import RegisterHoverIcon from '@/assets/icons/friends-hover.svg';
 import RegisterInactiveIcon from '@/assets/icons/friends-inactive.svg';
@@ -54,9 +58,9 @@ const navItems = [
     component: ACHView,
     meta: { requiresAuth: true },
     icons: { 
-      active: DashboardActiveIcon, 
-      hover: DashboardHoverIcon,
-      inactive: DashboardInactiveIcon,
+      active: AchievementsActiveIcon, 
+      hover: AchievementsHoverIcon,
+      inactive: AchievementsInactiveIcon,
     },
     children: []
   },

@@ -45,7 +45,7 @@
 
 <script>
 import AvatarSelector from '@/components/account/AvatarSelector.vue';
-import useAuthStore from '@/stores/auth';
+import useCanisterStore from '@/stores/canister';
 import { useRouter } from 'vue-router';
 export default {
   components: {
@@ -66,23 +66,18 @@ export default {
     },
     async registerPlayer() {
       const router = useRouter();
-      const authStore = useAuthStore();
-      const cosmicrafts = authStore.cosmicraftsCanister;
-
+      const canister = useCanisterStore();
+      const cosmicrafts = await canister.get("cosmicrafts");
       if (cosmicrafts) {
         console.log("Registering player...");
-
         try {
-          // Send selectedAvatarId with the registration data
           const [result, var1, var2] = await cosmicrafts.registerPlayer(
             this.username,
-            this.selectedAvatarId, // Send avatar ID instead of the avatar image
+            this.selectedAvatarId,
             this.referralCode
-          );
-          
+          );        
           if (result) {
-            authStore.saveStateToLocalStorage();
-            router.push('/');
+            router.push({path: '/dashboard'});
           } else {
             console.log("Player not registered");
           }

@@ -5,25 +5,21 @@
 //
 //
 import { defineStore } from 'pinia';
-import { HttpAgent } from '@dfinity/agent';
-import { Ed25519KeyIdentity } from '@dfinity/identity';
 import nacl from 'tweetnacl';
 import { encode as base64Encode, decode as base64Decode } from 'base64-arraybuffer';
 import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
-import { AuthClient } from '@dfinity/auth-client';
-import { createActor, canisterId, cosmicrafts } from '../../../declarations/cosmicrafts/index.js';
 import { Principal } from '@dfinity/principal';
+
+import useCanisterStore from './canister.js';
 
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    keys: null,
     isAuthenticated: false,
     isRegistered: false,
     googleSub: '',
-    principalId: '',
-    cosmicraftsCanister: null,
     initialized: false,
   }),
   actions: {
@@ -33,21 +29,19 @@ export const useAuthStore = defineStore('auth', {
       
       if (storedData) {
         const data = JSON.parse(storedData);
-        this.user = data.user;
+        this.keys = data.keys;
         this.isAuthenticated = data.isAuthenticated;
         this.isRegistered = data.isRegistered;
         this.googleSub = data.googleSub;
-        this.principalId = data.principalId;
-        this.cosmicraftsCanister = data.cosmicraftsCanister;
         this.initialized = true;
         this.saveStateToLocalStorage();
       }
     },
     async isPlayerRegistered() {
-
+      const canister = useCanisterStore();
+      const cosmicrafts = await canister.get("cosmicrafts");
       const [result, player] = 
-      await this.cosmicraftsCanister.getPlayerByCaller();
-      console.log('AuthStore: result: ', result, player);
+      await cosmicrafts.getPlayerByCaller();
       if (result) {
         this.isRegistered = true;
         this.saveStateToLocalStorage();
@@ -70,12 +64,14 @@ export const useAuthStore = defineStore('auth', {
       this.saveStateToLocalStorage();
     },
     async loginWithMetaMask() {
+      console.log('AuthStore: loginWithMetaMask');
       const uniqueMessage = 'Sign this message to log in with your Ethereum wallet';
       const signature = await MetaMaskService.signMessage(uniqueMessage);
       if (signature) {
-        await this.generateKeysFromSignature(signature);
+        this.keys = await this.generateKeysFromSignature(signature);
         this.isAuthenticated = true;
         this.saveStateToLocalStorage();
+        console.log('AuthStore: loginWithMetaMask keys generated');
       }
     },
     async loginWithPhantom() {
@@ -112,7 +108,7 @@ export const useAuthStore = defineStore('auth', {
         onSuccess: async () => {
           const identityFromAuthClient = authClient.getIdentity();
           const agent = new HttpAgent({ identityFromAuthClient, host: 'http://localhost:3000' });    
-         await this.createCanistersFromAuthClient(identityFromAuthClient, agent); 
+          //await this.createCanisterFromAuthClient(identityFromAuthClient, agent); 
          
         },
         onError: (error) => {
@@ -120,96 +116,18 @@ export const useAuthStore = defineStore('auth', {
         },
       });
     },
-    async createCanisters(publicKey, privateKey) {
-      
-      this.user = { publicKey, privateKey };
-      const identity = Ed25519KeyIdentity.fromKeyPair(
-        base64ToUint8Array(this.user.publicKey),
-        base64ToUint8Array(this.user.privateKey)
-      );
-
-      const isLocal = process.env.DFX_NETWORK !== 'ic';
-      const host = isLocal ?  'http://127.0.0.1:4943': 'https://ic0.app' ;
-      const agent = new HttpAgent({ identity, host });
-
-      if (isLocal) {
-        try {
-          await agent.fetchRootKey();
-        } catch (err) {
-          console.warn(
-            "Unable to fetch root key."+ 
-            "Check to ensure that your local replica is running"
-          );
-          console.error(err);
-        }
-      }
-
-      console.log(
-        'AuthStore: Host:'+ host + ' , ' + 
-        'COSMICRAFTS_CANISTER_ID:' + canisterId
-      );
-
-      try {
-        this.cosmicraftsCanister = createActor(canisterId, { agent });
-        console.log('AuthStore: cosmicraftsCanister initialized with keys');
-      } catch (error) {
-        console.error("Error initializing cosmicraftsCanister:", error);
-      }
-
-      this.principalId = identity.getPrincipal().toText();     
-      this.saveStateToLocalStorage();
-
-    },
-    async createCanistersFromAuthClient(identity, agent) {
-
-        try {
-          const isLocal = process.env.DFX_NETWORK !== 'ic';
-          const host = isLocal ?  'https://ic0.app': 'http://127.0.0.1:4943' ;
-    
-          if (isLocal) {
-            try {
-              await agent.fetchRootKey();
-            } catch (err) {
-              console.warn(
-                "Unable to fetch root key."+ 
-                "Check to ensure that your local replica is running"
-              );
-              console.error(err);
-            }
-          }
-    
-          console.log(
-            'AuthStore: Host:'+ host + ' , ' + 
-            'COSMICRAFTS_CANISTER_ID:' + canisterId
-          );
-    
-          try {
-            this.cosmicraftsCanister = createActor(canisterId, { agent });
-            console.log('AuthStore: From Authclient, cosmicraftsCanister initialized');
-          } catch (error) {
-            console.error("AuthStore: Error initializing cosmicraftsCanister:", error);
-          }
-    
-          this.principalId = identity.getPrincipal(); 
-          this.isAuthenticated= true;     
-          this.saveStateToLocalStorage();
-         
-        } catch (error) {
-          console.log("AuthStore: Error initializing cosmicraftsCanister:", error);
-        }     
-    },
-    async generateKeysFromSignature(signature) {
+    async generateKeysFromSignature (signature) {
       const encoder = new TextEncoder();
       const encodedSignature = encoder.encode(signature);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSignature);
       const seed = new Uint8Array(hashBuffer.slice(0, 32));
       const keyPair = nacl.sign.keyPair.fromSeed(seed);
-      const publicKeyBase64 = base64Encode(keyPair.publicKey);
-      const privateKeyBase64 = base64Encode(keyPair.secretKey);
-      await this.createCanisters(publicKeyBase64, privateKeyBase64);
-      this.saveStateToLocalStorage();
-    },
-    async generateKeysFromSub(sub) {
+      return {
+        public: base64Encode(keyPair.publicKey),
+        private: base64Encode(keyPair.secretKey)
+      };
+    }, 
+    async generateKeysFromSub (sub) {
       const encoder = new TextEncoder();
       const encodedSub = encoder.encode(sub);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSub);
@@ -217,32 +135,26 @@ export const useAuthStore = defineStore('auth', {
       const keyPair = nacl.sign.keyPair.fromSeed(seed);
       const publicKeyBase64 = base64Encode(keyPair.publicKey);
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
-      await this.createCanisters(publicKeyBase64, privateKeyBase64);
+      await this.createCanister(publicKeyBase64, privateKeyBase64);
       this.saveStateToLocalStorage();
     },
     saveStateToLocalStorage() {
       const authData = {
-        user: this.user,
+        keys: this.keys,
         isAuthenticated: this.isAuthenticated,
         isRegistered : this.isRegistered,
         googleSub: this.googleSub,
-        principalId: this.principalId,
-        cosmicraftsCanister: this.cosmicraftsCanister,
         authClient: this.authClient ? true : false,
-        identity: this.identity,
         initialized: this.initialized
       };
       localStorage.setItem('authStore', JSON.stringify(authData));
     },
     async logout() {
-      this.user = null;
+      this.keys = null;
       this.isAuthenticated = false;
       this.isregistered = false;
       this.googleSub = '';
-      this.principalId = '';
-      this.cosmicraftsCanister= null;
       this.authClient = false,
-      this.identity = null;
       this.initialized = false;
       localStorage.removeItem('authStore');
     }
@@ -250,13 +162,3 @@ export const useAuthStore = defineStore('auth', {
 });
 
 export default useAuthStore;
-
-function base64ToUint8Array(base64) {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes;
-}

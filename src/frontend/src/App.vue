@@ -27,9 +27,9 @@ const logout = async () => {
   await authStore.logout();
   router.push({ path: '/login' });
 };
-
+const filteredNavItems = navItems.filter(item => item.path !== '/login' && item.path !== '/account/register');
 const mainNavItems = computed(() =>
-  navItems.map(item => ({
+filteredNavItems.map(item => ({
     path: item.path,
     name: item.name,
     icons: item.icons
@@ -170,7 +170,7 @@ watchEffect(() => {
 
 .content-panel {
   flex-grow: 1;
-  margin-left: 8%; /* Space for the left panel */
+  margin-left: 10%; /* Space for the left panel */
   margin-right: 20%; /* Space for the right panel */
   padding: 20px;
   background: linear-gradient(to bottom, #262A32, #202328); /* Vertical gradient */

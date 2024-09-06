@@ -22,7 +22,7 @@ export default {
     return {
       categories: [],
       lines: [],
-      individualAchievements: []
+      individual: []
     };
   },
   methods: {
@@ -31,10 +31,10 @@ export default {
         const authStore = useAuthStore();
         const cosmicrafts = await authStore.cosmicraftsCanister;
         console.log("Achievements: " + cosmicrafts);
-        const [categories, lines, individualAchievements] = await cosmicrafts.getAchievementsView();
+        const [categories, lines, individual] = await cosmicrafts.getAchievementsView();
         this.categories = categories;
         this.lines = lines;
-        this.individualAchievements = individualAchievements;
+        this.individual = individual;
         console.log(cosmicrafts);
       } catch (error) {
         console.error('Error fetching achievements:', error);
@@ -45,7 +45,7 @@ export default {
         return this.lines.filter(line => line.categoryId === id);
       }
       if (type === 'line') {
-        return this.individualAchievements.filter(achievement => achievement.achievementId === id);
+        return this.individual.filter(achievement => achievement.achievementId === id);
       }
       return [];
     }

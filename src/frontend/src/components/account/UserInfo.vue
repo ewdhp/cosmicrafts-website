@@ -6,11 +6,6 @@ const authStore = useAuthStore();
 
 const principalId = computed(() => authStore.principalId);
 
-await authStore.createCanisters(authStore.user.publicKey,authStore.user.privateKey)
-const cosmicrafts = authStore.cosmicraftsCanister;
-const [result, player] = await cosmicrafts.getPlayerByCaller();
-console.log("Result: " + result);
-console.log("Player: " + player);
 </script>
 
 <template>
