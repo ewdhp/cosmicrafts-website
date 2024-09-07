@@ -4,7 +4,7 @@ import AvatarSelector from '@/components/account/AvatarSelector.vue';
 </script>
 <template>
     <div>
-         <AvatarSelector/>
+         Statistics
     </div>
 </template>
 <style>

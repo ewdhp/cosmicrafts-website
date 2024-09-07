@@ -11,7 +11,7 @@ import nfidLogo from '@/assets/login/NFID_logo.svg';
 import icpLogo from '@/assets/login/icp_logo.svg';
 import metaMaskLogo from '@/assets/login/metaMask_icon.svg';
 import phantomLogo from '@/assets/login/Phantom_icon.svg';
-import RegisterView from '../account/RegisterView.vue';
+import REGView from '../account/REGView.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -24,7 +24,7 @@ const handleAfterLogin = async () => {
     await authStore.isPlayerRegistered()
     ) {
     console.log("LoginView: Player is registered and authenticated");
-    router.push({ path: '/' });
+    router.push({ path: '/dashboard' });
 
   } else {
     console.log("LoginView: Player not registered, setting showregister = true");

@@ -37,6 +37,10 @@ export const useAuthStore = defineStore('auth', {
         this.saveStateToLocalStorage();
       }
     },
+    setRegistered(status) {
+      this.isRegistered = status;
+      this.saveStateToLocalStorage();
+    },
     async isPlayerRegistered() {
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");

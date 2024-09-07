@@ -10,7 +10,7 @@ import { useAuthStore } from './stores/auth.js';
 import { useRouter, useRoute } from 'vue-router';
 
 import AvatarSelector from '@/components/account/AvatarSelector.vue';
-import RegisterView from '@/views/account/RegisterView.vue';
+import REGView from '@/views/account/REGView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 
 
@@ -64,7 +64,7 @@ watchEffect(() => {
   </div>
 
   <div v-else-if="isAuthenticated == true && isRegistered == false">
-    <RegisterView />
+    <REGView />
   </div>
 
   <div v-else-if="isAuthenticated == true && isRegistered == true">

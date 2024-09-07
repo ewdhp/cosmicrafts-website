@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import { useAuthStore } from '@/stores/auth.js'; 
+import { useCanisterStore } from '@/stores/canister.js'; 
 import RecursiveComponent from '@/components/RecursiveComponent.vue';
 
 export default {
@@ -28,14 +28,12 @@ export default {
   methods: {
     async fetchAchievements() {
       try {
-        const authStore = useAuthStore();
-        const cosmicrafts = await authStore.cosmicraftsCanister;
-        console.log("Achievements: " + cosmicrafts);
+        const canister = useCanisterStore();
+        const cosmicrafts = await canister.get("comiscrafts");
         const [categories, lines, individual] = await cosmicrafts.getAchievementsView();
         this.categories = categories;
         this.lines = lines;
         this.individual = individual;
-        console.log(cosmicrafts);
       } catch (error) {
         console.error('Error fetching achievements:', error);
       }

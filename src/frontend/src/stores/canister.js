@@ -50,6 +50,7 @@ const createCanister = async (publicKey, privateKey, canisterName) =>{
     base64ToUint8Array(publicKey),
     base64ToUint8Array(privateKey)
   );
+  console.log(identity.getPrincipal().toText());
   const isLocal = process.env.DFX_NETWORK !== 'ic';
   const host = isLocal ?  'http://127.0.0.1:4943': 'https://ic0.app' ;
   const agent = new HttpAgent({ identity, host });

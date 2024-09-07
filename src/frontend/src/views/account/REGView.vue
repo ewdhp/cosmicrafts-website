@@ -1,3 +1,71 @@
+<script>
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
+import useCanisterStore from '@/stores/canister';
+import { useRouter} from 'vue-router';
+import { useAuthStore } from '@/stores/auth.js';
+import { ref } from 'vue';
+
+
+export default {
+  components: {
+    AvatarSelector,
+  },
+  setup() {
+
+    const username = ref('');
+    const referralCode = ref('');
+    const selectedAvatarId = ref(null); // Track the selected avatar ID
+    const acceptedTerms = ref(true); // Default to checked
+
+    // This method is triggered when an avatar is selected
+    const onAvatarSelected = (avatarId) => {
+      selectedAvatarId.value = avatarId; // Update the selected avatar ID
+    };
+
+    const registerPlayer = async () => {
+      const router = useRouter();
+      const authStore = useAuthStore();
+     
+      const canister = useCanisterStore();
+      const cosmicrafts = await canister.get("cosmicrafts");
+      if (cosmicrafts) {
+        console.log("Registering player...");
+        try {
+          const [result, var1, var2] = await cosmicrafts.registerPlayer(
+            username.value,
+            selectedAvatarId.value,
+            referralCode.value
+          );        
+          if (result) {
+            
+            await authStore.setRegistered(true);
+            router.push({ path: '/dashboard' });
+
+            console.log("Player registered successfully:", var1, var2);
+            await handleAfterReg();
+          } else {
+            console.log("Error registering player:");
+          }
+        } catch (error) {
+          console.error("Registration failed:", error);
+        }
+      } else {
+        console.log("Cosmicrafts not available");
+      }
+    };
+
+    return {
+      username,
+      referralCode,
+      selectedAvatarId,
+      acceptedTerms,
+      onAvatarSelected,
+      registerPlayer
+    };
+  }
+};
+</script>
+
 <template>
   <div class="register-container">
     <div class="register-panel">
@@ -42,57 +110,6 @@
     </div>
   </div>
 </template>
-
-<script>
-import AvatarSelector from '@/components/account/AvatarSelector.vue';
-import useCanisterStore from '@/stores/canister';
-import { useRouter } from 'vue-router';
-export default {
-  components: {
-    AvatarSelector,
-  },
-  data() {
-    return {
-      username: '',
-      referralCode: '',
-      selectedAvatarId: null, // Track the selected avatar ID
-      acceptedTerms: true, // Default to checked
-    };
-  },
-  methods: {
-    // This method is triggered when an avatar is selected
-    onAvatarSelected(avatarId) {
-      this.selectedAvatarId = avatarId; // Update the selected avatar ID
-    },
-    async registerPlayer() {
-      const router = useRouter();
-      const canister = useCanisterStore();
-      const cosmicrafts = await canister.get("cosmicrafts");
-      if (cosmicrafts) {
-        console.log("Registering player...");
-        try {
-          const [result, var1, var2] = await cosmicrafts.registerPlayer(
-            this.username,
-            this.selectedAvatarId,
-            this.referralCode
-          );        
-          if (result) {
-            router.push({path: '/dashboard'});
-          } else {
-            console.log("Player not registered");
-          }
-        } catch (error) {
-          console.log("Error registering player:", error);
-        }
-      }
-      else{
-        console.log("Cosmicrafts canister not loaded");
-      }
-    },
-  },
-};
-</script>
-
 
 <style scoped>
 .register-container {

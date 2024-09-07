@@ -1,9 +1,11 @@
 // Import view components
-import DBView from '@/views/dashboard/DashboardView.vue';
+import DBView from '@/views/dashboard/DBView.vue';
 import ACHView from '@/views/achievements/ACHView.vue';
-import REFView from '@/views/referrals/ReferralsView.vue';
+import REFView from '@/views/referrals/REFView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
-import RegisterView from '@/views/account/RegisterView.vue';
+import TourneysView from '../views/tourneys/TourneysView.vue';
+import REGView from '@/views/account/REGView.vue';
+import STATView from '@/views/statistics/STATView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 
 // Import icons for all states
@@ -67,7 +69,7 @@ const navItems = [
   {
     path: '/account/register',
     name: "Register",
-    component: RegisterView,
+    component: REGView,
     meta: { requiresAuth: true },
     icons: { 
       active: RegisterActiveIcon,
@@ -114,7 +116,7 @@ const navItems = [
   {
     path: '/statistics',
     name: "Statistics",
-    component: 'StatisticsView',
+    component: STATView,
     meta: { requiresAuth: true },
     icons: { 
       active: StatisticsActiveIcon,
@@ -126,7 +128,7 @@ const navItems = [
   {
     path: '/tourneys',
     name: "Tourneys",
-    component: 'TourneysView',
+    component: TourneysView,
     meta: { requiresAuth: true },
     icons: { 
       active: TourneysActiveIcon,

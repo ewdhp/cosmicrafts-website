@@ -96,6 +96,7 @@ shared actor class Cosmicrafts() = Self {
   public type NFTDetails = Types.NFTDetails;
   public type AchievementType = Types.AchievementType;
 
+  public type ACHView = Types.ACHView;
   //Timer
   public type Duration = Timer.Duration;
   public type TimerId = Timer.TimerId;
@@ -1780,6 +1781,8 @@ shared actor class Cosmicrafts() = Self {
           finalCode := assignedCode;
         };
 
+        let r1 = await initAchievements();
+        let _ = await assignAchievementsToUser(caller);
         return (true, ?newPlayer, "User registered successfully with referral code " # finalCode);
       };
     };
@@ -6891,7 +6894,6 @@ shared actor class Cosmicrafts() = Self {
         );
       };
     };
-
     Debug.print("Achievements initialized successfully");
     return true;
   };
@@ -6928,11 +6930,11 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(user)));
     userCategoriesList;
   };
-  public shared ({ caller }) func assignAchievementsToUserByCaller() : async ([AchievementCategory]) {
+  public shared ({ caller }) func assignAchievementsToUserByCaller() : async Bool {
     let userProgressOpt = userProgress.get(caller);
 
     var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
-      case (null) { [] };
+      case (null) { return false };
       case (?categories) { categories };
     };
 
@@ -6942,22 +6944,19 @@ shared actor class Cosmicrafts() = Self {
       func(a) { Utils._natHash(a) },
     );
 
-    // Add existing category IDs to the set
     for (category in userCategoriesList.vals()) {
       Set.put(categorySet, category.id);
     };
 
-    // Assign only new categories that are not already in the user's progress
     for ((id, category) in achievementCategories.entries()) {
       if (not Set.contains(categorySet, id)) {
         userCategoriesList := Array.append(userCategoriesList, [category]);
       };
     };
 
-    // Update the unified progress map with the assigned categories
     userProgress.put(caller, userCategoriesList);
     Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(caller)));
-    userCategoriesList;
+    return true;
   };
 
   //Get Achievements
@@ -7015,26 +7014,6 @@ shared actor class Cosmicrafts() = Self {
     };
 
     return (null, null, null);
-  };
-  public func getAchievementsView() : async ([AchievementCategory], [AchievementLine], [IndividualAchievement]) {
-
-    let data = await getUserAchievementsByCaller();
-
-    var categories : [AchievementCategory] = [];
-    var lines : [AchievementLine] = [];
-    var individuals : [IndividualAchievement] = [];
-
-    for (category in data.vals()) {
-      categories := Array.append(categories, [category]);
-      for (line in category.achievements.vals()) {
-        lines := Array.append(lines, [line]);
-        for (achievement in line.individualAchievements.vals()) {
-          individuals := Array.append(individuals, [achievement]);
-        };
-      };
-    };
-
-    (categories, lines, individuals);
   };
 
   //Register Achievements
@@ -7759,5 +7738,30 @@ shared actor class Cosmicrafts() = Self {
         return (true, "Multiplier increased by: " # Float.toText(rewardAmountFloat));
       };
     };
+  };
+
+  //Views
+
+  //Achievements
+  //public type ACHView = {
+  //  cats : [AchievementCategory];
+  //  lines : [AchievementLine];
+  //  inds : [IndividualAchievement];
+  //};
+  public func getAchievementsView() : async ([AchievementCategory], [AchievementLine], [IndividualAchievement]) {
+    let data = await getUserAchievementsByCaller();
+    var categories : [AchievementCategory] = [];
+    var lines : [AchievementLine] = [];
+    var individuals : [IndividualAchievement] = [];
+    for (category in data.vals()) {
+      categories := Array.append(categories, [category]);
+      for (line in category.achievements.vals()) {
+        lines := Array.append(lines, [line]);
+        for (achievement in line.individualAchievements.vals()) {
+          individuals := Array.append(individuals, [achievement]);
+        };
+      };
+    };
+    (categories, lines, individuals);
   };
 };
