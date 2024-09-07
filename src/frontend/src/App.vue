@@ -38,10 +38,7 @@ filteredNavItems.map(item => ({
 
 
 watchEffect(() => {
-  console.log('App.js:', route.path);
-  console.log('isAuthenticaded:', isAuthenticated);
-  console.log('isRegistered:', isRegistered);
-
+  console.log('Route:', route.path);
   const matchingSection = navItems.find(item => item.path === route.path);
   currentSection.value = matchingSection || navItems.find(item => item.path === '/'); // Default to the root if no match
   childNavItems.value = currentSection.value?.children || [];
