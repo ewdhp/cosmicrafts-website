@@ -6554,6 +6554,7 @@ shared actor class Cosmicrafts() = Self {
           info.referredPlayers,
           func(ref : (PlayerId, Bool, Float)) : Bool {
             ref.1 == true;
+
           },
         );
 
@@ -6564,6 +6565,7 @@ shared actor class Cosmicrafts() = Self {
             ref.0;
           },
         );
+
       };
     };
   };
@@ -7744,7 +7746,19 @@ shared actor class Cosmicrafts() = Self {
   //
   //
   //
-  public func getAchievementsView() : async (
+
+  public type ACHView = {
+    categories : [AchievementCategory];
+    lines : [AchievementLine];
+    individuals : [IndividualAchievement];
+  };
+  public type REFView = {
+    directReferrals : [PlayerId];
+    indirectReferrals : [PlayerId];
+    beyondReferrals : [PlayerId];
+  };
+
+  public query func getAchievementsView() : async (
     [AchievementCategory],
     [AchievementLine],
     [IndividualAchievement],
@@ -7765,11 +7779,119 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-  public func getTourneysView() : async Bool {
-    true;
-  };
+  public shared func getViews(playerId : PlayerId) : async ?(
+    ACHView,
+    REFView,
+  ) {
 
-  public func getReferralsView() : async Bool {
-    true;
+    //RefView
+    var directReferrals : [PlayerId] = [];
+    var indirectReferrals : [PlayerId] = [];
+    var beyondReferrals : [PlayerId] = [];
+
+    switch (referralsByPlayer.get(playerId)) {
+      case (null) {
+        return null;
+      };
+      case (?info) {
+        // Filter for direct referrals
+        let filteredDirectRefs = Array.filter(
+          info.referredPlayers,
+          func(ref : (PlayerId, Bool, Float)) : Bool {
+            ref.1 == true; // Only direct referrals
+          },
+        );
+
+        // Map to extract the PlayerIds
+        directReferrals := Array.map(
+          filteredDirectRefs,
+          func(ref : (PlayerId, Bool, Float)) : PlayerId {
+            ref.0;
+          },
+        );
+
+        // For each direct referral, gather indirect and beyond referrals
+        for (directRef in directReferrals.vals()) {
+          switch (referralsByPlayer.get(directRef)) {
+            case (null) {}; // No referrals found for this direct referral
+            case (?directInfo) {
+              // Filter for indirect referrals
+              let filteredIndirectRefs = Array.filter(
+                directInfo.referredPlayers,
+                func(ref : (PlayerId, Bool, Float)) : Bool {
+                  ref.1 == true; // Only direct referrals of the direct referral (indirect for the original player)
+                },
+              );
+
+              // Append indirect referrals
+              indirectReferrals := Array.append(
+                indirectReferrals,
+                Array.map(
+                  filteredIndirectRefs,
+                  func(ref : (PlayerId, Bool, Float)) : PlayerId {
+                    ref.0;
+                  },
+                ),
+              );
+
+              // For each indirect referral, gather beyond referrals
+              for (indirectRef in filteredIndirectRefs.vals()) {
+                switch (referralsByPlayer.get(indirectRef.0)) {
+                  case (null) {}; // No referrals found for this indirect referral
+                  case (?indirectInfo) {
+                    // Filter for beyond referrals
+                    let filteredBeyonds = Array.filter(
+                      indirectInfo.referredPlayers,
+                      func(ref : (PlayerId, Bool, Float)) : Bool {
+                        ref.1 == true; // Only direct referrals of the indirect referral (beyond for the original player)
+                      },
+                    );
+
+                    // Append beyond referrals
+                    beyondReferrals := Array.append(
+                      beyondReferrals,
+                      Array.map(
+                        filteredBeyonds,
+                        func(ref : (PlayerId, Bool, Float)) : PlayerId {
+                          ref.0;
+                        },
+                      ),
+                    );
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+
+    //ACHView
+    let data = await getUserAchievementsByCaller();
+    var categories : [AchievementCategory] = [];
+    var lines : [AchievementLine] = [];
+    var individuals : [IndividualAchievement] = [];
+    for (category in data.vals()) {
+      categories := Array.append(categories, [category]);
+      for (line in category.achievements.vals()) {
+        lines := Array.append(lines, [line]);
+        for (achievement in line.individualAchievements.vals()) {
+          individuals := Array.append(individuals, [achievement]);
+        };
+      };
+    };
+
+    let achView : ACHView = {
+      categories = categories;
+      lines = lines;
+      individuals = individuals;
+    };
+    let refView : REFView = {
+      directReferrals = directReferrals;
+      indirectReferrals = indirectReferrals;
+      beyondReferrals = beyondReferrals;
+    };
+
+    return ?(achView, refView);
   };
 };

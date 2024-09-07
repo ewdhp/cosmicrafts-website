@@ -6,7 +6,9 @@ import { AuthClient } from '@dfinity/auth-client';
 import { HttpAgent } from '@dfinity/agent';
 import useAuthStore from './auth.js';
 
-
+const canisters = {
+  cosmicrafts: null,
+};
 
 function base64ToUint8Array(base64) {
   const binaryString = atob(base64);
@@ -17,33 +19,6 @@ function base64ToUint8Array(base64) {
   }
   return bytes;
 }
-
-const saveStateToLocalStorage = (canisterName, canisterState) => {
-  try {
-    const stateString = JSON.stringify(canisterState);
-    localStorage.setItem(`canister_${canisterName}`, stateString);
-  } catch (error) {
-    console.error("Error saving state to local storage:", error);
-  }
-};
-
-const loadStateFromLocalStorage = (canisterName) => {
-  try {
-    const stateString = localStorage.getItem(`canister_${canisterName}`);
-    return stateString ? JSON.parse(stateString) : null;
-  } catch (error) {
-    console.error("Error loading state from local storage:", error);
-    return null;
-  }
-};
-
-//use:
-//const canisterState = canisters[canisterName];
-//saveStateToLocalStorage(canisterName, canisterState);
-
-const canisters = {
-  cosmicrafts: null,
-};
 
 const createCanister = async (publicKey, privateKey, canisterName) =>{
   const identity = Ed25519KeyIdentity.fromKeyPair(
