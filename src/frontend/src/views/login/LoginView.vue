@@ -24,7 +24,7 @@ const handleAfterLogin = async () => {
     await authStore.isPlayerRegistered()
     ) {
     console.log("LoginView: Player is registered and authenticated");
-    router.push({ path: '/dashboard' });
+    router.push({ path: '/' });
 
   } else {
     console.log("LoginView: Player not registered, setting showregister = true");

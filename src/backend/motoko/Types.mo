@@ -473,42 +473,5 @@ module Types {
     #WeeklyMissionsCompleted;
     #XPEarned;
   };
-  //--
-
-  //View Types
-
-  public type DBView = {
-    code_this : Nat;
-  };
-  public type ACHView = {
-    cats : [AchievementCategory];
-    lines : [AchievementLine];
-    inds : [IndividualAchievement];
-  };
-  public type NFTView = {
-    code_this : Nat;
-  };
-  public type TKView = {
-    code_this : Nat;
-  };
-  public type REFView = {
-    code_this : Nat;
-  };
-  public type STATView = {
-    code_this : Nat;
-  };
-  public type TNYView = {
-    code_this : Nat;
-  };
-  public type Views = {
-    player : ?Player;
-    dash : ?DBView;
-    ach : ?ACHView;
-    nfts : ?NFTView;
-    tokens : ?TKView;
-    refs : ?REFView;
-    stats : ?STATView;
-    tourneys : TNYView;
-  };
 
 };

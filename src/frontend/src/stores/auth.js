@@ -1,18 +1,9 @@
-//use a factory instead of creating the canisters here.
-//
-//
-//
-//
-//
 import { defineStore } from 'pinia';
-import nacl from 'tweetnacl';
 import { encode as base64Encode, decode as base64Decode } from 'base64-arraybuffer';
 import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
-import { Principal } from '@dfinity/principal';
-
 import useCanisterStore from './canister.js';
-
+import nacl from 'tweetnacl';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -21,25 +12,19 @@ export const useAuthStore = defineStore('auth', {
     isRegistered: false,
     googleSub: '',
     initialized: false,
+    principalId: '123',
   }),
   actions: {
-    async initializeStore() {
-      
-      const storedData = localStorage.getItem('authStore');
-      
-      if (storedData) {
-        const data = JSON.parse(storedData);
-        this.keys = data.keys;
-        this.isAuthenticated = data.isAuthenticated;
-        this.isRegistered = data.isRegistered;
-        this.googleSub = data.googleSub;
-        this.initialized = true;
-        this.saveStateToLocalStorage();
-      }
-    },
-    setRegistered(status) {
+    async setRegistered(status) {
       this.isRegistered = status;
       this.saveStateToLocalStorage();
+    },
+    async setPrincipalId(status) {
+      this.principalId = status;
+      this.saveStateToLocalStorage();
+    },
+    async getPrincipalId() {
+      return this.principalId;     
     },
     async isPlayerRegistered() {
       const canister = useCanisterStore();
@@ -143,15 +128,13 @@ export const useAuthStore = defineStore('auth', {
       this.saveStateToLocalStorage();
     },
     saveStateToLocalStorage() {
-      const authData = {
-        keys: this.keys,
-        isAuthenticated: this.isAuthenticated,
-        isRegistered : this.isRegistered,
-        googleSub: this.googleSub,
-        authClient: this.authClient ? true : false,
-        initialized: this.initialized
-      };
-      localStorage.setItem('authStore', JSON.stringify(authData));
+      localStorage.setItem('authStore', JSON.stringify(this.$state));
+    },
+    loadStateFromLocalStorage() {
+      const state = localStorage.getItem('authStore');
+      if (state) {
+        this.$patch(JSON.parse(state));
+      }
     },
     async logout() {
       this.keys = null;
@@ -160,6 +143,7 @@ export const useAuthStore = defineStore('auth', {
       this.googleSub = '';
       this.authClient = false,
       this.initialized = false;
+      this.principalId = '';
       localStorage.removeItem('authStore');
     }
   },

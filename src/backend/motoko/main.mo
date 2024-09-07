@@ -96,7 +96,6 @@ shared actor class Cosmicrafts() = Self {
   public type NFTDetails = Types.NFTDetails;
   public type AchievementType = Types.AchievementType;
 
-  public type ACHView = Types.ACHView;
   //Timer
   public type Duration = Timer.Duration;
   public type TimerId = Timer.TimerId;
@@ -7740,15 +7739,16 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
+  ///////////////////////////////
   //Views
-
-  //Achievements
-  //public type ACHView = {
-  //  cats : [AchievementCategory];
-  //  lines : [AchievementLine];
-  //  inds : [IndividualAchievement];
-  //};
-  public func getAchievementsView() : async ([AchievementCategory], [AchievementLine], [IndividualAchievement]) {
+  //
+  //
+  //
+  public func getAchievementsView() : async (
+    [AchievementCategory],
+    [AchievementLine],
+    [IndividualAchievement],
+  ) {
     let data = await getUserAchievementsByCaller();
     var categories : [AchievementCategory] = [];
     var lines : [AchievementLine] = [];
@@ -7763,5 +7763,13 @@ shared actor class Cosmicrafts() = Self {
       };
     };
     (categories, lines, individuals);
+  };
+
+  public func getTourneysView() : async Bool {
+    true;
+  };
+
+  public func getReferralsView() : async Bool {
+    true;
   };
 };

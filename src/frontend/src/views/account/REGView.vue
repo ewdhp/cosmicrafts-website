@@ -36,13 +36,10 @@ export default {
             selectedAvatarId.value,
             referralCode.value
           );        
-          if (result) {
-            
+          if (result) {            
             await authStore.setRegistered(true);
-            router.push({ path: '/dashboard' });
-
-            console.log("Player registered successfully:", var1, var2);
-            await handleAfterReg();
+            router.push({ path: '/' });
+            console.log("Player registered successfully");
           } else {
             console.log("Error registering player:");
           }

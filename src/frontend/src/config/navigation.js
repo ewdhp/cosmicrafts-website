@@ -3,7 +3,8 @@ import DBView from '@/views/dashboard/DBView.vue';
 import ACHView from '@/views/achievements/ACHView.vue';
 import REFView from '@/views/referrals/REFView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
-import TourneysView from '../views/tourneys/TourneysView.vue';
+import TNYDashView from '@/views/tournaments/DashboardView.vue';
+import TNYView from '@/views/tournaments/TournamentView.vue';
 import REGView from '@/views/account/REGView.vue';
 import STATView from '@/views/statistics/STATView.vue';
 import LoginView from '@/views/login/LoginView.vue';
@@ -126,16 +127,29 @@ const navItems = [
     children: []
   },
   {
-    path: '/tourneys',
-    name: "Tourneys",
-    component: TourneysView,
+    path: '/tournament',
+    name: "Tournament Dashboard",
+    component: TNYDashView,
     meta: { requiresAuth: true },
     icons: { 
       active: TourneysActiveIcon,
       hover: TourneysHoverIcon,
       inactive: TourneysInactiveIcon,
     },
-    children: []
+    children: [
+      {
+        path: '/tournament/:id',
+        name: "Tournament",
+        component: TNYView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: TourneysActiveIcon,
+          hover: TourneysHoverIcon,
+          inactive: TourneysInactiveIcon,
+        },
+        children: []
+      },
+    ]
   }
 ];
 

@@ -36,21 +36,12 @@ filteredNavItems.map(item => ({
   }))
 );
 
-
 watchEffect(() => {
   console.log('Route:', route.path);
   const matchingSection = navItems.find(item => item.path === route.path);
   currentSection.value = matchingSection || navItems.find(item => item.path === '/'); // Default to the root if no match
   childNavItems.value = currentSection.value?.children || [];
 });
-
-/**
- * 
- * Remove login and register from the nav items
- * 
- * 
- * 
- */
 
 </script>
 

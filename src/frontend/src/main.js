@@ -12,7 +12,7 @@ app.use(createPinia());
 app.use(router);
 
 const authStore = useAuthStore();
-authStore.initializeStore();
+authStore.loadStateFromLocalStorage();
 
 app.component('FriendQuery', FriendQuery);
 app.mount('#app');

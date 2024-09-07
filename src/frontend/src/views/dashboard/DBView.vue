@@ -1,19 +1,10 @@
 <!-- src/views/DashboardView.vue -->
-<template>
-    <div class="dashboard">
-        <UserInfo />
-        <button @click="logout">Logout</button>
-    </div>
-</template>
 
 <script setup>
-import { useAuthStore } from '@/stores/auth';
-import UserInfo from '@/components/account/UserInfo.vue';
+import { useAuthStore } from '@/stores/auth.js';
 import { useRouter } from 'vue-router';
 
-
 const router = useRouter();
-
 const authStore = useAuthStore();
 
 const logout = async () => {
@@ -21,6 +12,12 @@ const logout = async () => {
     router.push({ path: '/login' });
 };
 </script>
+
+<template>
+    <div class="dashboard">
+        <button @click="logout">Logout</button>
+    </div>
+</template>
 
 <style scoped>
 .dashboard {
