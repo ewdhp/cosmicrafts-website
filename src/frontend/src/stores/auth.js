@@ -12,7 +12,7 @@ export const useAuthStore = defineStore('auth', {
     isRegistered: false,
     googleSub: '',
     initialized: false,
-    principalId: '123',
+    principalId: '',
   }),
   actions: {
     async setRegistered(status) {

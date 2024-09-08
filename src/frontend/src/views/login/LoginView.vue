@@ -19,20 +19,23 @@ const router = useRouter();
 const showRegister = ref(false);
 
 const handleAfterLogin = async () => {
-
-  if (authStore.isAuthenticated && 
-    await authStore.isPlayerRegistered()
-    ) {
+  console.log("isAuthenticated: ", authStore.isAuthenticated);
+  console.log("isRegistered: ", await authStore.isPlayerRegistered());
+  router.push({ path: '/' });
+/**
+  if (authStore.isAuthenticated && await authStore.isPlayerRegistered()) {
     console.log("LoginView: Player is registered and authenticated");
     router.push({ path: '/' });
 
   } else {
-    console.log("LoginView: Player not registered, setting showregister = true");
-    showRegister.value = true;
+    if(authStore.isAuthenticated && await authStore.isPlayerRegistered() == false) {
+        console.log("LoginView: Player not registered, redirecting to /register");
+        router.push({ path: '/register' });
+      }
+    }
 
-  }
+**/
 };
-
 const loadGoogleIdentityServices = () => {
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';

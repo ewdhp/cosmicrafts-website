@@ -9,6 +9,7 @@ import REGView from '@/views/account/REGView.vue';
 import STATView from '@/views/stats/STATView.vue';
 import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
+import MainLayout from '@/views/layout/MainLayout.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -45,42 +46,6 @@ import TourneysInactiveIcon from '@/assets/icons/tourneys-inactive.svg';
 
 const navItems = [
   {
-    path: '/',
-    name: "Dashboard",
-    component: DBView,
-    meta: { requiresAuth: true },
-    icons: { // This needs to be "icons" with the active/hover/inactive states
-      active: DashboardActiveIcon,
-      hover: DashboardHoverIcon,
-      inactive: DashboardInactiveIcon,
-    },
-    children: []
-  },
-  {
-    path: '/achievements',
-    name: "Achievements", 
-    component: ACHView,
-    meta: { requiresAuth: true },
-    icons: { 
-      active: AchievementsActiveIcon, 
-      hover: AchievementsHoverIcon,
-      inactive: AchievementsInactiveIcon,
-    },
-    children: []
-  },
-  {
-    path: '/account/register',
-    name: "Register",
-    component: REGView,
-    meta: { requiresAuth: true },
-    icons: { 
-      active: RegisterActiveIcon,
-      hover: RegisterHoverIcon,
-      inactive: RegisterInactiveIcon,
-    },
-    children: []
-  },
-  {
     path: '/login',
     name: "Login",
     component: LoginView,
@@ -92,78 +57,121 @@ const navItems = [
     children: []
   },
   {
-    path: '/nfts',
-    name: "NFTS",
-    component: NFTSView,
-    meta: { requiresAuth: true },
+    path: '/register',
+    name: "Register",
+    component: REGView,
     icons: { 
-      active: NFTSActiveIcon,
-      hover: NFTSHoverIcon,
-      inactive: NFTSInactiveIcon,
+      active: RegisterActiveIcon,
+      hover: RegisterHoverIcon,
+      inactive: RegisterInactiveIcon,
     },
     children: []
   },
   {
-    path: '/referrals',
-    name: "Referrals",
-    component: REFView,
+    path: '/',
+    component: MainLayout,
     meta: { requiresAuth: true },
-    icons: { 
-      active: ReferralsActiveIcon,
-      hover: ReferralsHoverIcon,
-      inactive: ReferralsInactiveIcon,
-    },
-    children: []
-  },
-  {
-    path: '/statistics',
-    name: "Statistics",
-    component: STATView,
-    meta: { requiresAuth: true },
-    icons: { 
-      active: StatisticsActiveIcon,
-      hover: StatisticsHoverIcon,
-      inactive: StatisticsInactiveIcon,
-    },
-    children: []
-  },
-  {
-    path: '/tournament',
-    name: "Tournament Dashboard",
-    component: TNYDashView,
-    meta: { requiresAuth: true },
-    icons: { 
-      active: TourneysActiveIcon,
-      hover: TourneysHoverIcon,
-      inactive: TourneysInactiveIcon,
-    },
     children: [
       {
-        path: '/tournament/:id',
-        name: "Tournament",
-        component: TNYView,
+        path: '/',
+        name: "Dashboard",
+        component: DBView,
+        meta: { requiresAuth: true },
+        icons: { // This needs to be "icons" with the active/hover/inactive states
+          active: DashboardActiveIcon,
+          hover: DashboardHoverIcon,
+          inactive: DashboardInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/achievements',
+        name: "Achievements", 
+        component: ACHView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: AchievementsActiveIcon, 
+          hover: AchievementsHoverIcon,
+          inactive: AchievementsInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/nfts',
+        name: "NFTS",
+        component: NFTSView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: NFTSActiveIcon,
+          hover: NFTSHoverIcon,
+          inactive: NFTSInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/referrals',
+        name: "Referrals",
+        component: REFView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: ReferralsActiveIcon,
+          hover: ReferralsHoverIcon,
+          inactive: ReferralsInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/statistics',
+        name: "Statistics",
+        component: STATView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: StatisticsActiveIcon,
+          hover: StatisticsHoverIcon,
+          inactive: StatisticsInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/tournament',
+        name: "Tournament Dashboard",
+        component: TNYDashView,
         meta: { requiresAuth: true },
         icons: { 
           active: TourneysActiveIcon,
           hover: TourneysHoverIcon,
           inactive: TourneysInactiveIcon,
         },
+        children: [
+          {
+            path: '/tournament/:id',
+            name: "Tournament",
+            component: TNYView,
+            meta: { requiresAuth: true },
+            icons: { 
+              active: TourneysActiveIcon,
+              hover: TourneysHoverIcon,
+              inactive: TourneysInactiveIcon,
+            },
+            children: []
+          },
+        ]
+      },
+      {
+        path: '/tokens',
+        name: "Tokens",
+        component: TKView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: StatisticsActiveIcon,
+          hover: StatisticsHoverIcon,
+          inactive: StatisticsInactiveIcon,
+        },
         children: []
       },
     ]
   },
-  {
-    path: '/tokens',
-    name: "Tokens",
-    component: TKView,
-    meta: { requiresAuth: true },
-    icons: { 
-      active: StatisticsActiveIcon,
-      hover: StatisticsHoverIcon,
-      inactive: StatisticsInactiveIcon,
-    },
-    children: []
-  },
+
 ];
 
 export default navItems;

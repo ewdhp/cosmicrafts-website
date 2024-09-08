@@ -9,7 +9,7 @@
           @mouseenter="hoveredItem = item.path"
           @mouseleave="hoveredItem = null"
         >
-          <router-link :to="item.path">
+          <RouterLink :to="item.path">
             <div class="section">
               <img
                 v-if="getIcon(item)"
@@ -18,7 +18,7 @@
                 class="nav-icon"
               />
             </div>
-          </router-link>
+          </RouterLink>
         </li>
       </ul>
     </div>
@@ -77,7 +77,6 @@ export default {
   }
 };
 </script>
-
 <style scoped>
 .nav-container {
   display: flex;

@@ -5,47 +5,49 @@ import { useRouter} from 'vue-router';
 import { useAuthStore } from '@/stores/auth.js';
 import { ref } from 'vue';
 
-
 export default {
   components: {
     AvatarSelector,
   },
-  setup() {
-
+  setup() {    
+    const router = useRouter();
+    const authStore = useAuthStore();
+     
     const username = ref('');
     const referralCode = ref('');
-    const selectedAvatarId = ref(null); // Track the selected avatar ID
-    const acceptedTerms = ref(true); // Default to checked
+    const selectedAvatarId = ref(null);
+    const acceptedTerms = ref(true); 
 
-    // This method is triggered when an avatar is selected
     const onAvatarSelected = (avatarId) => {
-      selectedAvatarId.value = avatarId; // Update the selected avatar ID
+      selectedAvatarId.value = avatarId;
     };
 
     const registerPlayer = async () => {
-      const router = useRouter();
-      const authStore = useAuthStore();
-     
+      
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
+      var result = false;
       if (cosmicrafts) {
-        console.log("Registering player...");
         try {
-          const [result, var1, var2] = await cosmicrafts.registerPlayer(
+          console.log("Registering player...");
+          const [r, var1, var2] = await cosmicrafts.registerPlayer(
             username.value,
             selectedAvatarId.value,
             referralCode.value
-          );        
-          if (result) {            
-            await authStore.setRegistered(true);
-            router.push({ path: '/' });
-            console.log("Player registered successfully");
-          } else {
-            console.log("Error registering player:");
-          }
+          );          
+          result = r;
+         console.log("Player registered successfully");       
         } catch (error) {
           console.error("Registration failed:", error);
         }
+
+        if (result) {            
+            await authStore.setRegistered(true);
+            router.push({ path: '/' });          
+          } else {
+            console.log("Error registering player:");
+          }
+       
       } else {
         console.log("Cosmicrafts not available");
       }
