@@ -6,7 +6,8 @@ import NFTSView from '@/views/nfts/NFTSView.vue';
 import TNYDashView from '@/views/tournaments/DashboardView.vue';
 import TNYView from '@/views/tournaments/TournamentView.vue';
 import REGView from '@/views/account/REGView.vue';
-import STATView from '@/views/statistics/STATView.vue';
+import STATView from '@/views/stats/STATView.vue';
+import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 
 // Import icons for all states
@@ -150,7 +151,19 @@ const navItems = [
         children: []
       },
     ]
-  }
+  },
+  {
+    path: '/tokens',
+    name: "Tokens",
+    component: TKView,
+    meta: { requiresAuth: true },
+    icons: { 
+      active: StatisticsActiveIcon,
+      hover: StatisticsHoverIcon,
+      inactive: StatisticsInactiveIcon,
+    },
+    children: []
+  },
 ];
 
 export default navItems;

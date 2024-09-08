@@ -7741,11 +7741,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  ///////////////////////////////
   //Views
-  //
-  //
-  //
 
   public type ACHView = {
     categories : [AchievementCategory];
@@ -7757,13 +7753,17 @@ shared actor class Cosmicrafts() = Self {
     indirectReferrals : [PlayerId];
     beyondReferrals : [PlayerId];
   };
+  public type NFTView = {
+    nftTemplates : Nat;
+    userNFTs : Nat;
+  };
 
-  public query func getAchievementsView() : async (
+  public shared ({ caller }) func getAchievementsView() : async (
     [AchievementCategory],
     [AchievementLine],
     [IndividualAchievement],
   ) {
-    let data = await getUserAchievementsByCaller();
+    let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
     var lines : [AchievementLine] = [];
     var individuals : [IndividualAchievement] = [];
