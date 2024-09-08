@@ -27,23 +27,24 @@
       </div>
     </div>
     <div v-else>
-      <p>Loading tokens...</p>
+      <LoadingSpinner :isLoading=loading />
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue';
+import { reactive, onMounted, ref} from 'vue';
 import { customStringify } from '@/utils/customStringify';
 import { parseMetadata } from '@/utils/metadataParser';
 
 import { useTokenStore } from '@/stores/token';
 import { useAuthStore } from '@/stores/auth';
+import LoadingSpinner from '../../components/loading/LoadingSpinner.vue';
 
 
 const tokenStore = useTokenStore();
 const authStore = useAuthStore();
-
+const loading = ref(true);
 const transferData = reactive({});
 
 onMounted(async () => {
@@ -59,6 +60,7 @@ onMounted(async () => {
     transferData[canisterId] = { to: '', amount: 0 };
     await tokenStore.fetchICRC1TokenInfo(canisterId);
   }
+  loading = false;
 });
 
 const formatBalance = (balance, decimals) => {
@@ -95,11 +97,13 @@ const handleTransfer = async (canisterId) => {
 
 <style scoped>
 .container {
-  padding: 20px;
+
 }
 
 h2 {
   color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
   margin-bottom: 1em;
   font-size: 2em;
   font-weight: bold;

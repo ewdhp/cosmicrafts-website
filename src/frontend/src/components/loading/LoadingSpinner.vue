@@ -18,12 +18,12 @@ export default {
 
 <style scoped>
 .loading-overlay {
-  position: fixed;
+
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
+ 
   backdrop-filter: blur(5px); /* Blur effect */
   display: flex;
   justify-content: center;
@@ -32,8 +32,8 @@ export default {
 }
 
 .spinner {
-  border: 8px solid rgba(0, 0, 0, 0.1);
-  border-top: 8px solid #000;
+  border: 8px solid rgba(223, 230, 235, 0.904);
+  border-top: 8px solid #151927;
   border-radius: 50%;
   width: 50px;
   height: 50px;

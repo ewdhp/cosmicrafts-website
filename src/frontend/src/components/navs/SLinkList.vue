@@ -77,6 +77,7 @@ export default {
   }
 };
 </script>
+
 <style scoped>
 .nav-container {
   display: flex;
@@ -146,8 +147,8 @@ export default {
 .link-list li .section,
 .link-list li.active .section,
 .link-list li:not(.active):hover .section {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
 }
 
 .link-list ul {

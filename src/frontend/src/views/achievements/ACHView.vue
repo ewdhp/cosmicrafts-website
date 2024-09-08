@@ -1,25 +1,28 @@
 <template>
-  <div>
-    <RecursiveComponent
+  <LoadingSpinner :isLoading="loading" />
+    <div v-if="!loading">
+      <RecursiveComponent
       v-for="category in categories"
       :key="category.id"
       :item="category"
       type="category"
       :getChildren="getChildren"
     />
-  </div>
+    </div>
 </template>
 
 <script>
 import { useCanisterStore } from '@/stores/canister.js'; 
 import RecursiveComponent from '@/components/RecursiveComponent.vue';
-
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 export default {
   components: {
-    RecursiveComponent
+    RecursiveComponent,
+    LoadingSpinner
   },
   data() {
     return {
+      loading: true,
       categories: [],
       lines: [],
       individual: []
@@ -37,6 +40,8 @@ export default {
         console.log("lines:", lines);
       } catch (error) {
         console.error('Error fetching achievements:', error);
+      } finally {
+        this.loading = false;
       }
     },
     getChildren(id, type) {

@@ -1,4 +1,5 @@
 <template>
+  <span>Dashboard</span>
     <div>
       <button class="dashboard-button">Dashboard</button>
       <LoadingSpinner :isLoading="loading" />
@@ -32,20 +33,5 @@ import MainLayout from '../layout/MainLayout.vue';
   </script>
   
   <style scoped>
-  .dashboard-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border: none;
-    background-color: #007bff;
-    color: white;
-    cursor: pointer;
-    display: inline-block;
-    text-align: center;
-    font-size: 16px;
-    border-radius: 4px;
-  }
-  
-  .dashboard-button:hover {
-    background-color: #0056b3;
-  }
+
   </style>

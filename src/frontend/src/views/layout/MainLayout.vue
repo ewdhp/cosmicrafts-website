@@ -92,6 +92,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background-color: #f4f5ec;
 
   .layout-container {
     display: flex;
@@ -106,7 +107,7 @@ export default {
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, #080A0D, #171D25);
+  background: linear-gradient(to bottom, #151927, #171C2B);
   padding: 4px;
   position: fixed;
   z-index: 10;
@@ -115,7 +116,8 @@ export default {
 
   .link-nav {
     display: flex;
-    padding: 8px;
+    padding: 5px;
+    margin-left: 10px;
   }
 
   .account-nav {
@@ -149,10 +151,10 @@ export default {
 
 .content-panel {
   flex-grow: 1;
-  margin-left: 10%; /* Space for the left panel */
-  margin-right: 20%; /* Space for the right panel */
+  margin-left: 9vw; /* Space for the left panel */
+  margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: linear-gradient(to bottom, #262A32, #202328); /* Vertical gradient */
+  background: linear-gradient(to bottom, #151927, #171C2B); /* Vertical gradient */
   color: #79829B; /* Text color */
   border-radius: 20px; /* Rounded corners */
   box-shadow: 8px 8px 8px rgba(0, 0, 0.5, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
@@ -162,7 +164,6 @@ export default {
 
   &::before {
     content: '';
-    background: url('@/assets/logos/logo.svg') no-repeat center center;
     background-size: 100%;
     opacity: 0.015;
     position: absolute;
