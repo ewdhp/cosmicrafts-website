@@ -3,7 +3,6 @@ export const customStringify = (obj) => {
     typeof value === 'bigint' ? value.toString() : value
   );
 };
-
 export const customParse = (str) => {
   return JSON.parse(str, (_, value) =>
     typeof value === 'string' && /^\d+n$/.test(value)

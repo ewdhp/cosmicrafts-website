@@ -21,21 +21,12 @@ export const useNFTStore = defineStore('nfts', {
   
         const canister = useCanisterStore();
         const cosmicrafts = await canister.get("cosmicrafts");
-  
-        if (!cosmicrafts) {
-          console.log("cosmicrafts is not initialized");
-          return;
-        }
-  
-        console.log("cosmicrafts initialized");
-  
+
         const account = Principal.fromText(principalIdString);
   
         const result = await cosmicrafts.icrc7_tokens_of({ owner: account, subaccount: [] });
-        console.log("result:", result);
-  
+
         if ('Ok' in result) {
-          console.log("'Ok' in result");
           this.icrc7Tokens[canisterId] = result.Ok;
   
           for (const tokenId of result.Ok) {

@@ -11,42 +11,38 @@
 </template>
 
 <script>
-import { useCanisterStore } from '@/stores/canister.js'; 
+import { useACHStore } from '@/stores/ach.js'; 
 import RecursiveComponent from '@/components/RecursiveComponent.vue';
+import { computed } from 'vue';
 
 export default {
   components: {
     RecursiveComponent
   },
-  data() {
+  setup() {
+    const ach = useACHStore();
+
+    const categories = computed(() => ach.categories);
+    const lines = computed(() => ach.lines);
+    const individual = computed(() => ach.individual);
+
     return {
-      categories: [],
-      lines: [],
-      individual: []
+      categories,
+      lines,
+      individual,
+      fetchAchievements: async () => {
+        await ach.fetchAchievements();
+      },
+      getChildren: (id, type) => {
+        if (type === 'category') {
+          return lines.value.filter(line => line.categoryId === id);
+        }
+        if (type === 'line') {
+          return individual.value.filter(achievement => achievement.achievementId === id);
+        }
+        return [];
+      }
     };
-  },
-  methods: {
-    async fetchAchievements() {
-      try {
-        const canister = useCanisterStore();
-        const cosmicrafts = await canister.get("comiscrafts");
-        const [categories, lines, individual] = await cosmicrafts.getAchievementsView();
-        this.categories = categories;
-        this.lines = lines;
-        this.individual = individual;
-      } catch (error) {
-        console.error('Error fetching achievements:', error);
-      }
-    },
-    getChildren(id, type) {
-      if (type === 'category') {
-        return this.lines.filter(line => line.categoryId === id);
-      }
-      if (type === 'line') {
-        return this.individual.filter(achievement => achievement.achievementId === id);
-      }
-      return [];
-    }
   },
   async mounted() {
     await this.fetchAchievements();
