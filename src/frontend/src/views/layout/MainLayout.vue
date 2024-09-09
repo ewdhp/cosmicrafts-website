@@ -158,7 +158,7 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: #151927ce; /* Vertical gradient */
+  background: #151927cb; /* Vertical gradient */
   color: #9ca3b8; /* Text color */
   border: 2px solid rgba(191, 188, 201, 0.87);
   border-radius: 20px; /* Rounded corners */
