@@ -1,9 +1,16 @@
 <script setup>
 </script>
 <template>
-    <div>
+    <h2>
       Referrals
-    </div>
+    </h2>
 </template>
 <style>
+
+h2 {
+  color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 1em;
+}
 </style>

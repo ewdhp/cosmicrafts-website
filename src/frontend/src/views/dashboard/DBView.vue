@@ -1,7 +1,6 @@
 <template>
-  <span>Dashboard</span>
+  <h2>Dashboard</h2>
     <div>
-      <button class="dashboard-button">Dashboard</button>
       <LoadingSpinner :isLoading="loading" />
       <div v-if="!loading">
         <!-- Content goes here -->
@@ -9,9 +8,8 @@
     </div>
 </template>
   
-  <script>
-  import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
-import MainLayout from '../layout/MainLayout.vue';
+<script>
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
   
   export default {
     name: 'DBView',
@@ -33,5 +31,10 @@ import MainLayout from '../layout/MainLayout.vue';
   </script>
   
   <style scoped>
-
+h2 {
+  color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 1em;
+}
   </style>

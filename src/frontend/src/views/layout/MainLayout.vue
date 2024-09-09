@@ -92,7 +92,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f4f5ec;
+  background-color: #e0e2e6;
 
   .layout-container {
     display: flex;

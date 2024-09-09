@@ -1,4 +1,5 @@
 <template>
+  <h2>Tournaments</h2>
   <div>
     <section v-if="isLoading">Loading...</section>
     <section v-else>
@@ -13,7 +14,7 @@
         </form>
     
       <div>
-        <h2>All Tournaments</h2>
+
         <ul>
           <li v-for="tournament in tournaments" :key="tournament.id">
             {{ tournament.name }} - {{ new Date(tournament.startDate).toLocaleDateString() }}

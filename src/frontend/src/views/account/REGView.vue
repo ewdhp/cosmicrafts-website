@@ -1,116 +1,146 @@
+<template>
+  <div>
+   
+
+    <!-- Loading Spinner with Blurred Background -->
+    <div class="top" v-if="loading">
+      <LoadingSpinner :isLoading="loading" />
+    </div>
+
+    <div class="register-container">
+      <div class="register-panel">
+        <img src="@/assets/logos/logo_full.svg" alt="Cosmicrafts" class="full-logo" />
+         <!-- Registration Result -->
+    <div v-if="registerResult" class="register-result">
+      {{ registerResult }}
+    </div>
+        <form @submit.prevent="registerPlayer" class="form-grid">
+          <!-- Avatar Selector Component on the left -->
+          <div class="avatar-section">
+            <AvatarSelector @avatar-selected="onAvatarSelected" />
+          </div>
+
+          <!-- Inputs and Texts on the right -->
+          <div class="right-section">
+            <p class="intro-text">Let's get you started</p>
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input type="text" id="username" v-model="username" required placeholder="Enter your username" />
+            </div>
+            <div class="form-group">
+              <label for="referralCode">Referral Code:</label>
+              <input type="text" id="referralCode" v-model="referralCode" placeholder="Invitation Code" />
+            </div>
+            <div class="referral-link">
+              <p>Don't have a code? Get one <a href="https://discord.com/invite/cosmicrafts-884272584491941888" target="_blank">here!</a></p>
+            </div>
+          </div>
+
+          <!-- Terms of Service Checkbox -->
+          <div class="terms-container">
+            <div class="form-group terms">
+              <input type="checkbox" id="terms" v-model="acceptedTerms" required />
+              <label for="terms">
+                I accept <a href="https://cosmicrafts.com/privacy-policy">Terms of Service</a> and <a href="https://cosmicrafts.com/terms-of-service">Privacy Policy</a>
+              </label>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="submit-button">Register</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script>
-import AvatarSelector from '@/components/account/AvatarSelector.vue';
-import useCanisterStore from '@/stores/canister';
-import { useRouter} from 'vue-router';
-import { useAuthStore } from '@/stores/auth.js';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useCanisterStore } from '@/stores/canister';
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 
 export default {
   components: {
     AvatarSelector,
+    LoadingSpinner
   },
-  setup() {    
-    const router = useRouter();
+  setup() {
     const authStore = useAuthStore();
-     
+    const router = useRouter();
+    const loading = ref(false);
     const username = ref('');
     const referralCode = ref('');
     const selectedAvatarId = ref(null);
-    const acceptedTerms = ref(true); 
+    const acceptedTerms = ref(true);
+    const registerResult = ref(null);
+
+    if(authStore.isAuthenticated == false) {
+      console.log('User is not authenticated');
+      router.push({path: '/login'});
+
+    }
 
     const onAvatarSelected = (avatarId) => {
       selectedAvatarId.value = avatarId;
     };
 
     const registerPlayer = async () => {
-      
+      loading.value = true;
+      registerResult.value = null; // Clear previous result
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
       var result = false;
-      if (cosmicrafts) {
-        try {
-          console.log("Registering player...");
-          const [r, var1, var2] = await cosmicrafts.registerPlayer(
-            username.value,
-            selectedAvatarId.value,
-            referralCode.value
-          );          
-          result = r;
-         console.log("Player registered successfully");       
-        } catch (error) {
-          console.error("Registration failed:", error);
-        }
 
-        if (result) {            
-            await authStore.setRegistered(true);
-            router.push({ path: '/' });          
-          } else {
-            console.log("Error registering player:");
-          }
-       
-      } else {
-        console.log("Cosmicrafts not available");
+      try {
+        const [r, a, c] = await cosmicrafts.registerPlayer(
+          username.value,
+          selectedAvatarId.value,
+          referralCode.value
+        );
+        result = r;
+      } catch (error) {
+        console.error('Registration failed:', error);
       }
+
+      if (result) {
+        console.log('result inside:', result);
+        authStore.setRegistered(true);
+        router.push('/');
+      } else {
+        console.log('result:', result);
+        registerResult.value = 'Registration failed. Please try again.';
+      }
+      loading.value = false;
     };
 
     return {
+      loading,
       username,
       referralCode,
       selectedAvatarId,
       acceptedTerms,
       onAvatarSelected,
-      registerPlayer
+      registerPlayer,
+      registerResult
     };
   }
 };
 </script>
 
-<template>
-  <div class="register-container">
-    <div class="register-panel">
-      <img src="@/assets/logos/logo_full.svg" alt="Cosmicrafts" class="full-logo" />
-
-      <form @submit.prevent="registerPlayer" class="form-grid">
-        <!-- Avatar Selector Component on the left -->
-        <div class="avatar-section">
-          <AvatarSelector @avatar-selected="onAvatarSelected" />
-        </div>
-
-        <!-- Inputs and Texts on the right -->
-        <div class="right-section">
-          <p class="intro-text">Let's get you started</p>
-          <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" id="username" v-model="username" required placeholder="Enter your username" />
-          </div>
-          <div class="form-group">
-            <label for="referralCode">Referral Code:</label>
-            <input type="text" id="referralCode" v-model="referralCode" placeholder="Invitation Code" />
-          </div>
-          <div class="referral-link">
-            <p>Don't have a code? Get one <a href="https://discord.com/invite/cosmicrafts-884272584491941888" target="_blank">here!</a></p>
-          </div>
-        </div>
-         <!-- Terms of Service Checkbox -->
-      <div class="terms-container">
-        <div class="form-group terms">
-          <input type="checkbox" id="terms" v-model="acceptedTerms" required />
-          <label for="terms">
-            I accept <a href="https://cosmicrafts.com/privacy-policy">Terms of Service</a> and <a href="https://cosmicrafts.com/terms-of-service">Privacy Policy</a>
-          </label>
-        </div>
-      </div>
-
-      <!-- Submit Button -->
-      <button type="submit" class="submit-button">Register</button>
-      </form>
-
-     
-    </div>
-  </div>
-</template>
-
 <style scoped>
+.top {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 9999;
+  background: rgba(34, 47, 90, 0.5);
+  backdrop-filter: blur(10px);
+}
+
 .register-container {
   display: flex;
   align-items: center;
@@ -207,6 +237,7 @@ input[type="text"] {
 input::placeholder {
   color: #616161; /* Set default color */
 }
+
 .referral-link {
   margin-top: -11px;
   font-size: 11px;
@@ -246,7 +277,6 @@ input::placeholder {
   background-repeat: no-repeat;
   background-position: center;
   background-size: 18px;
-  
 }
 
 .terms label {
@@ -284,5 +314,11 @@ button.submit-button:hover {
     justify-content: flex-start;
     margin-bottom: 20px;
   }
+}
+
+.register-result {
+  color: red;
+  margin-top: 10px;
+  text-align: center;
 }
 </style>

@@ -1,8 +1,7 @@
 <template>
+  <h2>Stats</h2>
   <div class="statistics">
-    <h2>Player Statistics</h2>
     <div v-if="playerStats && Object.keys(playerStats).length">
-
 
       <h3>Average Stats</h3>
       <div class="stat-block">
@@ -93,10 +92,12 @@ const formatNumber = (number) => {
   padding: 20px;
 }
 
-h2, h3 {
+h2 {
   color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 1em;
 }
-
 .stat-block {
   background-color: #ecf0f1;
   border: 1px solid #bdc3c7;

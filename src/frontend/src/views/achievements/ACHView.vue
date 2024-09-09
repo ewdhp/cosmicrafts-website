@@ -1,5 +1,5 @@
 <template>
-  <LoadingSpinner :isLoading="loading" />
+  <h2>Achievements</h2>
     <div v-if="!loading">
       <RecursiveComponent
       v-for="category in categories"
@@ -8,6 +8,9 @@
       type="category"
       :getChildren="getChildren"
     />
+    </div>
+    <div v-else>
+      <LoadingSpinner :isLoading=loading />
     </div>
 </template>
 
@@ -61,5 +64,10 @@ export default {
 </script>
 
 <style scoped>
-/* Add your styles here */
+h2 {
+  color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 1em;
+}
 </style>

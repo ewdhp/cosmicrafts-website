@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div >
     <h2>Tokens</h2>
     <div v-if="Object.keys(tokenStore.icrc1Tokens).length">
       <div v-for="(balance, canisterId) in tokenStore.icrc1Tokens" :key="canisterId" class="token-card">
@@ -99,14 +99,9 @@ const handleTransfer = async (canisterId) => {
 .container {
 
 }
-
 h2 {
   color: #2c3e50;
-  padding: 0px;
-  margin: 0px;
   margin-bottom: 1em;
-  font-size: 2em;
-  font-weight: bold;
 }
 
 .token-card {

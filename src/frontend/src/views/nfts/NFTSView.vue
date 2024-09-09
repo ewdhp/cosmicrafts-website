@@ -1,6 +1,6 @@
 <template>
+  <h2>NFTs</h2>
   <div class="container">
-    <h2>NFTs</h2>
     <div class="nft-grid">
       <div v-for="(tokens, canisterId) in nftStore.icrc7Tokens" :key="canisterId" class="canister-section">
         <div v-if="nftStore.collectionMetadata[canisterId]" class="metadata-card">
@@ -56,9 +56,9 @@ onMounted(async () => {
 
 h2 {
   color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
   margin-bottom: 1em;
-  font-size: 2em;
-  font-weight: bold;
 }
 
 .nft-grid {

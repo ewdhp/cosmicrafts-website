@@ -118,6 +118,12 @@ onMounted(fetchTournamentDetails);
 </script>
 
 <style scoped>
+h2 {
+  color: #2c3e50;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 1em;
+}
 .bracket {
   display: grid;
   grid-auto-flow: column;
