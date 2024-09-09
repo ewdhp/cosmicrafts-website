@@ -5,9 +5,9 @@ import { useCanisterStore } from './canister.js';
 
 export const useACHStore = defineStore('ach', {
   state: () => ({
-    categories : null,
-    lines : null,
-    individual : null,
+    categories : {},
+    lines : {},
+    individual :{},
   }),
   actions: {
     async fetchAchievements() {

@@ -44,7 +44,7 @@ import LoadingSpinner from '../../components/loading/LoadingSpinner.vue';
 
 const tokenStore = useTokenStore();
 const authStore = useAuthStore();
-const loading = ref(true);
+var loading = ref(true);
 const transferData = reactive({});
 
 onMounted(async () => {

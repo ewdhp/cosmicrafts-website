@@ -38,6 +38,7 @@ onMounted(async () => {
   }
 
   try {
+    console.log('Fetching NFTs...');
     const canisterIds = ['phgme-naaaa-aaaap-abwda-cai', 'w4fdk-fiaaa-aaaap-qccgq-cai'];
     for (const canisterId of canisterIds) {
       await nftStore.fetchICRC7Tokens(canisterId);
