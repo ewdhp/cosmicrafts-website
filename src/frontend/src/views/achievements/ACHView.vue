@@ -55,7 +55,7 @@ onMounted(async () => {
 
 <style scoped>
 h2 {
-  color: #2c3e50;
+  color: #304355;
   padding: 0px;
   margin: 0px;
   margin-bottom: 1em;
@@ -69,7 +69,7 @@ li {
 }
 a {
   cursor: pointer;
-  color: #3498db;
+  color: #54b2f1;
   text-decoration: none;
 }
 a:hover {

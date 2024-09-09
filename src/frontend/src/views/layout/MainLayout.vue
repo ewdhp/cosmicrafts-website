@@ -92,13 +92,15 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #e0e2e6;
+  background-image: url('@/assets/login/fondo.jpg');
+
 
   .layout-container {
     display: flex;
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
+
   }
 }
 
@@ -111,8 +113,9 @@ export default {
   padding: 4px;
   position: fixed;
   z-index: 10;
-  border-bottom: 0.5px solid #4F4F4F;
+  border-bottom: 0.5px solid #131414;
   box-shadow: inset 0px 2px 12px rgba(255, 255, 255, 0.1);
+
 
   .link-nav {
     display: flex;
@@ -136,6 +139,7 @@ export default {
   height: 10px;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
   pointer-events: none;
+  
 }
 
 .left-panel {
@@ -154,8 +158,9 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: linear-gradient(to bottom, #151927, #171C2B); /* Vertical gradient */
-  color: #79829B; /* Text color */
+  background: #151927ce; /* Vertical gradient */
+  color: #9ca3b8; /* Text color */
+  border: 2px solid rgba(191, 188, 201, 0.87);
   border-radius: 20px; /* Rounded corners */
   box-shadow: 8px 8px 8px rgba(0, 0, 0.5, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
   //overflow-y: auto; /* Scrollable */

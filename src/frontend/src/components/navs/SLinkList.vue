@@ -90,6 +90,7 @@ export default {
   align-items: center;
   padding: 8px;
   border-radius: 8px;
+  border: 1px solid white;
   width: 48px;
   height: 48px;
   cursor: pointer;
@@ -130,7 +131,7 @@ export default {
 .link-list li .section {
   background: linear-gradient(to bottom, #151927, #171C2B);
   border: 2px solid #252C3F;
-  box-shadow: 0 0 5px black;
+  box-shadow: 0 0 3px black;
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
 }
 
@@ -149,6 +150,7 @@ export default {
 .link-list li:not(.active):hover .section {
   width: 42px;
   height: 42px;
+  
 }
 
 .link-list ul {
