@@ -92,7 +92,7 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg');
+  background-image: url('@/assets/OIG3.jpg');
 
 
   .layout-container {
@@ -158,9 +158,9 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: #151927cb; /* Vertical gradient */
+  background: #151927dc; /* Vertical gradient */
   color: #9ca3b8; /* Text color */
-  border: 2px solid rgba(191, 188, 201, 0.87);
+  border: 2px solid rgba(255, 255, 255, 0.966);
   border-radius: 20px; /* Rounded corners */
   box-shadow: 8px 8px 8px rgba(0, 0, 0.5, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
   //overflow-y: auto; /* Scrollable */
