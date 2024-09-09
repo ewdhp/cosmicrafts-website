@@ -3172,12 +3172,6 @@ shared actor class Cosmicrafts() = Self {
   };
 
   public shared ({ caller }) func createTournament(name : Text, startDate : Time.Time, prizePool : Text, expirationDate : Time.Time) : async Nat {
-    if (
-      caller != Principal.fromText("vam5o-bdiga-izgux-6cjaz-53tck-eezzo-fezki-t2sh6-xefok-dkdx7-pae") and
-      caller != Principal.fromText("bdycp-b54e6-fvsng-ouies-a6zfm-khbnh-wcq3j-pv7qt-gywe2-em245-3ae")
-    ) {
-      return 0;
-    };
 
     let id = tournaments.size();
     let buffer = Buffer.Buffer<Tournament>(tournaments.size() + 1);
@@ -3329,13 +3323,6 @@ shared actor class Cosmicrafts() = Self {
   };
 
   public shared ({ caller }) func adminUpdateMatch(tournamentId : Nat, matchId : Nat, winnerIndex : Nat, score : Text) : async Bool {
-    if (
-      caller != Principal.fromText("vam5o-bdiga-izgux-6cjaz-53tck-eezzo-fezki-t2sh6-xefok-dkdx7-pae") and
-      caller != Principal.fromText("bdycp-b54e6-fvsng-ouies-a6zfm-khbnh-wcq3j-pv7qt-gywe2-em245-3ae")
-    ) {
-      return false;
-    };
-
     let matchOpt = Array.find<Match>(matches, func(m : Match) : Bool { m.id == matchId and m.tournamentId == tournamentId });
     switch (matchOpt) {
       case (?match) {

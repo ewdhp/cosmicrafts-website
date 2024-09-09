@@ -1,7 +1,6 @@
 // Import view components
 import DBView from '@/views/dashboard/DBView.vue';
 import ACHView from '@/views/achievements/ACHView.vue';
-import REFView from '@/views/referrals/REFView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
 import TNYDashView from '@/views/tournaments/DashboardView.vue';
 import TNYView from '@/views/tournaments/TournamentView.vue';
@@ -105,18 +104,6 @@ const navItems = [
           active: NFTSActiveIcon,
           hover: NFTSHoverIcon,
           inactive: NFTSInactiveIcon,
-        },
-        children: []
-      },
-      {
-        path: '/referrals',
-        name: "Referrals",
-        component: REFView,
-        meta: { requiresAuth: true },
-        icons: { 
-          active: ReferralsActiveIcon,
-          hover: ReferralsHoverIcon,
-          inactive: ReferralsInactiveIcon,
         },
         children: []
       },
