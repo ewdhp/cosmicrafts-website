@@ -8,6 +8,7 @@ export const useACHStore = defineStore('ach', {
     categories : {},
     lines : {},
     individual :{},
+    fetched : false,
   }),
   actions: {
     async fetchAchievements() {
@@ -28,6 +29,7 @@ export const useACHStore = defineStore('ach', {
         console.error('Failed to fetch player stats:', error);
         throw error;
       }
+      this.fetched = true;
       return [this.categories, this.lines, this.individual];
     }
   }

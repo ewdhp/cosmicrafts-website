@@ -69,10 +69,18 @@ export default {
     });
 
     onMounted(async () => {
+      if(achStore.fetched) {
+        if (achStore.categories.length > 0) {
+        selectedCategory.value = achStore.categories[0].id;
+      }
+        console.log("Already fetched achievements");
+        return;
+      }
       await achStore.fetchAchievements();
       if (achStore.categories.length > 0) {
         selectedCategory.value = achStore.categories[0].id;
       }
+      fetched.value = true; 
       loading.value = false;
     });
 
@@ -84,7 +92,7 @@ export default {
       selectLine,
       filteredLines,
       filteredIndividuals,
-      loading
+      loading,
     };
   }
 };
