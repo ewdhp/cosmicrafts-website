@@ -55,7 +55,7 @@ onMounted(async () => {
 
 <style scoped>
 h2 {
-  color: #304355;
+  color: #a8b3bd;
   padding: 0px;
   margin: 0px;
   margin-bottom: 1em;

@@ -89,6 +89,7 @@ export default {
   justify-content: center;
   align-items: center;
   padding: 8px;
+
   border-radius: 8px;
   border: 1px solid white;
   width: 48px;
@@ -100,8 +101,8 @@ export default {
 }
 
 .nav-icon {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   transition: transform 0.2s ease-in-out; /* Consistent transition for icon scaling */
 }
 
@@ -114,7 +115,7 @@ export default {
 
 /* SVG Animation when switch to active */
 .link-list li.active .nav-icon {
-  transform: scale(1.25);
+
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
 }
 
@@ -130,15 +131,16 @@ export default {
 /* Default inactive state */
 .link-list li .section {
   background: linear-gradient(to bottom, #151927, #171C2B);
-  border: 2px solid #252C3F;
-  box-shadow: 0 0 3px black;
+  border: 1px solid #313b58;
+  box-shadow: 0 0 5px black;
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
+  margin-bottom: 20px;
 }
 
 /* Hover state for non-active buttons */
 .link-list li:not(.active):hover .section {
   background: linear-gradient(to bottom, #151927, #293547);
-  border: 2px solid #252C3F;
+  border: 2px solid #41c79f;
   box-shadow: 0 0 16px cyan;
   transform: scale(1.05); /* Slightly bigger on hover */
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
