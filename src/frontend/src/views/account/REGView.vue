@@ -80,7 +80,6 @@ export default {
     if(authStore.isAuthenticated == false) {
       console.log('User is not authenticated');
       router.push({path: '/login'});
-
     }
 
     const onAvatarSelected = (avatarId) => {
