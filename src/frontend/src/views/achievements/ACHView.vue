@@ -6,7 +6,7 @@
 
     <div class="categories">
       <ListH
-        :items="achStore.categories"
+        :items="[achStore.categories]"
         :selectedItem="selectedCategory"
         @update:selectedItem="selectLine"
       />
@@ -46,7 +46,6 @@ export default {
     const achStore = useACHStore();
     const selectedCategory = ref(null);
     const selectedLine = ref(null);
-
     const selectCategory = (categoryId) => {
       console.log(`selectCategory called with categoryId: ${categoryId}`);
       selectedCategory.value = categoryId;

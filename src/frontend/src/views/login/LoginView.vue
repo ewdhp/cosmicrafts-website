@@ -11,7 +11,6 @@ import nfidLogo from '@/assets/login/NFID_logo.svg';
 import icpLogo from '@/assets/login/icp_logo.svg';
 import metaMaskLogo from '@/assets/login/metaMask_icon.svg';
 import phantomLogo from '@/assets/login/Phantom_icon.svg';
-import REGView from '../account/REGView.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -22,26 +21,21 @@ const handleAfterLogin = async () => {
   console.log("registered: "+ authStore.isRegistered());
   console.log("authenticated: "+ authStore.isAuthenticated());
   router.push({ path: '/' });
-/**
-  if (authStore.isAuthenticated && await authStore.isPlayerRegistered()) {
-    console.log("LoginView: Player is registered and authenticated");
-    router.push({ path: '/' });
-
-  } else {
-    if(authStore.isAuthenticated && await authStore.isPlayerRegistered() == false) {
-        console.log("LoginView: Player not registered, redirecting to /register");
-        router.push({ path: '/register' });
-      }
-    }
-
-**/
 };
+
+const loginIC = async () => {
+  console.log("loginIC");
+  await authStore.loginWithInternetIdentity();
+  router.push({ path: '/' });
+
+};
+
 const loadGoogleIdentityServices = () => {
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
   script.onload = initializeGoogleSignIn;
   script.onerror = () => {
-    setTimeout(loadGoogleIdentityServices, 1000);
+    setTimeout(loadGoogleIdentityServices, 10000);
   };
   document.body.appendChild(script);
 };
@@ -75,7 +69,7 @@ const authMethods = [
   {
     logo: icpLogo,
     text: 'Internet Identity',
-    onClick: () => authStore.loginWithInternetIdentity().then(handleAfterLogin),
+    onClick:  () => loginIC(),
   },
   {
     logo: metaMaskLogo,

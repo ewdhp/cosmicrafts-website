@@ -5,7 +5,8 @@ import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import useCanisterStore from './canister.js';
 import nacl from 'tweetnacl';
-
+import { AuthClient } from '@dfinity/auth-client';
+import { useRouter } from 'vue-router';
 
 function base64ToUint8Array(base64) {
   const binaryString = atob(base64);
@@ -100,17 +101,19 @@ export const useAuthStore = defineStore('auth', {
         return false;
       }
 
-      await authClient.login({
+      authClient.login({
         identityProvider: identityProviderUrl,
         windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
         onSuccess: async () => {
-          identity = authClient.getIdentity();
-          authenticated = true;           
+          console.log('AuthStore: AuthClient login success');
+          authenticated = true;
+          registered = await this.isPlayerRegistered();
         },
         onError: (error) => {
           console.error('Authentication error:', error);
         },
       });
+      
     },
     async generateKeysFromSignature (signature) {
       const encoder = new TextEncoder();
@@ -145,8 +148,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async logout() {
-      this.isAuthenticated = false;
-      this.isregistered = false;
       this.googleSub = '';
       localStorage.removeItem('authStore');
     }

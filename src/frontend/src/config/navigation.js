@@ -4,7 +4,7 @@ import ACHView from '@/views/achievements/ACHView.vue';
 import NFTSView from '@/views/nfts/NFTSView.vue';
 import TNYDashView from '@/views/tournaments/DashboardView.vue';
 import TNYView from '@/views/tournaments/TournamentView.vue';
-import REGView from '@/views/account/REGView.vue';
+import RegView from '@/views/account/RegView.vue';
 import STATView from '@/views/stats/STATView.vue';
 import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
@@ -58,7 +58,7 @@ const navItems = [
   {
     path: '/register',
     name: "Register",
-    component: REGView,
+    component: RegView,
     icons: { 
       active: RegisterActiveIcon,
       hover: RegisterHoverIcon,
