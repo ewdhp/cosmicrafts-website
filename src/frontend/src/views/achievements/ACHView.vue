@@ -34,7 +34,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useACHStore } from '@/stores/ach.js';
 import ListV from '@/components/navs/ListV.vue';
 import ListH from '@/components/navs/ListH.vue';
-import LoadingSpinner from '../../components/loading/LoadingSpinner.vue';
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 
 export default {
   components: {

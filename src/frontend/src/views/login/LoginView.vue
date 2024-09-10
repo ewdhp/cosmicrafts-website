@@ -19,8 +19,8 @@ const router = useRouter();
 const showRegister = ref(false);
 
 const handleAfterLogin = async () => {
-  console.log("isAuthenticated: ", authStore.isAuthenticated);
-  console.log("isRegistered: ", await authStore.isPlayerRegistered());
+  console.log("registered: "+ authStore.isRegistered());
+  console.log("authenticated: "+ authStore.isAuthenticated());
   router.push({ path: '/' });
 /**
   if (authStore.isAuthenticated && await authStore.isPlayerRegistered()) {

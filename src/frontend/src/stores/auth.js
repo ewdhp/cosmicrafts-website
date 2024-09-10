@@ -1,30 +1,38 @@
 import { defineStore } from 'pinia';
 import { encode as base64Encode, decode as base64Decode } from 'base64-arraybuffer';
+import { Ed25519KeyIdentity } from '@dfinity/identity';
 import MetaMaskService from '../services/MetaMaskService';
 import PhantomService from '../services/PhantomService';
 import useCanisterStore from './canister.js';
 import nacl from 'tweetnacl';
 
+
+function base64ToUint8Array(base64) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+let identity= null;
+let registered = false;
+let authenticated = false;
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    keys: null,
-    isAuthenticated: false,
-    isRegistered: false,
     googleSub: '',
-    initialized: false,
-    principalId: '',
   }),
   actions: {
-    async setRegistered(status) {
-      this.isRegistered = status;
-      this.saveStateToLocalStorage();
+    getIdentity() {
+      return identity;
     },
-    async setPrincipalId(status) {
-      this.principalId = status;
-      this.saveStateToLocalStorage();
+    isAuthenticated() {
+      return authenticated;
     },
-    async getPrincipalId() {
-      return this.principalId;     
+    isRegistered(){
+      return registered;
     },
     async isPlayerRegistered() {
       const canister = useCanisterStore();
@@ -32,16 +40,12 @@ export const useAuthStore = defineStore('auth', {
       const [result, player] = 
       await cosmicrafts.getPlayerByCaller();
       if (result) {
-        this.isRegistered = true;
-        this.saveStateToLocalStorage();
-        console.log('AuthStore: Player is registered');
-        return true;
+        registered = true;
+        return registered;
       }
       else {
-        this.isRegistered = false;
-        this.saveStateToLocalStorage();
-        console.log('AuthStore: Player is not registered');
-        return false;
+        registered = false;
+        return registered;
       }
     },
     async loginWithGoogle(response) {
@@ -57,9 +61,13 @@ export const useAuthStore = defineStore('auth', {
       const uniqueMessage = 'Sign this message to log in with your Ethereum wallet';
       const signature = await MetaMaskService.signMessage(uniqueMessage);
       if (signature) {
-        this.keys = await this.generateKeysFromSignature(signature);
-        this.isAuthenticated = true;
-        this.saveStateToLocalStorage();
+        const keys = await this.generateKeysFromSignature(signature);
+        identity = Ed25519KeyIdentity.fromKeyPair(
+          base64ToUint8Array(keys.public),
+          base64ToUint8Array(keys.private)
+        );
+        authenticated = true;
+        registered = await this.isPlayerRegistered();
         console.log('AuthStore: loginWithMetaMask keys generated');
       }
     },
@@ -96,10 +104,8 @@ export const useAuthStore = defineStore('auth', {
         identityProvider: identityProviderUrl,
         windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
         onSuccess: async () => {
-          const identityFromAuthClient = authClient.getIdentity();
-          const agent = new HttpAgent({ identityFromAuthClient, host: 'http://localhost:3000' });    
-          //await this.createCanisterFromAuthClient(identityFromAuthClient, agent); 
-         
+          identity = authClient.getIdentity();
+          authenticated = true;           
         },
         onError: (error) => {
           console.error('Authentication error:', error);
@@ -129,27 +135,6 @@ export const useAuthStore = defineStore('auth', {
       await this.createCanister(publicKeyBase64, privateKeyBase64);
       this.saveStateToLocalStorage();
     },
-    async storePublicKey() {
-      const canister = useCanisterStore();
-      const cosmicrafts = await canister.get("cosmicrafts");
-      const identity = Ed25519KeyIdentity.fromKeyPair(
-        base64ToUint8Array(this.keys.public),
-        base64ToUint8Array(this.keys.private)
-      );
-        try {
-          const result = await cosmicrafts.storePublicKey(
-            identity.getPrincipalId().toText(), 
-            this.keys.public
-          );
-          if(result){
-            console.log('Public key stored successfully');
-          }else {
-            console.log('Public key not stored');
-          }         
-        } catch (error) {
-          console.error('Error storing public key:', error);
-        }     
-    },
     saveStateToLocalStorage() {
       localStorage.setItem('authStore', JSON.stringify(this.$state));
     },
@@ -160,13 +145,9 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async logout() {
-      this.keys = null;
       this.isAuthenticated = false;
       this.isregistered = false;
       this.googleSub = '';
-      this.authClient = false,
-      this.initialized = false;
-      this.principalId = '';
       localStorage.removeItem('authStore');
     }
   },

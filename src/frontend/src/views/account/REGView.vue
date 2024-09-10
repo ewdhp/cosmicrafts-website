@@ -99,18 +99,15 @@ export default {
           selectedAvatarId.value,
           referralCode.value
         );
-        result = r;       
-        await authStore.storePublicKey();
+        result = r;
       } catch (error) {
-        console.error('Registration failed:', error);
+        console.error(error);
       }
 
       if (result) {
-        console.log('result inside:', result);
-        authStore.setRegistered(true);
-        router.push('/');
+        await authStore.isPlayerRegistered() ? router.push('/account') 
+        : registerResult.value = 'Registration failed. Please try again.';
       } else {
-        console.log('result:', result);
         registerResult.value = 'Registration failed. Please try again.';
       }
       loading.value = false;

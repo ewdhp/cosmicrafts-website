@@ -3,7 +3,7 @@ import navItems from '../config/navigation.js';
 import { useAuthStore } from '../stores/auth.js';
 
 
-// Create the router instance
+
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes: navItems 
@@ -11,15 +11,14 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
-  const isAuthenticated = authStore.isAuthenticated;
-  const isRegistered = authStore.isRegistered;
-
+  const authenticated = authStore.isAuthenticated();
+  const registered = authStore.isRegistered();
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    if (isAuthenticated == false && isRegistered == false) {
+    if (authenticated == false && registered == false) {
       next({ path: '/login' });
     }
     else {
-      if (isRegistered == false) {
+      if (registered == false) {
         next({ path: '/register' });
       } else {
         next();
