@@ -1,47 +1,7 @@
-<template>
-  <div id="app" class="app-container">
-    <!-- Full-width header -->
-    <header class="header">
-      <div class="link-nav">
-        <img src="@/assets/logos/logo_menu.svg" alt="Logo" class="logo-menu" />
-      </div>
-      <div class="account-nav">
-        <AccountSearch />
-        <AccountNav />
-      </div>
-    </header>
-
-    <!-- Main layout with left menu, middle content, and right-side menu -->
-    <div class="layout-container">
-      <!-- Left-side navigation panel -->
-      <aside class="left-panel">
-        <div class="nav-wrapper">
-          <SLinkList :items="mainNavItems" />
-        </div>
-      </aside>
-
-      <!-- Middle dynamic content panel -->
-      <main class="content-panel">
-        <router-view />
-      </main>
-
-      <!-- Right-side secondary minimized menu -->
-      <aside class="right-panel">
-        <div class="right-menu minimized">
-          <!-- Placeholder for minimized secondary features like chat, friends list -->
-        </div>
-      </aside>
-    </div>
-  </div>
-</template>
-
 <script>
 import { ref, computed, watchEffect } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.js';
+import { useRoute } from 'vue-router';
 import navItems from '@/config/navigation.js';
-
-import LinkList from '@/components/navs/LinkList.vue';
 import SLinkList from '@/components/navs/SLinkList.vue';
 import AccountNav from '@/components/account/AccountMenu.vue';
 import AccountSearch from '@/components/account/AccountSearch.vue';
@@ -49,17 +9,17 @@ import AccountSearch from '@/components/account/AccountSearch.vue';
 export default {
   name: 'MainLayout',
   components: {
-    LinkList,
     SLinkList,
     AccountNav,
     AccountSearch
   },
   setup() {
+
     const route = useRoute();
     const routes = navItems[2].children;
-
     const currentSection = ref(null);
     const childNavItems = ref([]);
+
     const mainNavItems = computed(() =>
       routes.filter(
         item => item.path !== '/login' && 
@@ -86,6 +46,38 @@ export default {
   }
 };
 </script>
+
+<template>
+  <div id="app" class="app-container">
+
+    <header class="header">
+      <div class="link-nav">
+        <img src="@/assets/logos/logo_menu.svg" alt="Logo" class="logo-menu" />
+      </div>
+      <div class="account-nav">
+        <AccountSearch />
+        <AccountNav />
+      </div>
+    </header>
+
+    <div class="layout-container">
+      <aside class="left-panel">
+        <div class="nav-wrapper">
+          <SLinkList :items="mainNavItems" />
+        </div>
+      </aside>
+
+      <main class="content-panel">
+        <router-view />
+      </main>
+
+      <aside class="right-panel">
+        <div class="right-menu minimized">
+        </div>
+      </aside>
+    </div>
+  </div>
+</template>
 
 <style scoped lang="scss">
 .app-container {

@@ -99,7 +99,8 @@ export default {
           selectedAvatarId.value,
           referralCode.value
         );
-        result = r;
+        result = r;       
+        await authStore.storePublicKey();
       } catch (error) {
         console.error('Registration failed:', error);
       }

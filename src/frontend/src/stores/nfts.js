@@ -4,74 +4,58 @@ import { Principal } from '@dfinity/principal';
 import { useAuthStore } from './auth';
 import { useCanisterStore } from './canister.js';
 
+//create a initialization store function to init all required stores
+
 export const useNFTStore = defineStore('nfts', {
   state: () => ({
-    icrc7Tokens: {},
-    metadata: {},
-    collectionMetadata: {},
-    loading : true,
+    nfts: [],
+    collection: {},
+    loading: true,
   }),
   actions: {
-    async fetchICRC7Tokens() {
+    async fetchNFTs() {
       try {
-        console.log("fetchICRC7Tokens");
+        console.log("fetchNFTs");
         const authStore = useAuthStore();
-        const canisterStore = useCanisterStore();
-        const canisterId = canisterStore.canisterId;
-
-        const principalIdString = await authStore.getPrincipalId();
-  
-        console.log("principalIdString:", principalIdString);
-  
-        const canister = useCanisterStore();
+        const canister = useCanisterStore();       
         const cosmicrafts = await canister.get("cosmicrafts");
+        const id = await authStore.getPrincipalId().toText();
 
-        const account = Principal.fromText(principalIdString);
-  
-        const result = await cosmicrafts.icrc7_tokens_of({ owner: account, subaccount: [] });
+        /**
+        public type TokenId = Nat;       
+        public type TokenMetadata = {
+          tokenId : TokenId;
+          owner : Account;
+          metadata : Metadata;
+        };
+         */
+        this.nfts = await cosmicrafts.getNFTs(id);
 
-        if ('Ok' in result) {
-          this.icrc7Tokens[canisterId] = result.Ok;
-  
-          for (const tokenId of result.Ok) {
-            await this.fetchICRC7TokenMetadata(canisterId, tokenId);
-          }
-        } else {
-          throw new Error('Error fetching ICRC7 tokens');
-        }
       } catch (error) {
-        console.error('Error fetching ICRC7 tokens:', error);
+        console.error('Error fetching NFTs:', error);
       }
     },
 
-    async fetchICRC7TokenMetadata(tokenId) {
-      const canisterStore = useCanisterStore();
-        const canisterId = canisterStore.canisterId;
+    async fetchCollection() {
       try {
+        console.log("fetchCollection");
         const canister = useCanisterStore();
         const cosmicrafts = await canister.get("cosmicrafts");
-        const result = await cosmicrafts.icrc7_metadata(tokenId);
-        if ('Ok' in result) {
-          if (!this.metadata[canisterId]) {
-            this.metadata[canisterId] = {};
-          }
-          this.metadata[canisterId][tokenId.toString()] = result.Ok;
-        } else {
-          throw new Error('Error fetching ICRC7 token metadata');
-        }
-      } catch (error) {
-        console.error('Error fetching ICRC7 token metadata:', error);
-      }
-    },
+        const canisterId = canister.cosmicraftsId;
+        /**
+        public type CollectionMetadata = {
+          name : Text;
+          symbol : Text;
+          royalties : ?Nat16;
+          royaltyRecipient : ?Account;
+          description : ?Text;
+          image : ?Blob;
+          totalSupply : Nat;
+          supplyCap : ?Nat;
+        };
+         */
+        this.collection = await cosmicrafts.icrc7_collection_metadata();
 
-    async fetchICRC7CollectionMetadata() {
-      const canisterStore = useCanisterStore();
-      const canisterId = canisterStore.canisterId;
-      try {
-        const canister = useCanisterStore();
-        const cosmicrafts = await canister.get("cosmicrafts");
-        const collectionMetadata = await cosmicrafts.icrc7_collection_metadata();
-        this.collectionMetadata[canisterId] = collectionMetadata;
       } catch (error) {
         console.error('Error fetching ICRC7 collection metadata:', error);
       }

@@ -6,6 +6,9 @@ import { AuthClient } from '@dfinity/auth-client';
 import { HttpAgent } from '@dfinity/agent';
 import useAuthStore from './auth.js';
 
+
+//create a initialization store function to init all required stores
+
 const canisters = {
   cosmicrafts: null,
 };
@@ -109,7 +112,13 @@ const get = async (canisterName) => {
 
 export const useCanisterStore = defineStore('canister', {
   state: () => ({
-    canisterId: canisterId
+    get canisterId() {
+      return this._canisterId;
+    },
+    set canisterId(value) {
+      this._canisterId = value;
+    },
+    canisterId: canisterId 
   }),
   actions: {
     get
