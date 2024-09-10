@@ -9,12 +9,16 @@ export const useNFTStore = defineStore('nfts', {
     icrc7Tokens: {},
     metadata: {},
     collectionMetadata: {},
+    loading : true,
   }),
   actions: {
-    async fetchICRC7Tokens(canisterId) {
+    async fetchICRC7Tokens() {
       try {
         console.log("fetchICRC7Tokens");
         const authStore = useAuthStore();
+        const canisterStore = useCanisterStore();
+        const canisterId = canisterStore.canisterId;
+
         const principalIdString = await authStore.getPrincipalId();
   
         console.log("principalIdString:", principalIdString);
@@ -40,7 +44,9 @@ export const useNFTStore = defineStore('nfts', {
       }
     },
 
-    async fetchICRC7TokenMetadata(canisterId, tokenId) {
+    async fetchICRC7TokenMetadata(tokenId) {
+      const canisterStore = useCanisterStore();
+        const canisterId = canisterStore.canisterId;
       try {
         const canister = useCanisterStore();
         const cosmicrafts = await canister.get("cosmicrafts");
@@ -58,7 +64,9 @@ export const useNFTStore = defineStore('nfts', {
       }
     },
 
-    async fetchICRC7CollectionMetadata(canisterId) {
+    async fetchICRC7CollectionMetadata() {
+      const canisterStore = useCanisterStore();
+      const canisterId = canisterStore.canisterId;
       try {
         const canister = useCanisterStore();
         const cosmicrafts = await canister.get("cosmicrafts");
@@ -69,7 +77,7 @@ export const useNFTStore = defineStore('nfts', {
       }
     },
 
-    async transferICRC7Token(canisterId, to, tokenIds, memo) {
+    async transferICRC7Token(to, tokenIds, memo) {
       try {
         const authStore = useAuthStore();
         const principalIdString = await authStore.getPrincipalId();

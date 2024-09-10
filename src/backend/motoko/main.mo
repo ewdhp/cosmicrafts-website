@@ -5373,6 +5373,7 @@ shared actor class Cosmicrafts() = Self {
 
   // Pre-upgrade hook to save the state
   system func preupgrade() {
+    _userKeys := Iter.toArray(userKeys.entries());
     _generalUserProgress := Iter.toArray(generalUserProgress.entries());
     _missions := Iter.toArray(missions.entries());
     _activeMissions := Iter.toArray(activeMissions.entries());
@@ -5408,6 +5409,7 @@ shared actor class Cosmicrafts() = Self {
 
   // Post-upgrade hook to restore the state
   system func postupgrade() {
+    userKeys := HashMap.fromIter(_userKeys.vals(), 0, Principal.equal, Principal.hash);
     generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
     missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
     activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
@@ -7749,6 +7751,54 @@ shared actor class Cosmicrafts() = Self {
       };
     };
     (categories, lines, individuals);
+  };
+
+  //User keys
+
+  stable var _userKeys : [(Principal, Text)] = [];
+  var userKeys : HashMap.HashMap<Principal, Text> = HashMap.fromIter(_userKeys.vals(), 0, Principal.equal, Principal.hash);
+
+  //missing generateKey
+
+  public shared ({ caller }) func storePublicKey(user : Principal, publicKey : Text) : async Bool {
+    if (caller == user) {
+      userKeys.put(user, publicKey);
+      return true;
+    } else {
+      return false;
+    };
+  };
+
+  public query ({ caller }) func getPublicKey(user : Principal) : async ?Text {
+    if (caller == user) {
+      return userKeys.get(user);
+    } else {
+      return null;
+    };
+  };
+
+  public query ({ caller }) func checkKey(user : Principal, providedKey : Text) : async Bool {
+    if (caller == user) {
+      switch (userKeys.get(user)) {
+        case (?storedKey) {
+          return storedKey == providedKey;
+        };
+        case null {
+          return false;
+        };
+      };
+    } else {
+      return false;
+    };
+  };
+
+  public shared ({ caller }) func updateKey(user : Principal, newKey : Text) : async Bool {
+    if (caller == user) {
+      userKeys.put(user, newKey);
+      return true;
+    } else {
+      return false;
+    };
   };
 
 };

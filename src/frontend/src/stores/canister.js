@@ -1,6 +1,6 @@
 // /stores/canisterStore.js
 import { defineStore } from 'pinia';
-import { createActor, canisterId, cosmicrafts} from '../../../declarations/cosmicrafts/index.js';
+import { createActor, canisterId} from '../../../declarations/cosmicrafts/index.js';
 import { Ed25519KeyIdentity } from '@dfinity/identity';
 import { AuthClient } from '@dfinity/auth-client';
 import { HttpAgent } from '@dfinity/agent';
@@ -47,7 +47,7 @@ const createCanister = async (publicKey, privateKey, canisterName) =>{
   } catch (error) {
     console.error("Error initializing canister:", error);
   }
-  console.log('AuthStore: canister initialized with keys');
+  console.log('AuthStore: canister '+canisterName+' initialized with keys');
 
 };
 
@@ -106,9 +106,10 @@ const get = async (canisterName) => {
 
 };
 
+
 export const useCanisterStore = defineStore('canister', {
   state: () => ({
-    canisters: canisters
+    canisterId: canisterId
   }),
   actions: {
     get

@@ -1,21 +1,20 @@
 <template>
+  <LoadingSpinner :isLoading = "achStore.loading"/>
   <div class="ach-view">
     <div class="title"><h2>Achievements</h2></div>
     <div class="nav">
 
     <div class="categories">
-      <button
-        v-for="category in achStore.categories"
-        :key="category.id"
-        @click="selectCategory(category.id)"
-        :class="{ active: selectedCategory && selectedCategory.value === category.id }"
-      >
-        <h3>{{ category.name }}</h3>
-      </button>
+      <ListH
+        :items="achStore.categories"
+        :selectedItem="selectedCategory"
+        @update:selectedItem="selectLine"
+      />
+    
     </div>
     </div>
     <div class="content" v-if="selectedCategory">
-      <ACHList
+      <ListV
         :items="filteredLines"
         :selectedItem="selectedLine"
         @update:selectedItem="selectLine"
@@ -33,17 +32,20 @@
 <script>
 import { ref, onMounted, computed } from 'vue';
 import { useACHStore } from '@/stores/ach.js';
-import ACHList from '@/components/navs/ACHList.vue';
+import ListV from '@/components/navs/ListV.vue';
+import ListH from '@/components/navs/ListH.vue';
+import LoadingSpinner from '../../components/loading/LoadingSpinner.vue';
 
 export default {
   components: {
-    ACHList
+    ListH,
+    ListV,
+    LoadingSpinner
   },
   setup() {
     const achStore = useACHStore();
     const selectedCategory = ref(null);
     const selectedLine = ref(null);
-    const loading = ref(true);
 
     const selectCategory = (categoryId) => {
       console.log(`selectCategory called with categoryId: ${categoryId}`);
@@ -69,7 +71,10 @@ export default {
     });
 
     onMounted(async () => {
+      console.log("loading: ", achStore.loading);
+      achStore.loading = true;
       if(achStore.fetched) {
+        achStore.loading = false;
         if (achStore.categories.length > 0) {
         selectedCategory.value = achStore.categories[0].id;
       }
@@ -80,8 +85,8 @@ export default {
       if (achStore.categories.length > 0) {
         selectedCategory.value = achStore.categories[0].id;
       }
-      fetched.value = true; 
-      loading.value = false;
+      achStore.fetched = true; 
+      achStore.loading = false;
     });
 
     return {
@@ -92,7 +97,6 @@ export default {
       selectLine,
       filteredLines,
       filteredIndividuals,
-      loading,
     };
   }
 };

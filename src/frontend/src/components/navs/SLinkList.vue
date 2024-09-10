@@ -89,7 +89,6 @@ export default {
   justify-content: center;
   align-items: center;
   padding: 8px;
-
   border-radius: 8px;
   border: 1px solid white;
   width: 48px;
@@ -110,7 +109,6 @@ export default {
 .link-list li:not(.active):hover .nav-icon {
   transform: scale(1.25);
   transition: background 0.4s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.1s ease-in-out;
-
 }
 
 /* SVG Animation when switch to active */
@@ -130,8 +128,9 @@ export default {
 
 /* Default inactive state */
 .link-list li .section {
+  
   background: linear-gradient(to bottom, #151927, #171C2B);
-  border: 1px solid #313b58;
+  border: 1px solid #5e6777;
   box-shadow: 0 0 5px black;
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
   margin-bottom: 20px;

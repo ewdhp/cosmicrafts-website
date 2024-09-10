@@ -1,5 +1,7 @@
 <template>
+    <LoadingSpinner :isLoading = "nftStore.loading"/>
   <h2>NFTs</h2>
+
   <div class="container">
     <div class="nft-grid">
       <div v-for="(tokens, canisterId) in nftStore.icrc7Tokens" :key="canisterId" class="canister-section">
@@ -26,11 +28,12 @@ import { onMounted } from 'vue';
 import { useNFTStore } from '@/stores/nfts.js';
 import { useAuthStore } from '@/stores/auth.js';
 import MetadataItem from '@/components/nfts/MetadataItem.vue';
-
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 const nftStore = useNFTStore();
 const authStore = useAuthStore();
 
 onMounted(async () => {
+  nftStore.loading = true;
   const principalIdString = await authStore.getPrincipalId();
   if (!principalIdString) {
     console.error('Principal ID is not set');
@@ -39,14 +42,12 @@ onMounted(async () => {
 
   try {
     console.log('Fetching NFTs...');
-    const canisterIds = ['phgme-naaaa-aaaap-abwda-cai', 'w4fdk-fiaaa-aaaap-qccgq-cai'];
-    for (const canisterId of canisterIds) {
-      await nftStore.fetchICRC7Tokens(canisterId);
-      await nftStore.fetchICRC7CollectionMetadata(canisterId);
-    }
+      await nftStore.fetchICRC7Tokens();
+      await nftStore.fetchICRC7CollectionMetadata();  
   } catch (error) {
     console.error('Error fetching NFTs:', error);
   }
+  nftStore.loading = false;
 });
 </script>
 

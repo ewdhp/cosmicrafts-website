@@ -100,6 +100,7 @@ export default {
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
+    background: #11214d71;
 
   }
 }
@@ -113,7 +114,7 @@ export default {
   padding: 4px;
   position: fixed;
   z-index: 10;
-  border-bottom: 0.5px solid #131414;
+  border-bottom: 3px solid #000000;
   box-shadow: inset 0px 2px 12px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px); /* Add blurring effect */
 
@@ -160,11 +161,11 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: #1a1e2cdc; /* Vertical gradient */
+  background: rgba(9, 15, 29, 0.856); /* Vertical gradient */
   color: #9ca3b8; /* Text color */
-  border: 2px solid rgba(255, 255, 255, 0.966);
+  border: 1px solid #828c9e;
   border-radius: 20px; /* Rounded corners */
-  box-shadow: 8px 8px 8px rgba(0, 0, 0.5, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
+  box-shadow: 8px 8px 8px rgba(0, 0, 1, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
   //overflow-y: auto; /* Scrollable */
   backdrop-filter: blur(3px);
   position: relative; /* Needed for watermark positioning */

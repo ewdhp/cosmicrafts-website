@@ -67,6 +67,7 @@ export const useAuthStore = defineStore('auth', {
       const message = 'Sign this message to log in with your Phantom Wallet';
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
+        
         await this.generateKeysFromSignature(signature);
         this.isAuthenticated = true;
         this.saveStateToLocalStorage();
@@ -111,6 +112,7 @@ export const useAuthStore = defineStore('auth', {
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSignature);
       const seed = new Uint8Array(hashBuffer.slice(0, 32));
       const keyPair = nacl.sign.keyPair.fromSeed(seed);
+
       return {
         public: base64Encode(keyPair.publicKey),
         private: base64Encode(keyPair.secretKey)
@@ -126,6 +128,27 @@ export const useAuthStore = defineStore('auth', {
       const privateKeyBase64 = base64Encode(keyPair.secretKey);
       await this.createCanister(publicKeyBase64, privateKeyBase64);
       this.saveStateToLocalStorage();
+    },
+    async storePublicKey() {
+      const canister = useCanisterStore();
+      const cosmicrafts = await canister.get("cosmicrafts");
+      const identity = Ed25519KeyIdentity.fromKeyPair(
+        base64ToUint8Array(this.keys.public),
+        base64ToUint8Array(this.keys.private)
+      );
+        try {
+          const result = await cosmicrafts.storePublicKey(
+            identity.getPrincipalId().toText(), 
+            this.keys.public
+          );
+          if(result){
+            console.log('Public key stored successfully');
+          }else {
+            console.log('Public key not stored');
+          }         
+        } catch (error) {
+          console.error('Error storing public key:', error);
+        }     
     },
     saveStateToLocalStorage() {
       localStorage.setItem('authStore', JSON.stringify(this.$state));
