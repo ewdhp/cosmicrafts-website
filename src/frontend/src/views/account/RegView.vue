@@ -91,24 +91,30 @@ export default {
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
       var result = false;
+      var rawMessage = '';
+
+      // Set default avatar ID to 1 if none is selected
+      const avatarId = selectedAvatarId.value || 1;
 
       try {
         const [r, a, c] = await cosmicrafts.registerPlayer(
           username.value,
-          selectedAvatarId.value,
-          referralCode.value
+          avatarId,  // Use default avatar ID if none is selected
+          referralCode.value || ''  // Provide an empty string if no referral code is given
         );
         result = r;
+        rawMessage = a;  // Capture the raw message (assuming 'a' holds the message)
       } catch (error) {
         console.error(error);
+        rawMessage = error.toString();  // Capture the error message from blockchain if there's a failure
       }
 
       if (result) {
-        await authStore.isPlayerRegistered() ? router.push('/') 
-        : registerResult.value = 'Registration failed. Please try again.';
+        await authStore.isPlayerRegistered() ? router.push('/') : registerResult.value = rawMessage;
       } else {
-        registerResult.value = 'Registration failed. Please try again.';
+        registerResult.value = rawMessage;
       }
+      
       loading.value = false;
     };
 
