@@ -7,23 +7,7 @@
             <img style="display: flex;  margin-right:15px" src="@/assets/logos/cosmicrafts.svg" alt="Logo" class="logo-menu" />
             <h2 style="display: flex;  min-width: 230px;">{{ collection.name || 'Unknown Collection' }}</h2>
           </div>
-          <div style="display: flex; align-items:center; margin-right: 15px;">
-              <button @click="setLayout('vertical')" aria-label="Horizontal View">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="8" height="8" fill="currentColor" />
-                  <rect x="13" y="3" width="8" height="8" fill="currentColor" />
-                  <rect x="3" y="13" width="8" height="8" fill="currentColor" />
-                  <rect x="13" y="13" width="8" height="8" fill="currentColor" />
-                </svg>
-              </button>
-              <button  @click="setLayout('horizontal')" aria-label="Vertical View">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" y="3" width="18" height="4" fill="currentColor" />
-                  <rect x="3" y="10" width="18" height="4" fill="currentColor" />
-                  <rect x="3" y="17" width="18" height="4" fill="currentColor" />
-                </svg>
-              </button>
-            </div>
+    
           <div style="display:flex;justify-content: flex-end; margin:0px; width:100%;">
             <select v-model="selectedCategory" @change="filterNFTs">
               <option v-for="(displayName, category) in categories" :key="category" :value="category">{{ displayName }}</option>
@@ -46,9 +30,9 @@
     </div>
   </div>
 
-  <div :class="['nft-display', layout]">
+  <div class="nft-display">
     <div v-if="filteredNFTs.length === 0">No NFTs found.</div>
-    <NftItem v-for="nft in filteredNFTs" :key="nft.tokenId" :nft="nft" :layout="layout" />
+    <NftItem v-for="nft in filteredNFTs" :key="nft.tokenId" :nft="nft"  />
   </div>
 </template>
 
@@ -64,8 +48,7 @@ export default {
     return {
       searchQuery: '',
       selectedCategory: 'all',
-      nftsOwned: 0,
-      layout: 'vertical', // Default layout
+      nftsOwned: 0, // Default layout
       categories: {
         all: 'All'
       },
@@ -218,24 +201,9 @@ button {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-
   color: #9ca3b8;
-
   margin-top: 20px;
   border-radius: 15px;
-
-  backdrop-filter: blur(16px);
-  align-items: center;
-  align-content: center;
 }
 
-.nft-display.vertical .nft-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.nft-display.horizontal .nft-item {
-  display: flex;
-  flex-direction: row;
-}
 </style>
