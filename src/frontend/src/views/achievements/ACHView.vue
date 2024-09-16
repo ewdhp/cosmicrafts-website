@@ -157,7 +157,7 @@ padding: 25px;
 }
 
 .card {
-  border: 3px solid #77a7e6;
+  border: 2px solid #66adff;
   background-color: rgba(11, 16, 29, 0.945);
   padding: 20px;
   margin-bottom: 20px;

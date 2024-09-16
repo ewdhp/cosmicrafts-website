@@ -101,7 +101,7 @@ export default {
   .layout-container {
     display: flex;
     flex-grow: 1;
-    margin-top: 10vh; /* Ensure the content starts after the header */
+    margin-top: 6vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
     background-image: url('@/assets/login/fondo.jpg');
 
