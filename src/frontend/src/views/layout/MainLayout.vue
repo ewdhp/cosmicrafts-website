@@ -92,7 +92,7 @@ export default {
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
-    background: #0a0c13a6;
+    background: #161a2ca6;
 
   }
 }
@@ -153,7 +153,7 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: rgba(12, 16, 22, 0.719); /* Vertical gradient */
+  background: rgba(0, 0, 2, 0.432); /* Vertical gradient */
   color: #9ca3b8; /* Text color */
   border: 1px solid #828c9e;
   border-radius: 20px; /* Rounded corners */

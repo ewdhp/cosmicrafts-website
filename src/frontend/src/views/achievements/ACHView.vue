@@ -113,6 +113,9 @@ h2 {
 }
 .ach-view {
   padding: 20px;
+
+
+padding: 25px;
 }
 
 .categories {
@@ -145,6 +148,7 @@ h2 {
 
 .content {
   display: flex;
+
 }
 
 .individuals {
