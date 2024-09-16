@@ -1,6 +1,5 @@
 <template>
   <div>
-   
     <!-- Loading Spinner with Blurred Background -->
     <div class="top" v-if="loading">
       <LoadingSpinner :isLoading="loading" />
@@ -9,10 +8,12 @@
     <div class="register-container">
       <div class="register-panel">
         <img src="@/assets/logos/logo_full.svg" alt="Cosmicrafts" class="full-logo" />
-         <!-- Registration Result -->
-    <div v-if="registerResult" class="register-result">
-      {{ registerResult }}
-    </div>
+
+        <!-- Registration Result -->
+        <div v-if="registerResult" class="register-result">
+          {{ registerResult }}
+        </div>
+
         <form @submit.prevent="registerPlayer" class="form-grid">
           <!-- Avatar Selector Component on the left -->
           <div class="avatar-section">
@@ -21,7 +22,6 @@
 
           <!-- Inputs and Texts on the right -->
           <div class="right-section">
-            <p class="intro-text">Let's get you started</p>
             <div class="form-group">
               <label for="username">Username:</label>
               <input type="text" id="username" v-model="username" required placeholder="Enter your username" />
@@ -35,8 +35,8 @@
             </div>
           </div>
 
-          <!-- Terms of Service Checkbox -->
-          <div class="terms-container">
+          <!-- Terms of Service Checkbox (new grid row) -->
+          <div class="terms-column">
             <div class="form-group terms">
               <input type="checkbox" id="terms" v-model="acceptedTerms" required />
               <label for="terms">
@@ -45,13 +45,16 @@
             </div>
           </div>
 
-          <!-- Submit Button -->
-          <button type="submit" class="submit-button">Register</button>
+          <!-- Submit Button (new grid row) -->
+          <div class="submit-column">
+            <button type="submit" class="submit-button">Register</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 import { ref } from 'vue';
@@ -139,8 +142,7 @@ export default {
   height: 100%;
   width: 100%;
   z-index: 9999;
-  background: rgba(34, 47, 90, 0.5);
-  backdrop-filter: blur(10px);
+  background: rgba(34, 47, 90, 0.95);
 }
 
 .register-container {
@@ -148,23 +150,25 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg'); /* Add your background image here */
+  background-image: url('@/assets/login/fondo.jpg');
   background-size: cover;
   background-position: center;
 }
 
 .register-panel {
-  background: rgba(4, 15, 36, 0.582); /* Add some transparency for the background */
+  background: linear-gradient(125deg, #040f2451, #073e6170);
+  backdrop-filter: blur(4px);
   padding: 40px;
   border-radius: 10px;
   position: relative;
-  z-index: 1;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2);
-  max-width: 600px;
+  z-index: 10000;
+  border: 0.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.2);
+  max-width: 360px;
   width: 100%;
 }
 
+/* what is this doing? */
 .register-panel::after {
   content: '';
   background-size: 70%;
@@ -177,12 +181,13 @@ export default {
   z-index: -1; /* Ensure it’s behind the content */
 }
 
+
 /* Full Logo Styling */
 .full-logo {
   display: block;
   margin: 0 auto 30px auto;
   width: 200px;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.25));
 }
 
 /* Grid Layout for Avatar and Right Section */
@@ -190,6 +195,11 @@ export default {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 16px;
+}
+
+/* Terms and Submit Button are on new rows (full width) */
+.terms-column, .submit-column {
+  grid-column: 1 / span 2; /* Span across both columns */
 }
 
 /* Avatar Section */
@@ -220,9 +230,11 @@ export default {
 }
 
 label {
+  font-size: 14px;
   display: block;
-  margin-bottom: 4px;
-  color: #89B4C7;
+  margin-bottom: 2px;
+  margin-top: 4px;
+  color: #ffffff;
 }
 
 input[type="text"] {
@@ -237,7 +249,7 @@ input[type="text"] {
 }
 
 input::placeholder {
-  color: #616161; /* Set default color */
+  color: #7b7b7b; /* Set default color */
 }
 
 .referral-link {
@@ -246,7 +258,7 @@ input::placeholder {
 }
 
 .referral-link p {
-  color: #89B4C7;
+  color: #d8e7ee;
   font-weight: normal;
 }
 
@@ -255,21 +267,26 @@ input::placeholder {
   text-decoration: underline;
 }
 
+input::placeholder {
+  color: #7b7b7b;
+}
+
+.referral-link p {
+  color: #d8e7ee;
+}
+
 .terms {
   display: flex;
   align-items: center;
-  margin-top: 8px;
-  height: 100%;
 }
 
 .terms input[type="checkbox"] {
   appearance: none;
-  width: 31px;
-  height: 31px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #00FFFF;
   border-radius: 4px;
   background-color: #202020;
-  position: relative;
   margin-right: 8px;
   cursor: pointer;
 }
@@ -282,7 +299,7 @@ input::placeholder {
 }
 
 .terms label {
-  color: #89B4C7;
+  color: #bfddea;
 }
 
 .terms a {
@@ -316,11 +333,5 @@ button.submit-button:hover {
     justify-content: flex-start;
     margin-bottom: 20px;
   }
-}
-
-.register-result {
-  color: red;
-  margin-top: 10px;
-  text-align: center;
 }
 </style>
