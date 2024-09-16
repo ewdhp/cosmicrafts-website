@@ -173,12 +173,11 @@ export default {
 .register-panel {
   background: #1f303e5f;
   backdrop-filter: blur(4px);
-  padding: 40px;
+  padding: 36px;
   border-radius: 12px;
   position: relative;
   border: 0.5px solid rgba(0, 0, 0, 0.114);
   box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
-  
   max-width: 360px;
   width: 100%;
 }

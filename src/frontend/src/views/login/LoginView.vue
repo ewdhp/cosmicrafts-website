@@ -12,7 +12,7 @@
         <div class="btn-div" @click="loginWithGoogle">
           <label class="btn-label">
             <img src="@/assets/login/google_logo.svg" class="button-account-icon" alt="Google" />
-            <span class="btn-text">Login with Google</span>
+            <span class="btn-text"> Google</span>
           </label>
         </div>
 
@@ -20,7 +20,7 @@
         <div class="btn-div" v-for="method in authMethods" :key="method.text" @click="method.onClick">
           <label class="btn-label">
             <img :src="method.logo" class="button-account-icon" :alt="method.text" />
-            <span class="btn-text">Login with {{ method.text }}</span>
+            <span class="btn-text"> {{ method.text }}</span>
           </label>
         </div>
       </div>
@@ -125,6 +125,18 @@ const authMethods = [
   position: relative;
 }
 
+/* Container for the login screen */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(350deg, #161a2070, #1f242c4c);
+  overflow: hidden;
+  position: relative;
+}
+
 .login-container::before {
   content: '';
   position: absolute;
@@ -139,27 +151,35 @@ const authMethods = [
   z-index: -1;
 }
 
-/* Login panel styling */
 .login-panel {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   background: rgba(31, 48, 62, 0.37);
   backdrop-filter: blur(4px);
-  padding: 40px;
+  padding: 5vh; /* Adjusted padding for responsiveness */
   border-radius: 12px;
   border: 0.5px solid rgba(0, 0, 0, 0.114);
   box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+
+  /* Max width and height constraints */
   max-width: 360px;
+  max-height: 60vh;
   width: 100%;
+  height: auto;
+  
+  /* Ensure margin spacing relative to viewport */
+  margin-top: 5vh;
+  margin-bottom: 5vh;
 }
 
 /* Full logo styling */
 .full-logo {
   display: block;
-  width: 196px;
-  margin-bottom: 32px;
+  width: 21vh; /* Proportional to viewport height */
+  margin-top: 0px;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.25));
 }
 
@@ -167,31 +187,31 @@ const authMethods = [
 .cosmic-label-connect {
   color: #FFFFFF;
   font-weight: 600;
-  margin-bottom: 24px;
-  font-size: 1.5rem;
+  margin-top: 4vh;
+  margin-bottom: 2vh;
+  font-size: 2vh;
 }
 
 /* Custom Google Button & Auth Methods Grid */
 .inner-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 2vh; /* Use vh for gap for consistency */
   width: 100%;
-  max-width: 320px;
-  margin-bottom: 24px;
+  max-width: 360px;
+  margin-bottom: 2vh;
 }
 
 /* Button for Auth Methods and Custom Google Button */
 .btn-div {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  height: 48px;
+  height: 4.5vh; /* Proportional height */
   background: linear-gradient(135deg, rgba(28, 30, 33, 0.625), rgba(31, 36, 44, 0.765));
   border-radius: 8px;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0 20px;
+  padding: 0 2vh; /* Use vh for padding */
   transition: background 0.1s ease;
 }
 
@@ -201,9 +221,9 @@ const authMethods = [
 
 /* Icon inside the button */
 .button-account-icon {
-  width: 24px;
-  height: 24px;
-  margin-right: 12px;
+  width: 2.5vh; /* Responsive icon size */
+  height: 2.5vh;
+  margin-right: 1.5vh;
 }
 
 /* Label and Text inside the button */
@@ -211,20 +231,19 @@ const authMethods = [
   display: flex;
   align-items: center;
   width: 100%;
-  justify-content: flex-start; /* Align text and icon on the left */
-  color: #FFFFFF;
-  font-size: 1rem;
+  justify-content: flex-start;
+  color: #d6d6d6;
+  font-size: 1.8vh; /* Responsive font size */
 }
 
-/* Text inside the button */
 .btn-text {
-  margin-left: 8px;
+  margin-left: 1vh; /* Adjust text margin */
 }
 
 /* Clarification message */
 .clarification-message {
   text-align: center;
-  font-size: 14px;
+  font-size: 1.5vh; /* Responsive font size */
   color: #a4a4a4;
 }
 
@@ -233,18 +252,19 @@ const authMethods = [
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 24px;
+  margin-top: 3vh;
 }
 
 .bottom-wou-icon {
-  width: 48px;
+  width: 6vh; /* Responsive size */
 }
 
 .bottom-label {
   color: #aaaaaa;
   display: block;
-  font-size: 0.775rem;
+  font-size: 1.4vh; /* Responsive font size */
   text-align: center;
-  margin-top: 8px;
+  margin-top: 1vh;
 }
+
 </style>
