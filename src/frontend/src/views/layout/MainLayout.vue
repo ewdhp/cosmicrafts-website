@@ -78,13 +78,24 @@ export default {
     </div>
   </div>
 </template>
-
+/** 
+ background: rgba(0, 0, 0, 0.514); /* Vertical gradient */
+ color: #8f939e; /* Text color */
+  border: 1px solid #d2d6dd;
+  border-radius: 20px; /* Rounded corners */
+  box-shadow: 8px 8px 8px rgba(0, 0, 0, 0.616), inset 0px 2px 6px rgba(45, 76, 255, 0.548); /* Outer and inner shadows */
+  //overflow-y: auto; /* Scrollable */
+  backdrop-filter: blur(16px);
+  position: relative; /* Needed for watermark positioning */
+  z-index: 1; /* Ensure the content panel has a higher z-index */
+**/
 <style scoped lang="scss">
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-image: url('@/assets/OIG3.jpg');
+
+
 
 
   .layout-container {
@@ -92,7 +103,7 @@ export default {
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
-    background: #161a2ca6;
+    background: rgba(195, 195, 202, 0.769);
 
   }
 }
@@ -102,20 +113,20 @@ export default {
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, rgba(9, 12, 24, 0.918), rgba(43, 41, 23, 0.452));
-  padding: 4px;
+  background: rgb(23, 28, 37);
+  padding: 1px;
   position: fixed;
   z-index: 10;
-  border-bottom: 6px solid #03050ae5;
+  border-bottom: 1px solid #1e429ee5;
  
-  backdrop-filter: blur(10px); /* Add blurring effect */
+  backdrop-filter: blur(15px); /* Add blurring effect */
 
 
 
   .link-nav {
     display: flex;
-    padding: 5px;
-    margin-left: 10px;
+    padding: 3px;
+    margin-left: 18px;
   }
 
   .account-nav {
@@ -128,11 +139,11 @@ export default {
 .header::after {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: -7px;
   left: 0;
   right: 0;
   height: 10px;
-  background: linear-gradient(to bottom, rgba(33, 36, 85, 0.836), transparent);
+  background: linear-gradient(to bottom, rgba(21, 23, 54, 0.836), transparent);
   pointer-events: none;
   
 }
@@ -153,16 +164,7 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: rgba(0, 0, 2, 0.432); /* Vertical gradient */
-  color: #9ca3b8; /* Text color */
-  border: 1px solid #828c9e;
-  border-radius: 20px; /* Rounded corners */
-  box-shadow: 8px 8px 8px rgba(0, 0, 0, 0.616), inset 0px 2px 6px rgba(45, 76, 255, 0.548); /* Outer and inner shadows */
-  //overflow-y: auto; /* Scrollable */
-  backdrop-filter: blur(16px);
-  position: relative; /* Needed for watermark positioning */
-  z-index: 1; /* Ensure the content panel has a higher z-index */
-
+ 
   &::before {
     content: '';
     background-size: 100%;

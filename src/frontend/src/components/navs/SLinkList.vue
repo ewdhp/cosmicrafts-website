@@ -91,8 +91,8 @@ export default {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid white;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   /* Ensure smooth transition for all properties */
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
@@ -100,8 +100,9 @@ export default {
 }
 
 .nav-icon {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
+
   transition: transform 0.2s ease-in-out; /* Consistent transition for icon scaling */
 }
 
@@ -130,7 +131,7 @@ export default {
 .link-list li .section {
   
   background: linear-gradient(to bottom, #151927, #171C2B);
-  border: 1px solid #c9cacc;
+  border: .5px solid #d0dbdd;
   box-shadow: 0 0 5px black;
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
   margin-bottom: 20px;
@@ -149,8 +150,8 @@ export default {
 .link-list li .section,
 .link-list li.active .section,
 .link-list li:not(.active):hover .section {
-  width: 42px;
-  height: 42px;
+  width: 24px;
+  height: 24px;
   
 }
 

@@ -128,25 +128,25 @@ export default {
 </script>
 
 <style scoped>
-/* Define keyframes for the color transition */
+/* Define keyframes for the color transition 
 @keyframes colorTransition {
   0% {
     background-color: rgba(1, 8, 20, 0.678);
   }
   25% {
-    background-color: rgba(15, 8, 43, 0.267);
+    background-color: rgba(4, 4, 7, 0.788);
   }
   50% {
-    background-color: rgba(10, 8, 24, 0.774);
+    background-color: rgba(7, 7, 14, 0.774);
   }
   75% {
-    background-color: rgba(12, 12, 12, 0.753);
+    background-color: rgba(12, 12, 12, 0.842);
   }
   100% {
-    background-color: rgba(1, 7, 17, 0.877);
+    background-color: rgba(6, 8, 10, 0.877);
   }
 }
-
+*/
 body {
   font-family: Arial, sans-serif;
 }
@@ -186,9 +186,9 @@ button {
 
 .top-section {
   display: flex;
-  border: 1px solid #5b5c5e;
+  border: 1px solid #9ea3b8;
   border-radius: 10px;
-  background-color: rgba(22, 53, 128, 0.178);
+  background-color: rgb(23, 28, 37);
   color: rgb(223, 227, 230);
   backdrop-filter: blur(30px); 
   overflow: hidden;

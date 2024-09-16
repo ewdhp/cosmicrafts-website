@@ -43,7 +43,7 @@ export default {
   border-radius: 10px;
   border: 2px solid rgb(11, 182, 235);
   box-shadow: 0 2px 8px rgba(226, 147, 28, 0.945); /* Add shadow effect */
-  background-color: rgb(1, 7, 19);
+  background-color: rgb(23, 28, 37);
   color:rgb(194, 192, 186);
   display: flex;
   flex-direction: column;
