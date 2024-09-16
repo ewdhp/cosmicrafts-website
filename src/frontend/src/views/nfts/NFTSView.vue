@@ -7,14 +7,8 @@
             <img style="display: flex;  margin-right:15px" src="@/assets/logos/cosmicrafts.svg" alt="Logo" class="logo-menu" />
             <h2 style="display: flex;  min-width: 230px;">{{ collection.name || 'Unknown Collection' }}</h2>
           </div>
-          <div style="display:flex;justify-content: flex-end; margin:0px; width:100%;">
-            <select v-model="selectedCategory" @change="filterNFTs">
-              <option v-for="(displayName, category) in categories" :key="category" :value="category">{{ displayName }}</option>
-            </select>
-            <input style="display: flex; min-width:200px; width:100%;" type="text" v-model="searchQuery" placeholder="Search by name or id" @input="filterNFTs" /> 
-            
-            <div style="display: flex; align-items:center; margin-right: 15px;">
-              <button style="display: flex; align-items:flex-start;" @click="setLayout('vertical')" aria-label="Horizontal View">
+          <div style="display: flex; align-items:center; margin-right: 15px;">
+              <button @click="setLayout('vertical')" aria-label="Horizontal View">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="3" y="3" width="8" height="8" fill="currentColor" />
                   <rect x="13" y="3" width="8" height="8" fill="currentColor" />
@@ -22,7 +16,7 @@
                   <rect x="13" y="13" width="8" height="8" fill="currentColor" />
                 </svg>
               </button>
-              <button style="display: flex; align-items:flex-start;" @click="setLayout('horizontal')" aria-label="Vertical View">
+              <button  @click="setLayout('horizontal')" aria-label="Vertical View">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="3" y="3" width="18" height="4" fill="currentColor" />
                   <rect x="3" y="10" width="18" height="4" fill="currentColor" />
@@ -30,6 +24,12 @@
                 </svg>
               </button>
             </div>
+          <div style="display:flex;justify-content: flex-end; margin:0px; width:100%;">
+            <select v-model="selectedCategory" @change="filterNFTs">
+              <option v-for="(displayName, category) in categories" :key="category" :value="category">{{ displayName }}</option>
+            </select>
+            <input style="display: flex; min-width:200px; width:100%;" type="text" v-model="searchQuery" placeholder="Search NFTs" @input="filterNFTs" /> 
+            
           </div>
         </div>
         <div style="display: flex; flex-direction:column; align-items: center; margin: 0px 30px 15px 40px;">
@@ -98,16 +98,16 @@ export default {
       await nftsStore.fetchCollection();
       this.collection = nftsStore.collection;
     },
-    initializeMockNfts() {
+    initializeMockNfts() { //this is a test because no nfts are fetched
       this.mockNfts = [
-        { tokenId: 1, name: 'Art NFT 1', category: 'art' },
-        { tokenId: 2, name: 'Music NFT 1', category: 'music' },
-        { tokenId: 3, name: 'Game NFT 1', category: 'games' },
-        { tokenId: 4, name: 'Art NFT 2', category: 'art' },
-        { tokenId: 1, name: 'Art NFT 1', category: 'art' },
-        { tokenId: 2, name: 'Music NFT 1', category: 'music' },
-        { tokenId: 3, name: 'Game NFT 1', category: 'games' },
-        { tokenId: 4, name: 'Art NFT 2', category: 'art' },
+        { tokenId: 1, name: 'Art NFT', category: 'art' },
+        { tokenId: 2, name: 'Music NFT', category: 'music' },
+        { tokenId: 3, name: 'Game NFT', category: 'games' },
+        { tokenId: 4, name: 'Art NFT', category: 'art' },
+        { tokenId: 5, name: 'Art NFT', category: 'art' },
+        { tokenId: 6, name: 'Music NFT', category: 'music' },
+        { tokenId: 7, name: 'Game NFT', category: 'games' },
+        { tokenId: 8, name: 'Art NFT', category: 'art' },
       ];
     },
     setCategories() {
