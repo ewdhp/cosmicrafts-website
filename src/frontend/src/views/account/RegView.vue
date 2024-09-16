@@ -146,74 +146,60 @@ export default {
 }
 
 .register-container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background: linear-gradient(350deg, #161a2070, #1f242c4c);
+  overflow: hidden;
+}
+
+.register-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-image: url('@/assets/login/fondo.jpg');
   background-size: cover;
   background-position: center;
+  opacity: 1; /* Adjust this value for the desired transparency */
+  z-index: -1;
 }
 
+
 .register-panel {
-  background: linear-gradient(125deg, #040f2451, #073e6170);
+  background: #1f303e5f;
   backdrop-filter: blur(4px);
   padding: 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   position: relative;
-  z-index: 10000;
-  border: 0.5px solid rgba(255, 255, 255, 0.25);
-  box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.2);
+  border: 0.5px solid rgba(0, 0, 0, 0.114);
+  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+  
   max-width: 360px;
   width: 100%;
 }
 
-/* what is this doing? */
-.register-panel::after {
-  content: '';
-  background-size: 70%;
-  opacity: 0.025;
-  position: absolute;
-  top: 0; /* Align to the top */
-  left: 0; /* Align to the left */
-  width: 100%;
-  height: 100%;
-  z-index: -1; /* Ensure it’s behind the content */
-}
-
-
 /* Full Logo Styling */
 .full-logo {
   display: block;
-  margin: 0 auto 30px auto;
-  width: 200px;
-  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.25));
+  margin: 0 auto 32px auto;
+  width: 196px;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.25));
 }
 
 /* Grid Layout for Avatar and Right Section */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* Terms and Submit Button are on new rows (full width) */
 .terms-column, .submit-column {
   grid-column: 1 / span 2; /* Span across both columns */
-}
-
-/* Avatar Section */
-.avatar-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.selected-avatar {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid #00FFFF;
-  cursor: pointer;
 }
 
 /* Right Section for Inputs */
@@ -242,10 +228,10 @@ input[type="text"] {
   padding: 8px;
   box-sizing: border-box;
   background: linear-gradient(to bottom, #303030, #202020);
-  border: 1px solid #00FFFF;
+  border: .25px solid #00FFFF;
   border-radius: 8px;
   margin-bottom: 8px;
-  color: #b7b7b7;
+  color: #ffffff;
 }
 
 input::placeholder {
@@ -253,7 +239,7 @@ input::placeholder {
 }
 
 .referral-link {
-  margin-top: -11px;
+  margin-top: -12px;
   font-size: 11px;
 }
 
@@ -263,6 +249,7 @@ input::placeholder {
 }
 
 .referral-link a {
+  font-weight: bold;
   color: #21B6F6;
   text-decoration: underline;
 }
@@ -272,7 +259,7 @@ input::placeholder {
 }
 
 .referral-link p {
-  color: #d8e7ee;
+  color: #b0bec5;
 }
 
 .terms {
@@ -295,43 +282,44 @@ input::placeholder {
   background-image: url('@/assets/icons/checkmark_icon.svg');
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 18px;
+  background-size: 22px;
 }
 
 .terms label {
   color: #bfddea;
+  font-size: 13px;
 }
 
 .terms a {
   color: #21B6F6;
+  font-weight: bold;
   text-decoration: underline;
 }
 
 button.submit-button {
   width: 100%;
-  padding: 10px;
-  background-color: #007BFF;
+  padding: 12px;
+  background: linear-gradient(to bottom, #00C0FC, #0039BA); /* Gradient from top to bottom */
   color: white;
-  border: none;
-  border-radius: 5px;
+  border: .001rem solid rgba(255, 255, 255, 0.15); /* White stroke with 50% transparency */
+  border-radius: 8px; /* Rounded corners */
+  font-size: 16px;
+  font-weight: bold; /* Bold font */
   cursor: pointer;
-  transition: background-color 0.3s;
-  margin-top: 20px;
+  transition: background-color 0.1s, box-shadow 0.2s; /* Smooth transition for hover effects */
+  margin-top: 8px;
+
 }
 
+/* Hover effect */
 button.submit-button:hover {
-  background-color: #0056b3;
+  background: linear-gradient(to bottom, #1dcaff, #0e40b5); /* Gradient from top to bottom */
 }
 
-/* Responsive layout for small screens */
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .avatar-section {
-    justify-content: flex-start;
-    margin-bottom: 20px;
-  }
+/* Active effect (when clicked) */
+button.submit-button:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), /* Adjust drop shadow when active */
+              inset 0 1px 3px rgba(255, 255, 255, 0.3); /* Adjust inner shadow when active */
 }
+
 </style>
