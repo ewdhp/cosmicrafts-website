@@ -6837,6 +6837,45 @@ shared actor class Cosmicrafts() = Self {
     return paginatedPlayers;
   };
 
+  // Function to get top referrals with pagination
+  public query func getTopReferrals(page : Nat) : async [(PlayerId, Nat)] {
+    let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
+    let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
+      allReferrals,
+      func(a : (PlayerId, ReferralInfo), b : (PlayerId, ReferralInfo)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1.directReferrals > b.1.directReferrals) {
+          #less;
+        } else if (a.1.directReferrals < b.1.directReferrals) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+
+    let pageSize = 10;
+    let start = page * pageSize;
+    let end = if (start + pageSize > Array.size(sortedReferrals)) {
+      Array.size(sortedReferrals);
+    } else {
+      start + pageSize;
+    };
+
+    let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(Array.slice(sortedReferrals, start, end));
+    let topReferrals : [(PlayerId, Nat)] = Array.map<(PlayerId, ReferralInfo), (PlayerId, Nat)>(
+      paginatedReferrals,
+      func(entry : (PlayerId, ReferralInfo)) : (PlayerId, Nat) {
+        (entry.0, entry.1.directReferrals);
+      },
+    );
+
+    return topReferrals;
+  };
+
   // Achievements
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
