@@ -107,7 +107,7 @@ export default {
   flex-direction: row;
 }
 h2 {
-  color:#f8f4f4;
+  color: rgb(255, 255, 255);
   margin:0px;
   padding: 0px;
 }
@@ -129,7 +129,7 @@ padding: 25px;
 .categories button {
   background: none;
   border: none;
-  color:rgb(242, 243, 247);
+  color:rgb(247, 248, 250);
   font: inherit;
   cursor: pointer;
   padding: 0;
@@ -143,21 +143,21 @@ padding: 25px;
 .categories button.active {
   font-weight: bold;
   text-decoration: underline;
-  color: blue; /* Change color to indicate active state */
+  color: rgb(12, 12, 12); /* Change color to indicate active state */
 }
 
 .content {
   display: flex;
-
+  color:#070707;
 }
 
 .individuals {
   flex: 3;
-  color:rgb(216, 225, 253);
+  color:rgb(222, 225, 235);
 }
 
 .card {
-  border: .5px solid #77a7e6;
+  border: 3px solid #77a7e6;
   background-color: rgba(11, 16, 29, 0.945);
   padding: 20px;
   margin-bottom: 20px;

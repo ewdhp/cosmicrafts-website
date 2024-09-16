@@ -42,7 +42,7 @@ export default {
 .link-list button {
   background: none;
   border: none;
-  color: #66adff;
+  color: #cbcbd4;
   font: inherit;
   cursor: pointer;
   padding: 0;
@@ -56,6 +56,6 @@ export default {
 .link-list button.active {
   font-weight: bold;
 
-  color: rgb(222, 222, 231); /* Change color to indicate active state */
+  color: rgb(255, 255, 255); /* Change color to indicate active state */
 }
 </style>

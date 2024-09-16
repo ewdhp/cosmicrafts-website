@@ -18,7 +18,7 @@
         </div>
         <div style="display: flex; flex-direction:column; align-items: center; margin: 0px 30px 15px 40px;">
           <p>{{ collection.description ? collection.description[0] : 'No description available.' }}</p>
-          <div style="display:flex; flex-direction: row; color:rgba(25, 130, 255, 1);" class="metadata-stats">
+          <div style="display:flex; flex-direction: row; color:rgb(11, 182, 235);" class="metadata-stats">
             <div>Total Supply: {{ collection.totalSupply || 0 }}</div>
             <div>Total Supply: {{ collection.totalSupply || 0 }}</div>
             <div>Royalty Fees: {{ collection.royalties || 'N/A' }}</div>
@@ -156,6 +156,12 @@ select {
   background-color: rgba(10, 18, 31, 0);
   border: none;
   color: rgb(255, 255, 255);
+  backdrop-filter: blur(20px);
+}
+select option {
+  background-color: rgba(252, 253, 253, 0.925);
+  border: none;
+  color: rgb(21, 22, 22);
   backdrop-filter: blur(20px);
 }
 

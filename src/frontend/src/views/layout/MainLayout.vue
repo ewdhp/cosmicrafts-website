@@ -103,7 +103,7 @@ export default {
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
-    background: rgba(195, 195, 202, 0.769);
+    background-image: url('@/assets/login/fondo.jpg');
 
   }
 }
