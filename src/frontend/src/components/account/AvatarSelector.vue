@@ -4,13 +4,16 @@
     <img :src="selectedAvatar" alt="Selected Avatar" class="selected-avatar" @click="toggleGrid" />
     
     <transition name="fade">
-      <div v-if="showGrid" class="overlay">
-        <div class="avatar-grid">
-          <div v-for="(avatar, index) in avatarSrcArray" :key="index" @click="selectAvatar(index)">
-            <img :src="avatar" alt="Avatar" class="avatar-image" />
+      <!-- Use teleport to move the overlay to the root of the document -->
+      <teleport to="body">
+        <div v-if="showGrid" class="overlay">
+          <div class="avatar-grid">
+            <div v-for="(avatar, index) in avatarSrcArray" :key="index" @click="selectAvatar(index)">
+              <img :src="avatar" alt="Avatar" class="avatar-image" />
+            </div>
           </div>
         </div>
-      </div>
+      </teleport>
     </transition>
   </div>
 </template>
@@ -47,7 +50,6 @@ export default {
         avatar10,
         avatar11,
         avatar12,
-        // Add more avatar paths here
       ]
     };
   },
@@ -76,10 +78,11 @@ export default {
   cursor: pointer;
   border: 2px solid #00FFFF;
   border-radius: 8px;
+
 }
 
 .overlay {
-  position: fixed;
+  position: fixed; /* Fixed to the viewport */
   top: 0;
   left: 0;
   width: 100vw;
@@ -88,7 +91,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10000; /* Ensure it appears on top */
 }
 
 .avatar-grid {
@@ -96,8 +99,14 @@ export default {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   padding: 20px;
-  background: #fff;
+  background: linear-gradient(125deg, #040f2451, #073e6170); /* Same gradient as register-panel */
+  backdrop-filter: blur(4px); /* Same blur effect */
   border-radius: 10px;
+  border: 0.5px solid rgba(255, 255, 255, 0.25); /* Subtle white border */
+  box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.2); /* Inner shadow */
+  max-width: 600px;
+  width: 100%;
+  z-index: 1001; /* Ensure it's above the overlay */
 }
 
 .avatar-image {
@@ -111,7 +120,7 @@ export default {
   transition: opacity 0.5s;
 }
 
-.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
+.fade-enter, .fade-leave-to {
   opacity: 0;
 }
 </style>

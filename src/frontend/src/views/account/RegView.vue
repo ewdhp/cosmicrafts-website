@@ -1,6 +1,5 @@
 <template>
   <div>
-   
     <!-- Loading Spinner with Blurred Background -->
     <div class="top" v-if="loading">
       <LoadingSpinner :isLoading="loading" />
@@ -9,10 +8,12 @@
     <div class="register-container">
       <div class="register-panel">
         <img src="@/assets/logos/logo_full.svg" alt="Cosmicrafts" class="full-logo" />
-         <!-- Registration Result -->
-    <div v-if="registerResult" class="register-result">
-      {{ registerResult }}
-    </div>
+
+        <!-- Registration Result -->
+        <div v-if="registerResult" class="register-result">
+          {{ registerResult }}
+        </div>
+
         <form @submit.prevent="registerPlayer" class="form-grid">
           <!-- Avatar Selector Component on the left -->
           <div class="avatar-section">
@@ -21,7 +22,6 @@
 
           <!-- Inputs and Texts on the right -->
           <div class="right-section">
-            <p class="intro-text">Let's get you started</p>
             <div class="form-group">
               <label for="username">Username:</label>
               <input type="text" id="username" v-model="username" required placeholder="Enter your username" />
@@ -35,8 +35,8 @@
             </div>
           </div>
 
-          <!-- Terms of Service Checkbox -->
-          <div class="terms-container">
+          <!-- Terms of Service Checkbox (new grid row) -->
+          <div class="terms-column">
             <div class="form-group terms">
               <input type="checkbox" id="terms" v-model="acceptedTerms" required />
               <label for="terms">
@@ -45,13 +45,16 @@
             </div>
           </div>
 
-          <!-- Submit Button -->
-          <button type="submit" class="submit-button">Register</button>
+          <!-- Submit Button (new grid row) -->
+          <div class="submit-column">
+            <button type="submit" class="submit-button">Register</button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 import { ref } from 'vue';
@@ -139,71 +142,64 @@ export default {
   height: 100%;
   width: 100%;
   z-index: 9999;
-  background: rgba(34, 47, 90, 0.5);
-  backdrop-filter: blur(10px);
+  background: rgba(34, 47, 90, 0.95);
 }
 
 .register-container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg'); /* Add your background image here */
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(350deg, #161a2070, #1f242c4c);
+  overflow: hidden;
 }
 
-.register-panel {
-  background: rgba(4, 15, 36, 0.582); /* Add some transparency for the background */
-  padding: 40px;
-  border-radius: 10px;
-  position: relative;
-  z-index: 1;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.2);
-  max-width: 600px;
-  width: 100%;
-}
-
-.register-panel::after {
+.register-container::before {
   content: '';
-  background-size: 70%;
-  opacity: 0.025;
   position: absolute;
-  top: 0; /* Align to the top */
-  left: 0; /* Align to the left */
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1; /* Ensure it’s behind the content */
+  background-image: url('@/assets/login/fondo.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 1; /* Adjust this value for the desired transparency */
+  z-index: -1;
+}
+
+
+.register-panel {
+  background: #1f303e5f;
+  backdrop-filter: blur(4px);
+  padding: 40px;
+  border-radius: 12px;
+  position: relative;
+  border: 0.5px solid rgba(0, 0, 0, 0.114);
+  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+  
+  max-width: 360px;
+  width: 100%;
 }
 
 /* Full Logo Styling */
 .full-logo {
   display: block;
-  margin: 0 auto 30px auto;
-  width: 200px;
-  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+  margin: 0 auto 32px auto;
+  width: 196px;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.25));
 }
 
 /* Grid Layout for Avatar and Right Section */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* Avatar Section */
-.avatar-section {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.selected-avatar {
-  width: 100%;
-  border-radius: 8px;
-  border: 1px solid #00FFFF;
-  cursor: pointer;
+.terms-column, .submit-column {
+  grid-column: 1 / span 2; /* Span across both columns */
 }
 
 /* Right Section for Inputs */
@@ -220,9 +216,11 @@ export default {
 }
 
 label {
+  font-size: 14px;
   display: block;
-  margin-bottom: 4px;
-  color: #89B4C7;
+  margin-bottom: 2px;
+  margin-top: 4px;
+  color: #ffffff;
 }
 
 input[type="text"] {
@@ -230,46 +228,52 @@ input[type="text"] {
   padding: 8px;
   box-sizing: border-box;
   background: linear-gradient(to bottom, #303030, #202020);
-  border: 1px solid #00FFFF;
+  border: .25px solid #00FFFF;
   border-radius: 8px;
   margin-bottom: 8px;
-  color: #b7b7b7;
+  color: #ffffff;
 }
 
 input::placeholder {
-  color: #616161; /* Set default color */
+  color: #7b7b7b; /* Set default color */
 }
 
 .referral-link {
-  margin-top: -11px;
+  margin-top: -12px;
   font-size: 11px;
 }
 
 .referral-link p {
-  color: #89B4C7;
+  color: #d8e7ee;
   font-weight: normal;
 }
 
 .referral-link a {
+  font-weight: bold;
   color: #21B6F6;
   text-decoration: underline;
+}
+
+input::placeholder {
+  color: #7b7b7b;
+}
+
+.referral-link p {
+  color: #b0bec5;
 }
 
 .terms {
   display: flex;
   align-items: center;
-  margin-top: 8px;
-  height: 100%;
 }
 
 .terms input[type="checkbox"] {
   appearance: none;
-  width: 31px;
-  height: 31px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #00FFFF;
   border-radius: 4px;
   background-color: #202020;
-  position: relative;
   margin-right: 8px;
   cursor: pointer;
 }
@@ -278,49 +282,44 @@ input::placeholder {
   background-image: url('@/assets/icons/checkmark_icon.svg');
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 18px;
+  background-size: 22px;
 }
 
 .terms label {
-  color: #89B4C7;
+  color: #bfddea;
+  font-size: 13px;
 }
 
 .terms a {
   color: #21B6F6;
+  font-weight: bold;
   text-decoration: underline;
 }
 
 button.submit-button {
   width: 100%;
-  padding: 10px;
-  background-color: #007BFF;
+  padding: 12px;
+  background: linear-gradient(to bottom, #00C0FC, #0039BA); /* Gradient from top to bottom */
   color: white;
-  border: none;
-  border-radius: 5px;
+  border: .001rem solid rgba(255, 255, 255, 0.15); /* White stroke with 50% transparency */
+  border-radius: 8px; /* Rounded corners */
+  font-size: 16px;
+  font-weight: bold; /* Bold font */
   cursor: pointer;
-  transition: background-color 0.3s;
-  margin-top: 20px;
+  transition: background-color 0.1s, box-shadow 0.2s; /* Smooth transition for hover effects */
+  margin-top: 8px;
+
 }
 
+/* Hover effect */
 button.submit-button:hover {
-  background-color: #0056b3;
+  background: linear-gradient(to bottom, #1dcaff, #0e40b5); /* Gradient from top to bottom */
 }
 
-/* Responsive layout for small screens */
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .avatar-section {
-    justify-content: flex-start;
-    margin-bottom: 20px;
-  }
+/* Active effect (when clicked) */
+button.submit-button:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), /* Adjust drop shadow when active */
+              inset 0 1px 3px rgba(255, 255, 255, 0.3); /* Adjust inner shadow when active */
 }
 
-.register-result {
-  color: red;
-  margin-top: 10px;
-  text-align: center;
-}
 </style>
