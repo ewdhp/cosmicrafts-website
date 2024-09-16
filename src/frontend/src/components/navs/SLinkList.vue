@@ -130,7 +130,7 @@ export default {
 .link-list li .section {
   
   background: linear-gradient(to bottom, #151927, #171C2B);
-  border: 1px solid #5e6777;
+  border: 1px solid #c9cacc;
   box-shadow: 0 0 5px black;
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
   margin-bottom: 20px;

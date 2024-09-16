@@ -36,30 +36,22 @@
 import { reactive, onMounted, ref} from 'vue';
 import { customStringify } from '@/utils/customStringify';
 import { parseMetadata } from '@/utils/metadataParser';
-
+import { useCanisterStore } from '@/stores/canister';
 import { useTokenStore } from '@/stores/token';
-import { useAuthStore } from '@/stores/auth';
 import LoadingSpinner from '../../components/loading/LoadingSpinner.vue';
 
 
 const tokenStore = useTokenStore();
-const authStore = useAuthStore();
+const canisterStore = useCanisterStore();
 var loading = ref(true);
 const transferData = reactive({});
 
 onMounted(async () => {
-  const principalId = await authStore.getPrincipalId();
-
-  if (!principalId) {
-    console.error('Principal ID is not set');
-    return;
-  }
-
-  const canisterIds = ['svcoe-6iaaa-aaaam-ab4rq-cai', 'plahz-wyaaa-aaaam-accta-cai'];
-  for (const canisterId of canisterIds) {
-    transferData[canisterId] = { to: '', amount: 0 };
-    await tokenStore.fetchICRC1TokenInfo(canisterId);
-  }
+ // console.log('Fetching tokens...');
+ const canisterId = canisterStore.canisterIds["cosmicrafts"];
+//  console.log('canisterId:', canisterId);
+ transferData[canisterId] = { to: '', amount: 0 };
+ //  await tokenStore.fetchICRC1TokenInfo(canisterId);
   loading = false;
 });
 

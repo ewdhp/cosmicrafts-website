@@ -1,12 +1,9 @@
-// src/store/nftStore.js
 import { defineStore } from 'pinia';
 import { Principal } from '@dfinity/principal';
 import { useAuthStore } from './auth';
 import { useCanisterStore } from './canister.js';
 
-//create a initialization store function to init all required stores
-
-export const useNFTStore = defineStore('nfts', {
+export const useNftsStore = defineStore('nfts', {
   state: () => ({
     nfts: [],
     collection: {},
@@ -19,8 +16,7 @@ export const useNFTStore = defineStore('nfts', {
         const authStore = useAuthStore();
         const canister = useCanisterStore();       
         const cosmicrafts = await canister.get("cosmicrafts");
-        const id = await authStore.getPrincipalId().toText();
-
+        const id = await authStore.getIdentity().getPrincipal().toText();
         /**
         public type TokenId = Nat;       
         public type TokenMetadata = {
@@ -29,10 +25,10 @@ export const useNFTStore = defineStore('nfts', {
           metadata : Metadata;
         };
          */
-        this.nfts = await cosmicrafts.getNFTs(id);
-
+        this.nfts = await cosmicrafts.getNFTs(Principal.toString()) || [];
       } catch (error) {
         console.error('Error fetching NFTs:', error);
+        this.nfts = []; // Ensure nfts is an empty array on error
       }
     },
 
@@ -41,7 +37,6 @@ export const useNFTStore = defineStore('nfts', {
         console.log("fetchCollection");
         const canister = useCanisterStore();
         const cosmicrafts = await canister.get("cosmicrafts");
-        const canisterId = canister.cosmicraftsId;
         /**
         public type CollectionMetadata = {
           name : Text;
@@ -54,10 +49,11 @@ export const useNFTStore = defineStore('nfts', {
           supplyCap : ?Nat;
         };
          */
-        this.collection = await cosmicrafts.icrc7_collection_metadata();
+        this.collection = await cosmicrafts.icrc7_collection_metadata() || {};
 
       } catch (error) {
         console.error('Error fetching ICRC7 collection metadata:', error);
+        this.collection = {}; // Ensure collection is an empty object on error
       }
     },
 

@@ -5,15 +5,25 @@
     </div>
     <div class="name">{{ name }}</div>
     <div class="btnAdd"><button class="add-friend-btn">Add Friend</button></div>
-    
   </div>
 </template>
 
 <script>
 export default {
   props: {
-    avatarUrl: String,
-    name: String,
+    avatarUrl: {
+      type: String,
+      default: '',
+    },
+    name: {
+      type: String,
+      default: '',
+    },
+  },
+  mounted() {
+    console.log('FriendQuery mounted');
+    console.log('avatarUrl:', this.avatarUrl);
+    console.log('name:', this.name);
   },
 };
 </script>
@@ -23,7 +33,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-border: 1px solid;
+  border: 1px solid;
   padding: 2px;
   border-radius: 5px;
 }
@@ -35,32 +45,30 @@ border: 1px solid;
 }
 
 .avatar img {
-  display: flex;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
 }
 
 .name {
-  display: flex;
-  font-weight: bold;
-  border: 1px solid;
-  margin: 2px;
+  margin-left: 10px;
+  font-size: 1.2em;
 }
+
 .btnAdd {
-  margin: 2px;
+  margin-left: auto;
 }
 
 .add-friend-btn {
-  background-color: #4CAF50;
-  color: #fff;
+  padding: 5px 10px;
   border: none;
-  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
   border-radius: 5px;
   cursor: pointer;
 }
 
 .add-friend-btn:hover {
-  background-color: #3e8e41;
+  background-color: #0056b3;
 }
 </style>

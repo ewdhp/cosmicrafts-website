@@ -2252,6 +2252,15 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
+  public query func getPlayerByUsername(username : Text) : async (Bool, ?Player) {
+    for ((_, player) in players.entries()) {
+      if (player.username == username) {
+        return (true, ?player);
+      };
+    };
+    return (false, null);
+  };
+
   // Function to get another user profile
   public query func getProfile(player : PlayerId) : async ?Player {
     return players.get(player);

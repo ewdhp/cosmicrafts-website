@@ -16,6 +16,7 @@ export default {
         this.handleInput();
       } else {
         this.results = [];
+        this.isMenuVisible = false;
       }
     },
   },
@@ -41,23 +42,45 @@ export default {
       done();
     },
     async handleInput() {
-      const playerID = this.query.trim();
+      const query = this.query.trim();
+
+      if (query.length === 0) {
+        this.results = [];
+        this.isMenuVisible = false;
+        return;
+      }
 
       try {
-        const p = Principal.fromText(playerID);
-        const result = await cosmicrafts.ref_account_view(p);
-
-        if (result[0].errorCode) {
-          console.error('Error code:', result[0].errorCode);
+        let result;
+        if (this.isPrincipal(query)) {
+          result = await cosmicrafts.getPlayer(Principal.fromText(query));
         } else {
-          this.results = [result[0]];
-          console.log('Results Array:', this.results);
-          console.log('Player Name:', this.results[0].playerName); // Verify playerName
+          result = await cosmicrafts.getPlayerByUsername(query);
+        }
+
+        console.log('Result:', result); // Log the result to verify its structure
+
+        if (result[1][0].errorCode) {
+          console.error('Error code:', result[1][0].errorCode);
+          this.results = [];
+          this.isMenuVisible = false;
+        } else {
+          this.results = [result[1][0]];
+          console.log('Results Array:', this.results); // Log the results array
+          this.isMenuVisible = true;
         }
       } catch (error) {
         this.results = [];
-        return console.log("Not valid principal");
-        // Invalid Principal string
+        this.isMenuVisible = false;
+        console.log("Error fetching player");
+      }
+    },
+    isPrincipal(query) {
+      try {
+        Principal.fromText(query);
+        return true;
+      } catch (error) {
+        return false;
       }
     },
   },
@@ -74,7 +97,13 @@ export default {
       <div v-if="isMenuVisible" class="search-results">
         <ul v-if="results.length > 0" :key="results.length">
           <li v-for="(result, index) in results" :key="index">
-            <FriendQuery :avatarUrl="result.avatarUrl" :name="result.playerName" />
+            <div class="friend-container">
+              <div class="avatar">
+                <img :src="result.avatarUrl || 'https://via.placeholder.com/50'" alt="Avatar" />
+              </div>
+              <div class="name">{{ result.username }}</div>
+              <div class="btnAdd"><button class="add-friend-btn">Add Friend</button></div>
+            </div>
           </li>
         </ul>
         <p v-else-if="query.length > 0" class="no-results">No results found</p>
@@ -176,6 +205,49 @@ export default {
   font-size: 0.9rem;
 }
 
+.friend-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  padding: 2px;
+  border-radius: 5px;
+}
+
+.avatar {
+  display: flex;
+  border: 1px solid;
+  margin: 2px;
+}
+
+.avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.name {
+  margin-left: 10px;
+  font-size: 1.2em;
+}
+
+.btnAdd {
+  margin-left: auto;
+}
+
+.add-friend-btn {
+  padding: 5px 10px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.add-friend-btn:hover {
+  background-color: #0056b3;
+}
+
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -186,5 +258,4 @@ export default {
   opacity: 0;
   transform: translateY(-10px);
 }
-
 </style>

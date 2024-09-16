@@ -33,7 +33,7 @@ export default {
 
     watchEffect(() => {     
       const matchingSection = routes.find(item => item.path === route.path);
-      console.log("matchingSection: ", matchingSection);
+
       currentSection.value = matchingSection || routes.find(item => item.path === '/');
       childNavItems.value = currentSection.value?.children || [];
     });
@@ -92,7 +92,7 @@ export default {
     flex-grow: 1;
     margin-top: 10vh; /* Ensure the content starts after the header */
     padding: 16px; /* Add padding to avoid overlapping the edge */
-    background: #11214d71;
+    background: #0a0c13a6;
 
   }
 }
@@ -102,12 +102,12 @@ export default {
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, rgba(21, 25, 39, 0.493), rgba(23, 28, 43, 0.452));
+  background: linear-gradient(to bottom, rgba(9, 12, 24, 0.918), rgba(43, 41, 23, 0.452));
   padding: 4px;
   position: fixed;
   z-index: 10;
-  border-bottom: 3px solid #000000;
-  box-shadow: inset 0px 2px 12px rgba(255, 255, 255, 0.1);
+  border-bottom: 6px solid #03050ae5;
+ 
   backdrop-filter: blur(10px); /* Add blurring effect */
 
 
@@ -132,7 +132,7 @@ export default {
   left: 0;
   right: 0;
   height: 10px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
+  background: linear-gradient(to bottom, rgba(33, 36, 85, 0.836), transparent);
   pointer-events: none;
   
 }
@@ -153,13 +153,13 @@ export default {
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
-  background: rgba(9, 15, 29, 0.856); /* Vertical gradient */
+  background: rgba(12, 16, 22, 0.719); /* Vertical gradient */
   color: #9ca3b8; /* Text color */
   border: 1px solid #828c9e;
   border-radius: 20px; /* Rounded corners */
-  box-shadow: 8px 8px 8px rgba(0, 0, 1, 0.25), inset 0px 2px 6px rgba(255, 255, 255, 0.05); /* Outer and inner shadows */
+  box-shadow: 8px 8px 8px rgba(0, 0, 0, 0.616), inset 0px 2px 6px rgba(45, 76, 255, 0.548); /* Outer and inner shadows */
   //overflow-y: auto; /* Scrollable */
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(16px);
   position: relative; /* Needed for watermark positioning */
   z-index: 1; /* Ensure the content panel has a higher z-index */
 

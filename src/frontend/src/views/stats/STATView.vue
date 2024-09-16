@@ -70,7 +70,7 @@ import { useStatisticsStore } from '@/stores/stats.js';
 const statisticsStore = useStatisticsStore();
 
 onMounted(async () => {
-  await statisticsStore.fetchPlayerStats();
+  //await statisticsStore.fetchPlayerStats();
 });
 
 const playerStats = computed(() => statisticsStore.playerStats);
