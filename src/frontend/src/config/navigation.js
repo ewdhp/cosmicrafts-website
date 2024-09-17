@@ -8,6 +8,7 @@ import RegView from '@/views/account/RegView.vue';
 import STATView from '@/views/stats/STATView.vue';
 import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
+import TopView from '@/views/top/TopView.vue';
 import MainLayout from '@/views/layout/MainLayout.vue';
 
 // Import icons for all states
@@ -80,6 +81,18 @@ const navItems = [
           active: DashboardActiveIcon,
           hover: DashboardHoverIcon,
           inactive: DashboardInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/top',
+        name: "Top Players", 
+        component: TopView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: AchievementsActiveIcon, 
+          hover: AchievementsHoverIcon,
+          inactive: AchievementsInactiveIcon,
         },
         children: []
       },

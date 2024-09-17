@@ -1,5 +1,5 @@
-<!-- SLinkList.vue -->
 <template>
+  
   <div class="orientation link-list">
     <button
       v-for="item in items"
@@ -20,7 +20,7 @@ export default {
       required: true
     },
     selectedItem: {
-      type: Number,
+      type: String,
       default: null
     }
   },
@@ -35,27 +35,23 @@ export default {
 <style scoped>
 .orientation {
   display: flex;
-  flex-direction: row;
-  align-items: start;
-  margin-right: 30px;
+  flex-direction: row; /* Change to row for horizontal layout */
+
 }
 .link-list button {
-  background: none;
+
+  background-color:white;
   border: none;
-  color: #66adff;
+  color: #c0c0c4;
   font: inherit;
   cursor: pointer;
   padding: 0;
-  margin-bottom: 10px;
+  margin-right: 10px; /* Change to margin-right for horizontal spacing */
 }
 
-.link-list button:hover {
-  text-decoration: underline;
-}
 
 .link-list button.active {
   font-weight: bold;
-
-  color: rgb(222, 222, 231); /* Change color to indicate active state */
+  color: rgb(35, 74, 180);/* Change color to indicate active state */
 }
 </style>

@@ -6876,6 +6876,163 @@ shared actor class Cosmicrafts() = Self {
     return topReferrals;
   };
 
+  public shared func getTopELOPlayers(page : Nat) : async [(PlayerId, Float)] {
+    let buffer = Buffer.Buffer<(PlayerId, Float)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      buffer.add((playerId, player.elo));
+    };
+    let allPlayersWithELO = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithELO,
+      func(a : (PlayerId, Float), b : (PlayerId, Float)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+    let start = page * 10;
+    let end = if (start + 10 > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + 10;
+    };
+    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
+    return paginatedPlayers;
+  };
+
+  public shared func getTopNFTPlayers(page : Nat) : async [(PlayerId, Nat)] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      let nftCount = (await getNFTs(playerId)).size();
+      buffer.add((playerId, nftCount));
+    };
+    let allPlayersWithNFTs = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithNFTs,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+    let start = page * 10;
+    let end = if (start + 10 > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + 10;
+    };
+    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
+    return paginatedPlayers;
+  };
+
+  public shared func getTopAchievementPlayers(page : Nat) : async [(PlayerId, Nat)] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      let achievements = switch (userProgress.get(playerId)) {
+        case (?categories) {
+          Array.foldLeft<AchievementCategory, Nat>(
+            categories,
+            0,
+            func(acc, category) {
+              acc + Array.foldLeft<AchievementLine, Nat>(
+                category.achievements,
+                0,
+                func(acc, line) {
+                  acc + Array.foldLeft<IndividualAchievement, Nat>(
+                    line.individualAchievements,
+                    0,
+                    func(acc, achievement) {
+                      if (achievement.completed) {
+                        acc + 1;
+                      } else {
+                        acc;
+                      };
+                    },
+                  );
+                },
+              );
+            },
+          );
+        };
+        case null 0;
+      };
+      buffer.add((playerId, achievements));
+    };
+    let allPlayersWithAchievements = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithAchievements,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+    let start = page * 10;
+    let end = if (start + 10 > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + 10;
+    };
+    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
+    return paginatedPlayers;
+  };
+
+  public shared func getTopLevelPlayers(page : Nat) : async [(PlayerId, Nat)] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      buffer.add((playerId, player.level));
+    };
+    let allPlayersWithLevels = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithLevels,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+    let start = page * 10;
+    let end = if (start + 10 > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + 10;
+    };
+    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
+    return paginatedPlayers;
+  };
+
   // Achievements
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
