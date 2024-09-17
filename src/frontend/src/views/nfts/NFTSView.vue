@@ -25,15 +25,18 @@
             <div>Chain: IC</div>
             <span style="min-width: 120px;">NFTs Owned: {{ nftsOwned }}</span>
           </div>
-        </div> 
-      </div>
-    </div>
-  </div>
 
-  <div class="nft-display">
+          <div class="nft-display">
     <div v-if="filteredNFTs.length === 0">No NFTs found.</div>
     <NftItem v-for="nft in filteredNFTs" :key="nft.tokenId" :nft="nft"  />
   </div>
+        </div> 
+      </div>
+    </div>
+    
+  </div>
+
+  
 </template>
 
 <script>
@@ -111,25 +114,25 @@ export default {
 </script>
 
 <style scoped>
-/* Define keyframes for the color transition 
+
 @keyframes colorTransition {
   0% {
-    background-color: rgba(1, 8, 20, 0.678);
+    background-color: rgba(6, 8, 10, 0.678);
   }
   25% {
-    background-color: rgba(4, 4, 7, 0.788);
+    background-color: rgba(12, 3, 37, 0.61);
   }
   50% {
-    background-color: rgba(7, 7, 14, 0.774);
+    background-color: rgba(5, 15, 58, 0.527);
   }
   75% {
-    background-color: rgba(12, 12, 12, 0.842);
+    background-color: rgba(6, 39, 82, 0.548);
   }
   100% {
-    background-color: rgba(6, 8, 10, 0.877);
+    background-color: rgba(6, 8, 10, 0.678);
   }
 }
-*/
+
 body {
   font-family: Arial, sans-serif;
 }
@@ -181,7 +184,7 @@ button {
   color: rgb(223, 227, 230);
   backdrop-filter: blur(30px); 
   overflow: hidden;
-  animation: colorTransition 7s infinite; 
+  animation: colorTransition 18s infinite; 
 }
 
 .collection-metadata {

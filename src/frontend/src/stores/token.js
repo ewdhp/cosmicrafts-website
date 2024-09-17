@@ -16,9 +16,8 @@ export const useTokenStore = defineStore('token', {
     async fetchICRC1TokenInfo(canisterId) {
       try {
         const authStore = useAuthStore();
-        const principalIdString = await authStore.getPrincipalId();
-
         const canister = useCanisterStore();
+        const principalIdString = await authStore.getPrincipalId();       
         const cosmicrafts = await canister.get("cosmicrafts");
 
         if (!principalIdString) throw new Error('Principal ID is not set');
