@@ -35,7 +35,7 @@
     <div class="bottom-div">
       <img src="@/assets/login/wou_logo.svg" alt="wou-icon" class="bottom-wou-icon" />
       <label class="bottom-label">
-        &copy;&nbsp;2023 World of Unreal<br />
+        &copy;&nbsp;2024 World of Unreal<br />
         All trademarks referenced herein are the properties of their respective owners.
       </label>
     </div>
@@ -165,7 +165,7 @@ const authMethods = [
   box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
 
   /* Max width and height constraints */
-  max-width: 360px;
+  max-width: 240px;
   max-height: 60vh;
   width: 100%;
   height: auto;
@@ -197,8 +197,6 @@ const authMethods = [
   display: grid;
   grid-template-columns: 1fr;
   gap: 2vh; /* Use vh for gap for consistency */
-  width: 100%;
-  max-width: 360px;
   margin-bottom: 2vh;
 }
 
@@ -206,13 +204,13 @@ const authMethods = [
 .btn-div {
   display: flex;
   justify-content: space-between;
-  height: 4.5vh; /* Proportional height */
+  height: 4.8vh;
+  width: 24vh;
   background: linear-gradient(135deg, rgba(28, 30, 33, 0.625), rgba(31, 36, 44, 0.765));
   border-radius: 8px;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: .25px solid rgba(255, 255, 255, 0.157);
   padding: 0 2vh; /* Use vh for padding */
-  transition: background 0.1s ease;
 }
 
 .btn-div:hover {
@@ -221,8 +219,8 @@ const authMethods = [
 
 /* Icon inside the button */
 .button-account-icon {
-  width: 2.5vh; /* Responsive icon size */
-  height: 2.5vh;
+  width: 3vh; /* Responsive icon size */
+  height: 3vh;
   margin-right: 1.5vh;
 }
 
@@ -243,8 +241,9 @@ const authMethods = [
 /* Clarification message */
 .clarification-message {
   text-align: center;
-  font-size: 1.5vh; /* Responsive font size */
-  color: #a4a4a4;
+  font-size: 1.2vh;
+  color: #a1a1a1;
+  margin-top: -1vh;
 }
 
 /* WOU info, detached from panel and placed at the bottom */
