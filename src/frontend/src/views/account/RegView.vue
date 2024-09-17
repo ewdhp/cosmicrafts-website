@@ -24,11 +24,11 @@
           <div class="right-section">
             <div class="form-group">
               <label for="username">Username:</label>
-              <input type="text" id="username" v-model="username" required placeholder="Enter your username" />
+              <input type="text" id="username" v-model="username" required placeholder="Do not use real name" />
             </div>
             <div class="form-group">
               <label for="referralCode">Referral Code:</label>
-              <input type="text" id="referralCode" v-model="referralCode" placeholder="Invitation Code" />
+              <input type="text" id="referralCode" v-model="referralCode" placeholder="ex. WAGMI420, HODL99, etc" />
             </div>
             <div class="referral-link">
               <p>Don't have a code? Get one <a href="https://discord.com/invite/cosmicrafts-884272584491941888" target="_blank">here!</a></p>
@@ -173,11 +173,12 @@ export default {
 .register-panel {
   background: #1f303e5f;
   backdrop-filter: blur(4px);
-  padding: 36px;
+  padding: 40px;
   border-radius: 12px;
   position: relative;
   border: 0.5px solid rgba(0, 0, 0, 0.114);
   box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+  height: 30%;
   max-width: 360px;
   width: 100%;
 }
@@ -268,8 +269,8 @@ input::placeholder {
 
 .terms input[type="checkbox"] {
   appearance: none;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border: 1px solid #00FFFF;
   border-radius: 4px;
   background-color: #202020;
@@ -281,7 +282,7 @@ input::placeholder {
   background-image: url('@/assets/icons/checkmark_icon.svg');
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 22px;
+  background-size: 14px;
 }
 
 .terms label {
@@ -298,12 +299,12 @@ input::placeholder {
 button.submit-button {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(to bottom, #00C0FC, #0039BA); /* Gradient from top to bottom */
+  background: linear-gradient(to bottom, #0390f5, #0a47d4); /* Gradient from top to bottom */
   color: white;
   border: .001rem solid rgba(255, 255, 255, 0.15); /* White stroke with 50% transparency */
   border-radius: 8px; /* Rounded corners */
-  font-size: 16px;
-  font-weight: bold; /* Bold font */
+  font-size: 15px;
+  font-weight: 500; /* Bold font */
   cursor: pointer;
   transition: background-color 0.1s, box-shadow 0.2s; /* Smooth transition for hover effects */
   margin-top: 8px;
@@ -320,5 +321,57 @@ button.submit-button:active {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), /* Adjust drop shadow when active */
               inset 0 1px 3px rgba(255, 255, 255, 0.3); /* Adjust inner shadow when active */
 }
+
+/* Avatar Image Hover Effect */
+.avatar-section {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.avatar-section img {
+  display: block;
+  transition: all 0.1s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Overlay on hover */
+.avatar-section::before {
+  content: '';
+  position: absolute;
+  top: 12px;    /* Adjust these values to make the overlay smaller */
+  left: 2px;
+  right: 2px;
+  bottom: 16px;
+  transition: background 0.1s ease; /* Smooth transition effect */
+  border-radius: 8px; /* Match avatar shape */
+  z-index: 2; /* Overlay appears above the image */
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+.avatar-section:hover::before {
+  background: rgba(0, 0, 0, 0.607); /* Add a black overlay with transparency on hover */
+}
+
+/* Text on hover */
+.avatar-section::after {
+  content: 'Select Avatar';
+  position: absolute;
+  color: rgb(214, 214, 214);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 3; /* Text appears above the overlay */
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+.avatar-section:hover::after {
+  opacity: 1; /* Show text on hover */
+}
+
 
 </style>
