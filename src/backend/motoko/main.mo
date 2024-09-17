@@ -6838,7 +6838,7 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Function to get top referrals with pagination
-  public func getTopReferrals(page : Nat) : async [(PlayerId, Text, Nat, Float)] {
+  public query func getTopReferrals(page : Nat) : async [(PlayerId, Nat)] {
     let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
     let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
       allReferrals,
@@ -6866,26 +6866,16 @@ shared actor class Cosmicrafts() = Self {
     };
 
     let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(Array.slice(sortedReferrals, start, end));
-    let topReferrals : [(PlayerId, Text, Nat, Float)] = await async {
-      let buf = Buffer.Buffer<(PlayerId, Text, Nat, Float)>(Array.size(paginatedReferrals));
-      for (entry in paginatedReferrals.vals()) {
-        let (success, playerOpt) = await getPlayerByCaller();
-        let multiplier = await getMultiplier(entry.0);
-        let result = switch (playerOpt) {
-          case (?player) {
-            (entry.0, player.username, entry.1.directReferrals, multiplier);
-          };
-          case (null) {
-            (entry.0, "unknown", entry.1.directReferrals, multiplier);
-          };
-        };
-        buf.add(result);
-      };
-      let array = Buffer.toArray(buf);
-    };
+    let topReferrals : [(PlayerId, Nat)] = Array.map<(PlayerId, ReferralInfo), (PlayerId, Nat)>(
+      paginatedReferrals,
+      func(entry : (PlayerId, ReferralInfo)) : (PlayerId, Nat) {
+        (entry.0, entry.1.directReferrals);
+      },
+    );
 
     return topReferrals;
   };
+
   // Achievements
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;

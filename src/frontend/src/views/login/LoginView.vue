@@ -26,12 +26,8 @@ import TypesICRC7 "/icrc7/types";
 import TypesICRC1 "/icrc1/Types";
 import Result "mo:base/Result";
 
-<<<<<<< Updated upstream
 import Int64 "mo:base/Int64";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
-=======
-
->>>>>>> Stashed changes
 
 import ICRC1 "/icrc1/Canisters/..";
 import MetadataUtils "MetadataUtils";
@@ -41,16 +37,8 @@ import MissionOptions "MissionOptions";
 import AchievementData "AchievementData";
 import Set "Set";
 
-<<<<<<< Updated upstream
 shared actor class Cosmicrafts() = Self {
   // Types
-=======
-      <!-- Clarification Message -->
-      <div class="clarification-message">
-        <p>Sign up with your login provider.</p>
-      </div>
-    </div>
->>>>>>> Stashed changes
 
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -7872,177 +7860,3 @@ shared actor class Cosmicrafts() = Self {
   };
 
 };
-<<<<<<< Updated upstream
-=======
-
-const initializeGoogleSignIn = () => {
-  window.google.accounts.id.initialize({
-    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,
-  });
-};
-
-const handleCredentialResponse = (response) => {
-  authStore.loginWithGoogle(response, router).then(handleAfterLogin);
-};
-
-onMounted(() => {
-  loadGoogleIdentityServices();
-});
-
-const authMethods = [
-  {
-    logo: icpLogo,
-    text: 'Internet Identity',
-    onClick: () => loginIC(),
-  },
-  {
-    logo: metaMaskLogo,
-    text: 'MetaMask',
-    onClick: () => authStore.loginWithMetaMask().then(handleAfterLogin),
-  },
-  {
-    logo: phantomLogo,
-    text: 'Phantom',
-    onClick: () => authStore.loginWithPhantom().then(handleAfterLogin),
-  },
-];
-</script>
-
-<style scoped>
-/* Container for the login screen */
-.login-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: linear-gradient(350deg, #161a2070, #1f242c4c);
-  overflow: hidden;
-  position: relative;
-}
-
-.login-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('@/assets/login/fondo.jpg');
-  background-size: cover;
-  background-position: center;
-  opacity: 1;
-  z-index: -1;
-}
-
-/* Login panel styling */
-.login-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(31, 48, 62, 0.37);
-  backdrop-filter: blur(4px);
-  padding: 40px;
-  border-radius: 12px;
-  border: 0.5px solid rgba(0, 0, 0, 0.114);
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
-  max-width: 360px;
-  width: 100%;
-}
-
-/* Full logo styling */
-.full-logo {
-  display: block;
-  width: 128px;
-  margin-bottom: 32px;
-  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.25));
-}
-
-/* Connect with text */
-.cosmic-label-connect {
-  color: #FFFFFF;
-  font-weight: 600;
-  margin-bottom: 24px;
-  font-size: 1.5rem;
-}
-
-/* Custom Google Button & Auth Methods Grid */
-.inner-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  width: 100%;
-  max-width: 320px;
-  margin-bottom: 24px;
-}
-
-/* Button for Auth Methods and Custom Google Button */
-.btn-div {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 48px;
-  background: linear-gradient(135deg, rgba(28, 30, 33, 0.625), rgba(31, 36, 44, 0.765));
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0 20px;
-  transition: background 0.1s ease;
-}
-
-.btn-div:hover {
-  background: linear-gradient(135deg, rgba(40, 45, 55, 0.635), rgba(50, 60, 70, 0.612));
-}
-
-/* Icon inside the button */
-.button-account-icon {
-  width: 24px;
-  height: 24px;
-  margin-right: 12px;
-}
-
-/* Label and Text inside the button */
-.btn-label {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  justify-content: flex-start; /* Align text and icon on the left */
-  color: #FFFFFF;
-  font-size: 1rem;
-}
-
-/* Text inside the button */
-.btn-text {
-  margin-left: 8px;
-}
-
-/* Clarification message */
-.clarification-message {
-  text-align: center;
-  font-size: 14px;
-  color: #a4a4a4;
-}
-
-/* WOU info, detached from panel and placed at the bottom */
-.bottom-div {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 24px;
-}
-
-.bottom-wou-icon {
-  width: 48px;
-}
-
-.bottom-label {
-  color: #aaaaaa;
-  display: block;
-  font-size: 0.775rem;
-  text-align: center;
-  margin-top: 8px;
-}
-</style>
->>>>>>> Stashed changes
