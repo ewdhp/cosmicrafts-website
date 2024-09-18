@@ -7988,8 +7988,15 @@ shared actor class Cosmicrafts() = Self {
   //
   //
 
-  //Referrals Top
-  public shared func getTopReferrals(page : Nat) : async [(?Principal, Nat, Float, Text, Nat, ?Principal)] {
+  public type ReferralsTop = {
+    playerId : Principal;
+    totalReferrals : Nat;
+    multiplier : Float;
+    username : Text;
+    avatar : Nat;
+    referrer : ?Principal;
+  };
+  public shared func getReferralsTop(page : Nat) : async [ReferralsTop] {
     let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
     let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
       allReferrals,
@@ -8016,11 +8023,15 @@ shared actor class Cosmicrafts() = Self {
       start + pageSize;
     };
 
-    let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(Array.slice(sortedReferrals, start, end));
-    var topReferrals : [(?Principal, Nat, Float, Text, Nat, ?Principal)] = [];
+    let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(
+      Array.slice(sortedReferrals, start, end)
+    );
 
+    var topReferrals : [ReferralsTop] = [];
     for (entry in paginatedReferrals.vals()) {
+
       let playerId = entry.0;
+      let referrer = await getReferrer(playerId);
       let totalReferrals = await getTotalReferrals(playerId);
       let multiplier = await getMultiplier(playerId);
       let (_, playerOpt) = await getPlayer(playerId);
@@ -8032,16 +8043,20 @@ shared actor class Cosmicrafts() = Self {
         case (?player) { player.avatar };
         case (null) { 0 };
       };
-      let referrer = await getReferrer(playerId);
-      topReferrals := Array.append(topReferrals, [(?playerId, totalReferrals, multiplier, username, avatar, referrer)]);
-    };
 
+      let r : ReferralsTop = {
+        playerId = playerId;
+        totalReferrals = totalReferrals;
+        multiplier = multiplier;
+        username = username;
+        avatar = avatar;
+        referrer = referrer;
+      };
+      topReferrals := Array.append(topReferrals, [r]);
+    };
     return topReferrals;
   };
-
-  //Referrals Rank
-  public query func getReferralsRank(caller : PlayerId) : async Nat {
-
+  public shared ({ caller }) func getTopReferralsRank() : async Nat {
     let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
     let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
       allReferrals,
@@ -8059,10 +8074,33 @@ shared actor class Cosmicrafts() = Self {
         };
       },
     );
-    let rank : Nat = switch (Array.indexOf<(PlayerId, ReferralInfo)>(sortedReferrals, func(entry : (PlayerId, ReferralInfo)) : Bool { entry.0 == caller })) {
+
+    let rank : Nat = switch (
+      Array.indexOf<(PlayerId, ReferralInfo)>(
+        (caller, allReferrals[0].1),
+        sortedReferrals,
+        func(
+          a : (PlayerId, ReferralInfo),
+          b : (PlayerId, ReferralInfo),
+        ) : Bool {
+          a.0 == caller;
+        },
+      )
+    ) {
       case (?index) { index };
-      case (null) { -1 };
-      return rank;
+      case (null) { 0 };
     };
+    rank;
   };
+
+  public type ELOTop = {
+    playerId : Principal;
+    avatar : Nat;
+    username : Text;
+    elo : Float;
+  };
+  public shared func getELOTop(page : Nat) : async ?[ELOTop] {
+    return null;
+  };
+
 };
