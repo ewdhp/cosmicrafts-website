@@ -1,32 +1,11 @@
-<template>
-  <div>
-   
-    <ListH :items="topTypes" :selectedItem="selectedType" @update:selectedItem="fetchTopPlayers" />
-    <div v-if="selectedType">
-      <table>
-        <thead>
-          <tr>
-            <th v-for="header in tableHeaders" :key="header">{{ header }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="player in selectedPlayers" :key="player.id">
-            <td v-for="header in tableHeaders" :key="header">{{ player[header] }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</template>
-
 <script>
 import { ref, computed } from 'vue';
 import { useTopPlayersStore } from '@/stores/tops.js';
-import ListH from '@/components/navs/ListH.vue';
+import TableMenu from '@/components/TableMenu.vue';
 
 export default {
   components: {
-    ListH,
+    TableMenu,
   },
   setup() {
     const topPlayersStore = useTopPlayersStore();
@@ -41,40 +20,25 @@ export default {
 
     const fetchTopPlayers = async (type) => {
       selectedType.value = type;
-      switch (type) {
-        case 'Referrals':
-          await topPlayersStore.fetchTopReferrals();
-          break;
-        case 'ELO':
-          await topPlayersStore.fetchTopELOPlayers();
-          break;
-        case 'NFTs':
-          await topPlayersStore.fetchTopNFTPlayers();
-          break;
-        case 'Achievements':
-          await topPlayersStore.fetchTopAchievementPlayers();
-          break;
-        case 'Level':
-          await topPlayersStore.fetchTopLevelPlayers();
-          break;
-      }
+      const fetchFunctions = {
+        'Referrals': topPlayersStore.fetchTopReferrals,
+        'ELO': topPlayersStore.fetchTopELOPlayers,
+        'NFTs': topPlayersStore.fetchTopNFTPlayers,
+        'Achievements': topPlayersStore.fetchTopAchievementPlayers,
+        'Level': topPlayersStore.fetchTopLevelPlayers,
+      };
+      await fetchFunctionstype;
     };
 
     const selectedPlayers = computed(() => {
-      switch (selectedType.value) {
-        case 'Referrals':
-          return topPlayersStore.topREF;
-        case 'ELO':
-          return topPlayersStore.topELO;
-        case 'NFTs':
-          return topPlayersStore.topNFT;
-        case 'Achievements':
-          return topPlayersStore.topACH;
-        case 'Level':
-          return topPlayersStore.topLEV;
-        default:
-          return [];
-      }
+      const playerTypes = {
+        'Referrals': topPlayersStore.topREF,
+        'ELO': topPlayersStore.topELO,
+        'NFTs': topPlayersStore.topNFT,
+        'Achievements': topPlayersStore.topACH,
+        'Level': topPlayersStore.topLEV,
+      };
+      return playerTypes[selectedType.value] || [];
     });
 
     const tableHeaders = computed(() => {
@@ -85,7 +49,6 @@ export default {
     });
 
     return {
-      topPlayersStore,
       selectedType,
       topTypes,
       fetchTopPlayers,
@@ -96,28 +59,14 @@ export default {
 };
 </script>
 
-<style scoped>
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-th {
-  background-color: #0c0b0b;
-  text-align: left;
-}
-
-tr:nth-child(even) {
-
-}
-
-tr:hover {
-  background-color: #ddd;
-}
-</style>
+<template>
+  <div>
+    <TableMenu 
+      :menuItems="topTypes" 
+      :selectedItem="selectedType" 
+      :tableHeaders="tableHeaders" 
+      :tableData="selectedPlayers" 
+      @update:selectedItem="fetchTopPlayers" 
+    />
+  </div>
+</template>
