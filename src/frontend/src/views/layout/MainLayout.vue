@@ -78,89 +78,77 @@ export default {
     </div>
   </div>
 </template>
-/** 
- background: rgba(0, 0, 0, 0.514); /* Vertical gradient */
- color: #8f939e; /* Text color */
-  border: 1px solid #d2d6dd;
-  border-radius: 20px; /* Rounded corners */
-  box-shadow: 8px 8px 8px rgba(0, 0, 0, 0.616), inset 0px 2px 6px rgba(45, 76, 255, 0.548); /* Outer and inner shadows */
-  //overflow-y: auto; /* Scrollable */
-  backdrop-filter: blur(16px);
-  position: relative; /* Needed for watermark positioning */
-  z-index: 1; /* Ensure the content panel has a higher z-index */
-**/
+
 <style scoped lang="scss">
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-
-
-
-
+  background-image: url('@/assets/login/fondo.jpg');
+  /*needs to use grid*/
   .layout-container {
     display: flex;
     flex-grow: 1;
-    margin-top: 6vh; /* Ensure the content starts after the header */
-    padding: 16px; /* Add padding to avoid overlapping the edge */
-    background-image: url('@/assets/login/fondo.jpg');
+    padding: 66px;
+    background: linear-gradient(to bottom, rgba(38, 50, 60, 0.812), rgba(16, 26, 34, 0.958)); /* 20% opacity gradient */
 
   }
 }
 
-  .header {
-  width: 100%;
+.header {
+  width: 97.5%; /* Limit the width to 90% of the viewport */
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: rgb(23, 28, 37);
+  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
   padding: 1px;
   position: fixed;
+  top: 12px; /* Lower it by 25px from the top of the viewport */
+  left: 50%; /* Move it 50% from the left */
+  transform: translateX(-50%); /* Center it horizontally */
   z-index: 10;
-  border-bottom: 1px solid #1e429ee5;
- 
-  backdrop-filter: blur(15px); /* Add blurring effect */
-
-
-
+  border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
+  border-radius: 10px; /* Round the edges with 10px radius */
+  backdrop-filter: blur(15px); /* Keep the blurring effect */
+  
   .link-nav {
     display: flex;
-    padding: 3px;
-    margin-left: 18px;
-  }
+    margin-left: 24px;
+    align-items: center; 
+    
+
+    img {  // Target the img tag within .link-nav
+        width: 96px;
+    }
+}
 
   .account-nav {
     display: flex;
     align-items: center;
-    padding: 8px 16px;
   }
 }
 
-.header::after {
-  content: '';
-  position: absolute;
-  bottom: -7px;
-  left: 0;
-  right: 0;
-  height: 10px;
-  background: linear-gradient(to bottom, rgba(21, 23, 54, 0.836), transparent);
-  pointer-events: none;
-  
-}
-
 .left-panel {
-  width: 8%;
-  padding: 8px;
+  width: 4%; /* Fixed width */
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  top: 12vh;
-  bottom: 0;
-  left: 0;
+  position: absolute; /* Use absolute positioning for dynamic content height */
+  top: 12%; /* Maximum top margin of 12% */
+  bottom: 12%; /* Maximum bottom margin of 12% */
+  left: 12px; /* Left offset */
+  margin: auto 0; /* Center vertically by distributing remaining space as margin */
+  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
+  border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
+  border-radius: 10px; /* Round the edges with 10px radius */
+  backdrop-filter: blur(15px); /* Blurring effect */
+  max-height: calc(100% - 24%); /* Ensure maximum height takes into account 12% margin on top and bottom */
+  overflow-y: auto; /* Make it scrollable if content overflows */
 }
 
+
 .content-panel {
-  flex-grow: 1;
+  flex-grow: 0;
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;

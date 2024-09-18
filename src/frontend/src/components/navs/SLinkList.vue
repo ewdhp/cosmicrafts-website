@@ -90,7 +90,7 @@ export default {
   align-items: center;
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid white;
+  border: .25px solid rgba(255, 255, 255, 0.068);
   width: 36px;
   height: 36px;
   cursor: pointer;
@@ -121,20 +121,20 @@ export default {
 /* Button Animation when switch to active */
 .link-list li.active .section {
   background: linear-gradient(to bottom, #00C0FC, #0039BA);
-  border: 2px solid #00FFFF;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.457);
-  transform: scale(1.1);
+  border: 1px solid #00ffff88;
+  box-shadow: 0 0 8px rgba(0, 225, 255, 0.498);
+  transform: scale(1.05);
   transition: background 0.6s ease-in-out, border 0.2s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
 }
 
 /* Default inactive state */
 .link-list li .section {
   
-  background: linear-gradient(to bottom, #151927, #171C2B);
-  border: .5px solid #d0dbdd;
-  box-shadow: 0 0 5px black;
+  background: linear-gradient(to bottom, #292c3729, #0c0f1684);
+  border: .5px solid #ffffff2e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.741);
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 /* Hover state for non-active buttons */

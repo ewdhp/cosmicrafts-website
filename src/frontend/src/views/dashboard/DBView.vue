@@ -1,5 +1,4 @@
 <template>
-  <h2>Dashboard</h2>
     <div>
       <LoadingSpinner :isLoading="loading" />
       <div v-if="!loading">

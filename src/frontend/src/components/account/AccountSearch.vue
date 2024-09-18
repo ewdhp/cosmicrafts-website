@@ -90,7 +90,7 @@ export default {
 <template>
   <div class="search">
     <div class="search-input">
-      <input v-model="query" @input="handleInput" placeholder="Search..." />
+      <input v-model="query" @input="handleInput" placeholder="Search in Cosmicrafts..." />
       <img src="@/assets/icons/search_icon.svg" class="search-icon" />
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
@@ -117,10 +117,10 @@ export default {
   position: relative;
   display: flex;
   background: linear-gradient(to bottom, #282828, #252525);
-  border-radius: 18px;
-  border-color: #6A6A6A;
-  box-shadow: 0 2px 4px rgb(0, 0, 0);
-  box-shadow: inset 1px 1px 2px 2px rgba(255, 255, 255, 0.025);
+  border-radius: 24px;
+  border: 0.25px solid rgba(255, 255, 255, 0.239);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.285);
+
 }
 
 .search-input {
@@ -131,7 +131,7 @@ export default {
 }
 
 .search-input input {
-  padding: 8px 42px 8px 16px;
+  padding: 8px 16px 8px 42px; /* Adjust padding to ensure text is next to the icon */
   background: none;
   border: none;
   color: #b4b4b4;
@@ -143,7 +143,7 @@ export default {
 
 .search-input input:focus {
   background: linear-gradient(to top, #2d2d2d, rgb(43, 43, 43));
-  padding: 8px 42px 8px 16px;
+  padding: 8px 16px 8px 42px; /* Adjust padding to ensure text is next to the icon */
   border-radius: 25px;
   outline: none;
   box-shadow: none;
@@ -151,12 +151,13 @@ export default {
 
 .search-input .search-icon {
   position: absolute;
-  right: 15px;
+  left: 12px;
   width: 20px;
   height: 20px;
   pointer-events: none; /* Ensure the icon doesn't interfere with input */
   transition: opacity 0.2s ease;
 }
+
 
 .search-results {
   position: absolute;

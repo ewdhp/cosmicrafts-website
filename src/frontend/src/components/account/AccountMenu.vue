@@ -33,18 +33,8 @@ export default {
 <template>
   <div class="account-menu">
     <div class="avatar-wrapper" @click="toggleMenu">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <!-- Outer Circle for the Avatar -->
-        <circle cx="12" cy="12" r="10" />
-        <!-- Inner Circle for the Face -->
-        <circle cx="12" cy="10" r="4" />
-        <!-- Eyes -->
-        <circle cx="10" cy="9" r="1" />
-        <circle cx="14" cy="9" r="1" />
-        <!-- Smile -->
-        <path d="M10 12c1 1 3 1 4 0" />
-      </svg>
+      <!-- Add an image tag to load the avatar directly -->
+      <img src="@/assets/avatars/Avatar_01.jpg" alt="User Avatar" class="avatar" />
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
       <div v-if="isMenuVisible" class="menu">
@@ -68,12 +58,14 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   margin: 10px;
+  border: 0.25px solid rgba(255, 255, 255, 0.239);
+
 }
 
 .avatar {
