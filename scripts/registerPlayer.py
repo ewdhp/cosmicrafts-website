@@ -170,7 +170,7 @@ async def main():
 
     # Switch back to the bizkit identity at the end
     print("Switching back to bizkit identity")
-    await switch_identity("dafault")
+    await switch_identity("default")
 
     # Step 4: Check referrals for the first player
     principal_id = await switch_identity(user_data[0][0])
