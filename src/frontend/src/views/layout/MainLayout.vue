@@ -84,16 +84,13 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
-
-
-
-
+  background-image: url('@/assets/login/fondo.jpg');
+  /*needs to use grid*/
   .layout-container {
     display: flex;
     flex-grow: 1;
-    margin-top: 6vh; /* Ensure the content starts after the header */
-    padding: 16px; /* Add padding to avoid overlapping the edge */
-    background-image: url('@/assets/login/fondo.jpg');
+    padding: 66px;
+    background: linear-gradient(to bottom, rgba(38, 50, 60, 0.812), rgba(16, 26, 34, 0.958)); /* 20% opacity gradient */
 
   }
 }
@@ -103,7 +100,7 @@ export default {
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: rgb(23, 28, 37);
+  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
   padding: 1px;
   position: fixed;
   top: 12px; /* Lower it by 25px from the top of the viewport */
@@ -112,7 +109,7 @@ export default {
   z-index: 10;
   border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
   border-radius: 10px; /* Round the edges with 10px radius */
-  backdrop-filter: blur(15px); /* Keep the blurring effect */
+  backdrop-filter: blur(12px); /* Keep the blurring effect */
   
   .link-nav {
     display: flex;
@@ -132,30 +129,38 @@ export default {
 }
 
 .left-panel {
-  width: 4%; /* Fixed width */
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  position: absolute; /* Use absolute positioning for dynamic content height */
-  top: 12%; /* Maximum top margin of 12% */
-  bottom: 12%; /* Maximum bottom margin of 12% */
+  position: absolute; /* Changed to fixed positioning */
+  top: 12%; /* Pin to the bottom */
   left: 12px; /* Left offset */
-  margin: auto 0; /* Center vertically by distributing remaining space as margin */
   background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
   border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
   border-radius: 10px; /* Round the edges with 10px radius */
-  backdrop-filter: blur(15px); /* Blurring effect */
-  max-height: calc(100% - 24%); /* Ensure maximum height takes into account 12% margin on top and bottom */
+  backdrop-filter: blur(12px); /* Blurring effect */
   overflow-y: auto; /* Make it scrollable if content overflows */
 }
 
 
 .content-panel {
-  flex-grow: 1;
+  flex-grow: 0;
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
  
+  &::before {
+    content: '';
+    background-size: 100%;
+    opacity: 0.015;
+    position: absolute;
+    width: 512px;
+    height: 512px;
+    top: 50%;
+    right: 0;
+    right: 12px;
+    transform: translateY(-50%);
+  }
 }
 
 .right-panel {
@@ -171,5 +176,41 @@ export default {
 .right-menu.minimized {
   width: 5%;
   transition: width 0.3s ease;
+}
+
+/* Media query for screens below 768px */
+@media (max-width: 1080px) {
+  .layout-container {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .left-panel {
+    top: 92%;
+    width: 100%;
+    height: 6%;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 8px;
+    max-height: none;
+    border-radius: 0;
+    border-top: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .content-panel {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 16px;
+  }
+
+  .right-panel {
+    display: none;
+  }
 }
 </style>

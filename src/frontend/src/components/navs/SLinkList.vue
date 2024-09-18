@@ -90,9 +90,7 @@ export default {
   align-items: center;
   padding: 8px;
   border-radius: 8px;
-  border: .25px solid rgba(255, 255, 255, 0.068);
-  width: 36px;
-  height: 36px;
+  border: .25px solid rgb(255, 255, 255);
   cursor: pointer;
   /* Ensure smooth transition for all properties */
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
@@ -108,7 +106,7 @@ export default {
 
 /* Scaling the SVG only on hover */
 .link-list li:not(.active):hover .nav-icon {
-  transform: scale(1.25);
+  transform: scale(1.1);
   transition: background 0.4s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.1s ease-in-out;
 }
 
@@ -132,7 +130,7 @@ export default {
   
   background: linear-gradient(to bottom, #292c3729, #0c0f1684);
   border: .5px solid #ffffff2e;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.741);
+  box-shadow: 0 4px 2px brgba(0, 0, 0, 0.139);
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
   margin-bottom: 24px;
 }
@@ -159,5 +157,33 @@ export default {
   list-style-type: none;
   padding: 0;
   margin: 0;
+}
+
+/* Media query for screens below 768px */
+@media (max-width: 1080px) {
+  .nav-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .link-list {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .link-list ul {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .link-list li {
+    margin-bottom: 0;
+    margin-right: 12px;
+  }
+
+  .link-list li:last-child {
+    margin-right: 0;
+  }
 }
 </style>

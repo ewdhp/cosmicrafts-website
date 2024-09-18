@@ -9,11 +9,13 @@
 
       <!-- Custom Google Button -->
       <div class="inner-grid">
-        <div class="btn-div" @click="loginWithGoogle">
+        <!-- Internet Identity Button with Subtext -->
+        <div class="btn-div" @click="loginIC">
           <label class="btn-label">
-            <img src="@/assets/login/google_logo.svg" class="button-account-icon" alt="Google" />
-            <span class="btn-text"> Google</span>
+            <img src="@/assets/login/icp_logo.svg" class="button-account-icon" alt="Internet Identity" />
+            <span class="btn-text"> Internet Identity</span>
           </label>
+          <span class="subtext">Most secure</span>
         </div>
 
         <!-- Other Auth Methods -->
@@ -35,7 +37,7 @@
     <div class="bottom-div">
       <img src="@/assets/login/wou_logo.svg" alt="wou-icon" class="bottom-wou-icon" />
       <label class="bottom-label">
-        &copy;&nbsp;2024 World of Unreal<br />
+        © 2024 World of Unreal<br />
         All trademarks referenced herein are the properties of their respective owners.
       </label>
     </div>
@@ -47,9 +49,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
-import icpLogo from '@/assets/login/icp_logo.svg';
 import metaMaskLogo from '@/assets/login/metaMask_icon.svg';
 import phantomLogo from '@/assets/login/Phantom_icon.svg';
+import googleLogo from '@/assets/login/google_logo.svg';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -95,11 +97,6 @@ onMounted(() => {
 
 const authMethods = [
   {
-    logo: icpLogo,
-    text: 'Internet Identity',
-    onClick: () => loginIC(),
-  },
-  {
     logo: metaMaskLogo,
     text: 'MetaMask',
     onClick: () => authStore.loginWithMetaMask().then(handleAfterLogin),
@@ -108,6 +105,11 @@ const authMethods = [
     logo: phantomLogo,
     text: 'Phantom',
     onClick: () => authStore.loginWithPhantom().then(handleAfterLogin),
+  },
+  {
+    logo: googleLogo,
+    text: 'Google',
+    onClick: () => loginWithGoogle(),
   },
 ];
 </script>
@@ -125,18 +127,6 @@ const authMethods = [
   position: relative;
 }
 
-/* Container for the login screen */
-.login-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: linear-gradient(350deg, #00000043, #0000005f);
-  overflow: hidden;
-  position: relative;
-}
-
 .login-container::before {
   content: '';
   position: absolute;
@@ -149,7 +139,6 @@ const authMethods = [
   background-position: center;
   opacity: 1;
   z-index: -1;
-  
 }
 
 .login-panel {
@@ -205,12 +194,13 @@ const authMethods = [
   display: flex;
   justify-content: space-between;
   height: 4.8vh;
-  width: 24vh;
+  width: 25vh;
   background: linear-gradient(135deg, rgba(28, 30, 33, 0.625), rgba(31, 36, 44, 0.765));
   border-radius: 8px;
   cursor: pointer;
   border: .25px solid rgba(255, 255, 255, 0.157);
   padding: 0 2vh; /* Use vh for padding */
+  position: relative; /* Added for subtext positioning */
 }
 
 .btn-div:hover {
@@ -236,6 +226,16 @@ const authMethods = [
 
 .btn-text {
   margin-left: 1vh; /* Adjust text margin */
+}
+
+/* Subtext for Internet Identity */
+.subtext {
+  position: absolute;
+  align-items: center;
+  top: 20%;
+  left: 80%;
+  font-size: 1.2vh;
+  color: #a1a1a1;
 }
 
 /* Clarification message */
