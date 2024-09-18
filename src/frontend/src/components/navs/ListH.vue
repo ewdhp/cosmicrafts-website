@@ -35,7 +35,7 @@ export default {
 /* General layout for button container */
 .orientation {
   display: flex;
-  flex-direction: column; /* Stack buttons vertically */
+  flex-direction: row; /* Stack buttons vertically */
   align-items: flex-start; /* Align buttons to the start (left) */
   gap: 10px; /* Space between buttons */
 }

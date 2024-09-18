@@ -249,8 +249,7 @@ async def main():
     """Función principal para ejecutar los comandos iniciales y luego registrar usuarios."""
     # Comandos iniciales
     initial_commands = [
-        "dfx start --clean --background",
-        "dfx deploy"
+
     ]
     
     for command in initial_commands:
@@ -298,13 +297,13 @@ async def main():
     print("Testing getTopReferrals...")
     await test_get_top_referrals(page)
 
+
     final_commands = [
-        "npm start"
+
     ]
-    
-    print("Starting frontend...")
     for command in final_commands:
         await execute_dfx_command(command)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

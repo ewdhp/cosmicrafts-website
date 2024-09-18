@@ -14,7 +14,7 @@ export const useTopPlayersStore = defineStore('topPlayers', {
     async fetchTopReferrals() {
       const canister= useCanisterStore();
       const c = await canister.get('cosmicrafts');
-      this.topREF = await c.getTopReferrals(0);
+      this.topREF = await c.getReferralsTop(0);
     },
     async fetchTopELOPlayers() {
       const canister= useCanisterStore();

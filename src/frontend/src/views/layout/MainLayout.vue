@@ -84,13 +84,16 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg');
-  /*needs to use grid*/
+
+
+
+
   .layout-container {
     display: flex;
     flex-grow: 1;
-    padding: 66px;
-    background: linear-gradient(to bottom, rgba(38, 50, 60, 0.812), rgba(16, 26, 34, 0.958)); /* 20% opacity gradient */
+    margin-top: 6vh; /* Ensure the content starts after the header */
+    padding: 16px; /* Add padding to avoid overlapping the edge */
+    background-image: url('@/assets/login/fondo.jpg');
 
   }
 }
@@ -100,7 +103,7 @@ export default {
   height: 8vh;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
+  background: rgb(23, 28, 37);
   padding: 1px;
   position: fixed;
   top: 12px; /* Lower it by 25px from the top of the viewport */
@@ -148,23 +151,11 @@ export default {
 
 
 .content-panel {
-  flex-grow: 0;
+  flex-grow: 1;
   margin-left: 9vw; /* Space for the left panel */
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
  
-  &::before {
-    content: '';
-    background-size: 100%;
-    opacity: 0.015;
-    position: absolute;
-    width: 512px;
-    height: 512px;
-    top: 50%;
-    right: 0;
-    right: 12px;
-    transform: translateY(-50%);
-  }
 }
 
 .right-panel {
