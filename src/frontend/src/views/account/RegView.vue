@@ -143,6 +143,7 @@ export default {
   width: 100%;
   z-index: 9999;
   background: rgba(34, 47, 90, 0.95);
+  
 }
 
 .register-container {
@@ -151,7 +152,8 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(350deg, #161a2070, #1f242c4c);
+  background: linear-gradient(350deg, #00000043, #0000005f);
+  
   overflow: hidden;
 }
 
@@ -167,20 +169,22 @@ export default {
   background-position: center;
   opacity: 1; /* Adjust this value for the desired transparency */
   z-index: -1;
+  
 }
 
 
 .register-panel {
-  background: #1f303e5f;
+  background: #16212bb9;
   backdrop-filter: blur(4px);
   padding: 40px;
   border-radius: 12px;
   position: relative;
-  border: 0.5px solid rgba(0, 0, 0, 0.114);
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+  border: 0.5px solid rgba(255, 255, 255, 0.151);
+  box-shadow: inset 0px 4px 8px rgba(255, 255, 255, 0.08);
   height: 30%;
   max-width: 360px;
   width: 100%;
+  
 }
 
 /* Full Logo Styling */
@@ -341,26 +345,33 @@ button.submit-button:active {
 .avatar-section::before {
   content: '';
   position: absolute;
-  top: 12px;    /* Adjust these values to make the overlay smaller */
-  left: 2px;
-  right: 2px;
-  bottom: 16px;
+  top: 4px;    /* Adjust these values to make the overlay smaller */
+  left: -4px;
+  right: -4px;
+  bottom: 8px;
   transition: background 0.1s ease; /* Smooth transition effect */
-  border-radius: 8px; /* Match avatar shape */
-  z-index: 2; /* Overlay appears above the image */
+  border-radius: 6px; /* Match avatar shape */
+  z-index: 2; /* Ensure the overlay appears above the image */
   pointer-events: none; /* Allow clicks to pass through */
 }
 
 .avatar-section:hover::before {
-  background: rgba(0, 0, 0, 0.607); /* Add a black overlay with transparency on hover */
+  background: radial-gradient(circle, 
+    rgba(0, 0, 0, 0.631) 0%,   /* Fully transparent at the center */
+    rgba(0, 0, 0, 0.75) 50%,  /* Slightly dark at 50% distance from the center */
+    rgba(0, 229, 255, 0.103) 90%, /* Darker at 90% from the center */
+    rgba(0, 195, 255, 0.887) 100%  /* Fully transparent at the outer edge */
+  );
+  transition: background 0.3s ease-in-out; /* Smooth transition on hover */
 }
+
 
 /* Text on hover */
 .avatar-section::after {
   content: 'Select Avatar';
   position: absolute;
-  color: rgb(214, 214, 214);
-  font-size: 12px;
+  color: rgb(189, 189, 189);
+  font-size: 16px;
   font-weight: bold;
   text-align: center;
   opacity: 0;

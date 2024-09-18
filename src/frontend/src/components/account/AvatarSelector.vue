@@ -114,46 +114,62 @@ export default {
   cursor: pointer;
   border: 1px solid #00FFFF;
   border-radius: 8px;
+  transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
-/* Overlay that appears when selecting an avatar */
+.selected-avatar:hover {
+  border-color: #ff8fff;
+  transform: scale(1.025);
+}
+
 .overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.289);
   backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
+  opacity: 0;
+  animation: fadeIn 0.15s forwards;
 }
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
 
 /* Outer panel with black background and transparency */
 .outer-panel {
-  background: rgba(0, 0, 0, 0.128); /* Transparent black background */
+  background: rgba(0, 0, 0, 0.361);
   padding: 20px;
-  border-radius: 10px; /* Rounded corners */
+  border-radius: 10px;
   justify-content: center;
   align-items: center;
-  border: .025px solid #6c6c6c3b;
+  border: 0.025px solid #ffffff25;
   position: relative;
-  z-index: 3; /* Panel is on top */
+  z-index: 3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+
 
 /* Avatar grid container styling */
 .avatar-grid-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #16212bc6;
+  background: #19242fd1;
   backdrop-filter: blur(4px);
   padding: 36px;
   border-radius: 12px;
   border: 0.5px solid rgba(255, 255, 255, 0.077);
-  box-shadow: inset 0px 0px 10px rgba(156, 156, 156, 0.068);
+  box-shadow: inset 0px 4px 4px rgba(255, 255, 255, 0.037);
 }
 
 /* Avatar grid header with SVG icon and title */
@@ -161,24 +177,31 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
-  margin-bottom: 16px; /* Space between title and grid */
-  margin-left: 20px; /* Align with outer-panel padding */
+  margin-bottom: 16px;
+  margin-left: 20px;
 }
 
 /* SVG icon before title */
 .avatar-icon {
   width: 24px;
   height: 24px;
-  margin-right: 8px; /* Space between icon and title */
+  margin-right: 8px;
 }
-
-/* Title for avatar selection grid */
+.avatar-icon:hover  {
+  color: #cacaca;
+}
 .avatar-grid-title {
-  color: #d8e7ee;
+  color: #afafaf;
   font-size: 18px;
   font-weight: 900;
   text-align: left;
+  transition: color 0.3s ease;
 }
+
+.avatar-grid-title:hover {
+  color: #ffffff;
+}
+
 
 /* Avatar grid layout */
 .avatar-grid {
@@ -208,9 +231,10 @@ export default {
 /* Glow and elastic hover animation */
 .avatar-item:hover .avatar-image {
   animation: elasticScale 0.45s ease-in-out;
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.5),
-              0 0 20px rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(255, 0, 234, 0.818),
+              0 0 16px rgba(255, 0, 247, 0.498);
   filter: brightness(1.2);
+  border: 2px solid #ff00c3;
 }
 
 /* Keyframe for elastic animation */
@@ -219,7 +243,7 @@ export default {
     transform: scale(1);
   }
   30% {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
   60% {
     transform: scale(0.95);
@@ -234,23 +258,23 @@ export default {
 
 /* Projected avatar image */
 .avatar-projection {
-  position: fixed; /* Fixed to viewport */
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100vw; /* Full viewport width */
-  height: 100vh; /* Full viewport height */
-  opacity: 0.625; /* Transparency level */
-  z-index: -1; /* Lower than the outer panel */
-  pointer-events: none; /* Prevent the projection from blocking clicks */
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.625;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .projected-avatar {
-  width: 100vw; /* Full width */
-  height: 100vh; /* Full height */
-  object-fit: cover; /* Ensure the image scales properly */
-  opacity: 0.1; /* Adjust transparency */
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 0.1;
   animation: projectIn 0.25s ease forwards;
-  pointer-events: none; /* Prevent the image from blocking clicks */
+  pointer-events: none;
 }
 
 /* Keyframes for projecting the avatar */
@@ -260,6 +284,41 @@ export default {
   }
   100% {
     opacity: 0.25;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  .avatar-grid {
+    grid-template-columns: 1fr 1fr 1fr; /* Two columns */
+    gap: 15px; /* Adjust gap for smaller screens */
+  }
+
+  .avatar-image {
+    width: 96px;
+    height: 96px; /* 4:3 aspect ratio */
+  }
+}
+
+/* Transition effects */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.35s;
+}
+
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+}
+
+
+
+@media screen and (max-width: 480px) {
+  .avatar-grid {
+    grid-template-columns: 1fr 1fr; /* Two columns */
+    gap: 15px; /* Adjust gap for smaller screens */
+  }
+
+  .avatar-image {
+    width: 96px;
+    height: 96px; /* 4:3 aspect ratio */
   }
 }
 

@@ -132,7 +132,7 @@ const authMethods = [
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(350deg, #161a2070, #1f242c4c);
+  background: linear-gradient(350deg, #00000043, #0000005f);
   overflow: hidden;
   position: relative;
 }
@@ -149,6 +149,7 @@ const authMethods = [
   background-position: center;
   opacity: 1;
   z-index: -1;
+  
 }
 
 .login-panel {
@@ -156,13 +157,12 @@ const authMethods = [
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
-  background: rgba(31, 48, 62, 0.37);
+  background: #16212bb9;
   backdrop-filter: blur(4px);
   padding: 5vh; /* Adjusted padding for responsiveness */
   border-radius: 12px;
   border: 0.5px solid rgba(0, 0, 0, 0.114);
-  box-shadow: inset 0px 0px 10px rgba(255, 255, 255, 0.149);
+  box-shadow: inset 0px 4px 8px rgba(255, 255, 255, 0.08);
 
   /* Max width and height constraints */
   max-width: 240px;
