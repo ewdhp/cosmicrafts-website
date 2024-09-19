@@ -67,6 +67,7 @@ export const useAuthStore = defineStore('auth', {
           base64ToUint8Array(keys.public),
           base64ToUint8Array(keys.private)
         );
+        console.log('Principal:', identity.getPrincipal().toText());
         authenticated = true;
         registered = await this.isPlayerRegistered();
         console.log('AuthStore: loginWithMetaMask keys generated');

@@ -39,6 +39,7 @@
     "epic-spinners": "^2.0.0",
     "globalthis": "^1.0.4",
     "lodash": "^4.17.21",
+    "md5": "^2.3.0",
     "tweetnacl": "^1.0.3",
     "vue-router": "^4.4.3",
     "vue-toastification": "^2.0.0-rc.5",

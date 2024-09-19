@@ -149,18 +149,7 @@ export default {
   margin-right: 10px; /* Space for the right panel */
   padding: 20px;
  
-  &::before {
-    content: '';
-    background-size: 100%;
-    opacity: 0.015;
-    position: absolute;
-    width: 512px;
-    height: 512px;
-    top: 50%;
-    right: 0;
-    right: 12px;
-    transform: translateY(-50%);
-  }
+
 }
 
 .right-panel {

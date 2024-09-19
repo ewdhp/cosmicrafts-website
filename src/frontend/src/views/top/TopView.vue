@@ -1,25 +1,39 @@
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useTopPlayersStore } from '@/stores/tops.js';
 import TableMenuView from '@/components/TableMenuView.vue';
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
+import md5 from 'md5'; // Assuming you have an md5 library installed
 
 export default {
   components: {
     TableMenuView,
+    LoadingSpinner,
   },
   setup() {
     const topPlayersStore = useTopPlayersStore();
 
-    const fetchTops = async () => {
-      await topPlayersStore.fetchTopReferrals(0);
-      await topPlayersStore.fetchTopELOPlayers(0);
-      await topPlayersStore.fetchTopNFTPlayers(0);
-      await topPlayersStore.fetchTopAchievementPlayers(0);
-      await topPlayersStore.fetchTopLevelPlayers(0);
+    const checkAndReloadData = async () => {
+      const currentData = [
+        ...topPlayersStore.topREF,
+        ...topPlayersStore.topELO,
+        ...topPlayersStore.topNFT,
+        ...topPlayersStore.topACH,
+        ...topPlayersStore.topLEV,
+      ];
+      const currentDataString = JSON.stringify(currentData, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      );
+      const currentHash = md5(currentDataString);
+      if (currentHash !== topPlayersStore.dataHash) {
+        await topPlayersStore.loadStore();
+      }
     };
 
     onMounted(async () => {
-      await fetchTops();
+      await checkAndReloadData();
+      // Load data in the background and update if changed
+      await topPlayersStore.reloadDataIfChanged();
     });
 
     const selectedType = ref(null);
@@ -63,14 +77,25 @@ export default {
 
       // Retrieve the function corresponding to the selected type
       const fetchFunction = fetchFunctions[type];
-      
-      // Call the function with argument 0 if it exists
-      if (fetchFunction) {
+      console.log("TopView tops.loaded: ", topPlayersStore.loaded);
+      // Call the function with argument 0 if it exists and the store is not already loaded
+      if (fetchFunction && topPlayersStore.loaded == false) {
         await fetchFunction(0);
       }
     };
 
+    // Watch for changes in the store's loading state
+    watch(() => topPlayersStore.loading, (newVal) => {
+      console.log("Loading state changed: ", newVal);
+    });
+
+    // Watch for changes in the store's data
+    watch(() => topPlayersStore.topREF, (newVal) => {
+      console.log("Top Referrals data changed: ", newVal);
+    });
+
     return {
+      topPlayersStore,
       selectedType,
       topTypes,
       fetchTopPlayers,
@@ -83,6 +108,7 @@ export default {
 
 <template>
   <div>
+    <LoadingSpinner :isLoading="topPlayersStore.loading" />
     <TableMenuView 
       :menuItems="topTypes" 
       :selectedItem="selectedType" 
