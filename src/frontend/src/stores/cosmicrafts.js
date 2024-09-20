@@ -2,7 +2,7 @@ import md5 from 'md5';
 import { defineStore } from 'pinia';
 import { useCanisterStore } from '@/stores/canister';
 
-const Func = Object.freeze({
+const F = Object.freeze({
   Player: 'player',
   Settings: 'settings',
   Referrals: 'referrals',
@@ -27,9 +27,7 @@ const hash = {
 };
 
 export const actor = defineStore(
-
   'cosmicrafts',
-
     () => {
 
       let actor = null;
@@ -64,7 +62,7 @@ export const actor = defineStore(
           if (!this.loadded) {
             this.loading = true;
             await this.init();
-            const funcTypes= Object.values(Func);
+            const funcTypes= Object.values(F);
             const funcArray = names.map(
             name => actor[`get_${name}`]());
             const newState = await Promise.all(funcArray);
@@ -81,11 +79,11 @@ export const actor = defineStore(
       },
 
       async fetchAllData() {
-        const funcNames = Object.values(Func);
-        const functions = funcNames.map(
+        const funcNames = Object.values(F);
+        const actions = funcNames.map(
         name => actor[`get_${name}`]());
-        const data = await Promise.all(functions);
-        funcNames.forEach((type, index) => {
+        const data = await Promise.all(actions);
+        actions.forEach((type, index) => { // falta de aqui pa arriba (type, index)
           this[type] = data[index];
         });
 
@@ -93,54 +91,61 @@ export const actor = defineStore(
       },
 
       updHashes() {
-        const funcNames = Object.values(Func);
-        funcNames.forEach(type => {
-          const str = JSON.stringify(this[type], (key, val) =>
-            typeof value === 'bigint' ? val.toString() : val
+        Object.values(F).forEach(indexByName => {
+          const str = JSON.stringify(
+            this[indexByName], (key, value) =>
+            typeof value === 'bigint' ? 
+            value.toString() : value
           );
-          this.hashes[type] = md5(str);
+          this.hashes[indexByName] = md5(str);
         });
       },
       
-      async hasChangedState(type) {
+      async hasChangedState(funcName) {
         await this.init();
-        const newState = await actor[`get_${funcName}`]();
-        const str = JSON.stringify(newState, (key, val) =>
-        typeof val === 'bigint' ? val.toString() : val);
-        const newHash = md5(str);
-        if (newHash !== this.hashes[type]) {
-          this[type] = newState;
-          this.hashes[type] = newHash;
+        const data = await actor[`get_${funcName}`]();
+        const str = JSON.stringify(stateVar, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value);
+        const hash = md5(str);
+        const index = funcName;
+        if (hash !== this.hashes[index]) {
+          this[index] = data;
+          this.hashes[index] = hash;
         }
       },
 
-      async reload() {
-        const funcs = Object.keys(this.$options.actions);
-        const results = {};
-
-        for (const types of funcs) {
-          if (typeof this[types] === 'function' && 
-            types !== 'callAllActions') {
+      async reloadF() {
+        const newState = {};
+        const actions = this.$options.actions;
+        const funcKeys = Object.keys(actions);   
+        for (const funcName of funcKeys) {
+          const i = funcName;
+          if (typeof this[i] === 'function' 
+            && i !== 'reloadF') {
             try {
-              results[types] = await this[types]();
-            } catch (error) {
-              console.error(`Error calling action ${types}:`, error);
+              newState[i] = await this[i]();
+            } catch (err) {
+              console.error(
+                ` Error: ${i}:`, 
+                  err
+              );
             }
           }
         }
-        for (const [key, val] of 
-          Object.entries(results)) {
-          if (key in this.$state) {
-            this.$state[key] = val;
+        for (const [key, value] of 
+          Object.entries(newState)) {
+            const varName = key;
+          if (varName in this.$state) {
+            this.$state[varName] = value;
           }
         }
         this.updHashes();
       },
 
-      async reloadFunc() {
-        const funcNames = Object.values(Func);
-        for (const types of funcNames) {
-          await this.hasChangedState(types);
+      async reloadF() {
+        const functions = Object.values(F);
+        for (const f of functions) {
+          await this.hasChangedState(f);
         }
       },
     },
