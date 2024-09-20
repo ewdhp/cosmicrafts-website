@@ -69,10 +69,10 @@ export default {
       // Map of functions to fetch data based on type
       const fetchFunctions = {
         'Referrals': topPlayersStore.fetchTopReferrals,
-        'ELO': topPlayersStore.fetchTopELOPlayers,
-        'NFTs': topPlayersStore.fetchTopNFTPlayers,
-        'Achievements': topPlayersStore.fetchTopAchievementPlayers,
-        'Level': topPlayersStore.fetchTopLevelPlayers,
+        'ELO': topPlayersStore.fetchTopELO,
+        'NFTs': topPlayersStore.fetchTopNFTs,
+        'Achievements': topPlayersStore.fetchTopAch,
+        'Level': topPlayersStore.fetchTopLevel,
       };
 
       // Retrieve the function corresponding to the selected type

@@ -11,56 +11,36 @@ export const useTopPlayersStore = defineStore('topPlayers', {
     topNFT: [],
     topACH: [],
     topLEV: [],
-    dataHash: '', // Store the hash/checksum of the data
+    dataHash: '',
+    canister: null,
   }),
   actions: {
+    async setup() {
+      if (!this.canister) {
+        const canisterStore = useCanisterStore();
+        this.canister = await canisterStore.get('cosmicrafts');
+      }
+    },
     async loadStore() {
       this.loading = true;
       if (!this.loaded) {
-        await this.fetchTopReferrals(0);
-        await this.fetchTopELOPlayers(0);
-        await this.fetchTopNFTPlayers(0);
-        await this.fetchTopAchievementPlayers(0);
-        await this.fetchTopLevelPlayers(0);
+        await this.setup();
+        await this.fetchAllTopData();
         this.loaded = true;
-        this.updateDataHash(); // Update the hash/checksum after loading data
+        this.updateDataHash();
       }
       this.loading = false;
     },
-    async fetchTopReferrals() {
-      this.loading = true;
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      this.topREF = await c.getTopReferrals(0);
-      this.loading = false;
-    },
-    async fetchTopELOPlayers() {
-      this.loading = true;
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      this.topELO = await c.getTopELOPlayers(0);
-      this.loading = false;
-    },
-    async fetchTopNFTPlayers() {
-      this.loading = true;
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      this.topNFT = await c.getTopNFTPlayers(0);
-      this.loading = false;
-    },
-    async fetchTopAchievementPlayers() {
-      this.loading = true;
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      this.topACH = await c.getTopAchievementPlayers(0);
-      this.loading = false;
-    },
-    async fetchTopLevelPlayers() {
-      this.loading = true;
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      this.topLEV = await c.getTopLevelPlayers(0);
-      this.loading = false;
+    async fetchAllTopData() {
+      const topData = await Promise.all([
+        this.canister.getTopRef(0),
+        this.canister.getTopELO(0),
+        this.canister.getTopNFTs(0),
+        this.canister.getTopAch(0),
+        this.canister.getTopLevel(0),
+      ]);
+
+      [this.topREF, this.topELO, this.topNFT, this.topACH, this.topLEV] = topData;
     },
     updateDataHash() {
       const data = [
@@ -76,20 +56,21 @@ export const useTopPlayersStore = defineStore('topPlayers', {
       this.dataHash = md5(dataString); // Compute and store the hash/checksum
     },
     async reloadDataIfChanged() {
-      const canister = useCanisterStore();
-      const c = await canister.get('cosmicrafts');
-      const newTopREF = await c.getTopReferrals(0);
-      const newTopELO = await c.getTopELOPlayers(0);
-      const newTopNFT = await c.getTopNFTPlayers(0);
-      const newTopACH = await c.getTopAchievementPlayers(0);
-      const newTopLEV = await c.getTopLevelPlayers(0);
+      await this.setup();
+      const newTopData = await Promise.all([
+        this.canister.getTopRef(0),
+        this.canister.getTopELO(0),
+        this.canister.getTopNFTs(0),
+        this.canister.getTopAch(0),
+        this.canister.getTopLevel(0),
+      ]);
 
       const newData = [
-        ...newTopREF,
-        ...newTopELO,
-        ...newTopNFT,
-        ...newTopACH,
-        ...newTopLEV,
+        ...newTopData[0],
+        ...newTopData[1],
+        ...newTopData[2],
+        ...newTopData[3],
+        ...newTopData[4],
       ];
       const newDataString = JSON.stringify(newData, (key, value) =>
         typeof value === 'bigint' ? value.toString() : value
@@ -97,12 +78,8 @@ export const useTopPlayersStore = defineStore('topPlayers', {
       const newHash = md5(newDataString);
 
       if (newHash !== this.dataHash) {
-        this.topREF = newTopREF;
-        this.topELO = newTopELO;
-        this.topNFT = newTopNFT;
-        this.topACH = newTopACH;
-        this.topLEV = newTopLEV;
-        this.updateDataHash();        
+        [this.topREF, this.topELO, this.topNFT, this.topACH, this.topLEV] = newTopData;
+        this.updateDataHash();
       }
     },
   },

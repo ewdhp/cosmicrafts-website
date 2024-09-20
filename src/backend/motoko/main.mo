@@ -29,7 +29,7 @@ import Result "mo:base/Result";
 import Int64 "mo:base/Int64";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
 
-import ICRC1 "/icrc1/Canisters/..";
+import ICRC1 "/icrc1/canisters/..";
 import MetadataUtils "MetadataUtils";
 
 import Validator "Validator";
@@ -115,10 +115,10 @@ shared actor class Cosmicrafts() = Self {
   let ADMIN_PRINCIPAL = Principal.fromText("vam5o-bdiga-izgux-6cjaz-53tck-eezzo-fezki-t2sh6-xefok-dkdx7-pae");
 
   //mainnet
-  //let CANISTER_ID = Principal.fromText("opcce-byaaa-aaaak-qcgda-cai");
+  //let canister_ID = Principal.fromText("opcce-byaaa-aaaak-qcgda-cai");
 
   //local
-  let CANISTER_ID = Principal.fromText("bkyz2-fmaaa-aaaaa-qaaaq-cai");
+  let canister_ID = Principal.fromText("bkyz2-fmaaa-aaaaa-qaaaq-cai");
 
   public type InitArgs = TypesICRC1.InitArgs;
 
@@ -3708,7 +3708,7 @@ shared actor class Cosmicrafts() = Self {
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
-    owner = CANISTER_ID;
+    owner = canister_ID;
     subaccount = null;
   };
 
@@ -4716,7 +4716,7 @@ shared actor class Cosmicrafts() = Self {
     let acceptedTo : TypesICRC7.Account = _acceptAccount(mintArgs.to);
 
     //todo add a more complex roles management
-    if (Principal.notEqual(caller, owner.owner) and Principal.notEqual(caller, CANISTER_ID)) {
+    if (Principal.notEqual(caller, owner.owner) and Principal.notEqual(caller, canister_ID)) {
       return #Err(#Unauthorized);
     };
 
@@ -5106,8 +5106,8 @@ shared actor class Cosmicrafts() = Self {
     logo = "logoGoesHere";
     fee = 1;
     max_supply = 10_000_000_000_000_000_000;
-    initial_balances = [({ owner = CANISTER_ID; subaccount = null }, 0)];
-    minting_account = ?{ owner = CANISTER_ID; subaccount = null };
+    initial_balances = [({ owner = canister_ID; subaccount = null }, 0)];
+    minting_account = ?{ owner = canister_ID; subaccount = null };
     description = ?"Glittering particles born from the heart of dying stars. Stardust is the rarest and most precious substance in the Cosmicrafts universe, imbued with the power to create, enhance, and transform. Collect Stardust to unlock extraordinary crafts, upgrade your NFTs, and forge your own destiny among the stars.";
     advanced_settings = null;
     min_burn_amount = 0;
@@ -5117,7 +5117,7 @@ shared actor class Cosmicrafts() = Self {
     init_args with minting_account = Option.get(
       init_args.minting_account,
       {
-        owner = CANISTER_ID;
+        owner = canister_ID;
         subaccount = null;
       },
     );
@@ -5382,7 +5382,6 @@ shared actor class Cosmicrafts() = Self {
 
   system func preupgrade() {
     // Save the state of the stable variables
-    _userKeys := Iter.toArray(userKeys.entries());
     _generalUserProgress := Iter.toArray(generalUserProgress.entries());
     _missions := Iter.toArray(missions.entries());
     _activeMissions := Iter.toArray(activeMissions.entries());
@@ -5428,7 +5427,6 @@ shared actor class Cosmicrafts() = Self {
 
 system func postupgrade() {
     // Restore the state of the stable variables
-    userKeys := HashMap.fromIter(_userKeys.vals(), 0, Principal.equal, Principal.hash);
     generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
     missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
     activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
@@ -6871,6 +6869,10 @@ system func postupgrade() {
   };
 
   // Achievements
+
+
+
+  //check if get size instad of stable vars....
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -7953,56 +7955,7 @@ func updateStableArrays() {
     };
   };
 
-  //User keys
-
-  stable var _userKeys : [(Principal, Text)] = [];
-  var userKeys : HashMap.HashMap<Principal, Text> = HashMap.fromIter(_userKeys.vals(), 0, Principal.equal, Principal.hash);
-
-  //missing generateKey
-
-  public shared ({ caller }) func storePublicKey(user : Principal, publicKey : Text) : async Bool {
-    if (caller == user) {
-      userKeys.put(user, publicKey);
-      return true;
-    } else {
-      return false;
-    };
-  };
-
-  public query ({ caller }) func getPublicKey(user : Principal) : async ?Text {
-    if (caller == user) {
-      return userKeys.get(user);
-    } else {
-      return null;
-    };
-  };
-
-  public query ({ caller }) func checkKey(user : Principal, providedKey : Text) : async Bool {
-    if (caller == user) {
-      switch (userKeys.get(user)) {
-        case (?storedKey) {
-          return storedKey == providedKey;
-        };
-        case null {
-          return false;
-        };
-      };
-    } else {
-      return false;
-    };
-  };
-
-  public shared ({ caller }) func updateKey(user : Principal, newKey : Text) : async Bool {
-    if (caller == user) {
-      userKeys.put(user, newKey);
-      return true;
-    } else {
-      return false;
-    };
-  };
-
   //Views
-
   public shared ({ caller }) func getAchievementsView() : async (
     [AchievementCategory],
     [AchievementLine],
@@ -8025,107 +7978,12 @@ func updateStableArrays() {
   };
 
 
-  //Achievements Top
-  public shared func ach(page : Nat) : async [(PlayerId, Nat)] {
-    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
-    for ((playerId, player) in players.entries()) {
-      let achievements = switch (userProgress.get(playerId)) {
-        case (?categories) {
-          Array.foldLeft<AchievementCategory, Nat>(
-            categories,
-            0,
-            func(acc, category) {
-              acc + Array.foldLeft<AchievementLine, Nat>(
-                category.achievements,
-                0,
-                func(acc, line) {
-                  acc + Array.foldLeft<IndividualAchievement, Nat>(
-                    line.individualAchievements,
-                    0,
-                    func(acc, achievement) {
-                      if (achievement.completed) {
-                        acc + 1;
-                      } else {
-                        acc;
-                      };
-                    },
-                  );
-                },
-              );
-            },
-          );
-        };
-        case null 0;
-      };
-      buffer.add((playerId, achievements));
-    };
-    let allPlayersWithAchievements = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-      allPlayersWithAchievements,
-      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
-        #less;
-        #equal;
-        #greater;
-      } {
-        if (a.1 > b.1) {
-          #less;
-        } else if (a.1 < b.1) {
-          #greater;
-        } else {
-          #equal;
-        };
-      },
-    );
-    let start = page * 10;
-    let end = if (start + 10 > Array.size(sortedPlayers)) {
-      Array.size(sortedPlayers);
-    } else {
-      start + 10;
-    };
-    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
-    return paginatedPlayers;
-  };
-
-  //Level Top
-  public shared func level(page : Nat) : async [(PlayerId, Nat)] {
-    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
-    for ((playerId, player) in players.entries()) {
-      buffer.add((playerId, player.level));
-    };
-    let allPlayersWithLevels = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-      allPlayersWithLevels,
-      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
-        #less;
-        #equal;
-        #greater;
-      } {
-        if (a.1 > b.1) {
-          #less;
-        } else if (a.1 < b.1) {
-          #greater;
-        } else {
-          #equal;
-        };
-      },
-    );
-    let start = page * 10;
-    let end = if (start + 10 > Array.size(sortedPlayers)) {
-      Array.size(sortedPlayers);
-    } else {
-      start + 10;
-    };
-    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
-    return paginatedPlayers;
-  };
-
   //////////////////////////////////////////////////////////////////////////
   //
   //  Tops
   //
   //
 
-  // Referrals Top
   public type ReferralsTop = {
     playerId : Principal;
     totalReferrals : Nat;
@@ -8134,7 +7992,7 @@ func updateStableArrays() {
     avatar : Nat;
     referrer : ?Principal;
   };
-  public shared func getTopReferrals(page : Nat) : async [ReferralsTop] {
+  public shared func getTopRef(page : Nat) : async [ReferralsTop] {
     let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
     
     // Sort by total referrals (direct, indirect, and beyond)
@@ -8199,15 +8057,13 @@ func updateStableArrays() {
     };
     return topReferrals;
   };
-
-  // ELO Top
-  public type ELOPlayer = {
+  public type ELOTop = {
     playerId : Principal;
     elo : Float;
     username : Text;
     avatar : Nat;
   };
-  public shared func getTopELOPlayers(page : Nat) : async [ELOPlayer] {
+  public shared func getTopELO(page : Nat) : async [ELOTop] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(players.size());
     for ((playerId, player) in players.entries()) {
         buffer.add((playerId, player.elo));
@@ -8239,7 +8095,7 @@ func updateStableArrays() {
         Array.slice(sortedPlayers, start, end)
     );
 
-    var topELOPlayers : [ELOPlayer] = [];
+    var topELOPlayers : [ELOTop] = [];
     for (entry in paginatedPlayers.vals()) {
         let playerId = entry.0;
         let elo = entry.1;
@@ -8253,7 +8109,7 @@ func updateStableArrays() {
             case (null) { 0 };
         };
 
-        let p : ELOPlayer = {
+        let p : ELOTop= {
             playerId = playerId;
             elo = elo;
             username = username;
@@ -8263,8 +8119,6 @@ func updateStableArrays() {
     };
     return topELOPlayers;
   };
-
-  // NFT Top
   public type NFTTop = {
     playerId : Principal;
     avatar : Nat;
@@ -8272,7 +8126,7 @@ func updateStableArrays() {
     level : Nat;
     nftCount : Nat;
   };
-  public shared func getTopNFTPlayers(page : Nat) : async [NFTTop] {
+  public shared func getTopNFTs(page : Nat) : async [NFTTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
     for ((playerId, player) in players.entries()) {
       let nftCount = (await getNFTs(playerId)).size();
@@ -8333,15 +8187,13 @@ func updateStableArrays() {
     };
     return topNFTPlayers;
   };
-
-  // Level Top
   public type LevelTop = {
     playerId : Principal;
     level : Nat;
     username : Text;
     avatar : Nat;
   }; 
-  public shared func getTopLevelPlayers(page : Nat) : async [LevelTop] {
+  public shared func getTopLevel(page : Nat) : async [LevelTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
     for ((playerId, player) in players.entries()) {
       buffer.add((playerId, player.level));
@@ -8393,16 +8245,13 @@ func updateStableArrays() {
     };
     return topPlayers;
   };
-
-
-  // Achievements Top
   public type AchievementsTop = {
     playerId : Principal;
     totalAchievements : Nat;
     username : Text;
     avatar : Nat;
   };
-  public shared func getTopAchievementPlayers(page : Nat) : async [AchievementsTop] {
+  public shared func getTopAch(page : Nat) : async [AchievementsTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(userProgress.size());
     for ((playerId, userCategoriesList) in userProgress.entries()) {
         var totalAchievements : Nat = 0;
@@ -8474,40 +8323,35 @@ func updateStableArrays() {
         topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
     };
     return topAchievementPlayers;
-    };
-
-  public shared func debugClaimedRewards() : async () {
-    Debug.print(" INDIVIDUAL:");
-    if (claimedIndividualAchievementRewards.size() == 0) {
-        Debug.print("No individual achievement rewards found.");
-    } else {
-        for ((playerId, rewards) in claimedIndividualAchievementRewards.entries()) {
-            Debug.print("Player ID: " # debug_show(playerId));
-            Debug.print("Rewards: " # debug_show(rewards));
-            Debug.print("Total Rewards: " # debug_show(Array.size(rewards)));
-        };
-    };
-
-    Debug.print("LINES:");
-    if (claimedAchievementLineRewards.size() == 0) {
-        Debug.print("No achievement line rewards found.");
-    } else {
-        for ((playerId, rewards) in claimedAchievementLineRewards.entries()) {
-            Debug.print("Player ID: " # debug_show(playerId));
-            Debug.print("Rewards: " # debug_show(rewards));
-            Debug.print("Total Rewards: " # debug_show(Array.size(rewards)));
-        };
-    };
-
-    Debug.print("CATEGORY:");
-    if (claimedCategoryAchievementRewards.size() == 0) {
-        Debug.print("No category achievement rewards found.");
-    } else {
-        for ((playerId, rewards) in claimedCategoryAchievementRewards.entries()) {
-            Debug.print("Player ID: " # debug_show(playerId));
-            Debug.print("Rewards: " # debug_show(rewards));
-            Debug.print("Total Rewards: " # debug_show(Array.size(rewards)));
-        };
-    };
   };
+
+  public query func get_player():async Bool{true};
+  public query func get_settings():async Bool{true};
+  public query func get_tops():async Bool {true};
+  public query func get_tourneys():async Bool{true};
+  public query func get_missions():async Bool{true};
+  public query func get_stats():async Bool{true};
+  public query func get_tokens():async Bool{true};
+  public query func get_referrals():async Bool{true};
+  public query func get_achs():async Bool{true};
+ 
+  public func get_tops1(
+    page : Nat 
+    ) : async (
+      [ReferralsTop], 
+      [ELOTop], 
+      [NFTTop], 
+      [LevelTop], 
+      [AchievementsTop]){
+    (
+      await getTopRef(page), 
+      await getTopELO(page),
+      await getTopNFTs(page),
+      await getTopLevel(page), 
+      await getTopAch(page)
+    );
+  };       
 };
+
+//definir una funcion de tops para regresar todos los datos utilizados en la vista 
+
