@@ -1,86 +1,148 @@
+import md5 from 'md5';
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { useCanisterStore } from './canister.js';
+import { useCanisterStore } from '@/stores/canister';
 
-export const Cosmicrafts = defineStore('Cosmicrafts', {
-  state: () => ({
-    loadded: false,
-    loading: true,
-    player: false,
-    settings: false,
-    referrals: false,
-    achs: false,
-    stats: false,
-    tokens: false,
-    tourneys: false,
-    missions: false,
-    tops: false,
-    cosmicrafts: null,
-  }),
-  actions: {
-    async init() {
-      if (!this.canister) {
-        const canister = useCanisterStore();
-        this.cosmicrafts = await canister.get("cosmicrafts");
-      }
-    },
-    async load() {
-      try {
-        if (!this.loadded) {
-          this.loading = true;
-          await this.init();
-          this.player = await this.cosmicrafts.get_player();
-          this.settings = await this.cosmicrafts.get_settings();
-          this.referrals = await this.cosmicrafts.get_referrals();
-          this.achs = await this.cosmicrafts.get_achs();
-          this.stats = await this.cosmicrafts.get_stats();
-          this.tokens = await this.cosmicrafts.get_tokens();
-          this.tourneys = await this.cosmicrafts.get_tourneys();
-          this.missions = await this.cosmicrafts.get_missions();
-          this.tops = await this.cosmicrafts.get_tops();
-          this.loadded = true;
-          this.loading = false;
-          console.log("Player: ", this.player);
+const Func = Object.freeze({
+  Player: 'player',
+  Settings: 'settings',
+  Referrals: 'referrals',
+  Achs: 'achs',
+  Stats: 'stats',
+  Tokens: 'tokens',
+  Tourneys: 'tourneys',
+  Missions: 'missions',
+  Tops: 'tops',
+});
+
+const hash = {
+  player: '',
+  settings: '',
+  referrals: '',
+  achs: '',
+  stats: '',
+  tokens: '',
+  tourneys: '',
+  missions: '',
+  tops: '',
+};
+
+export const actor = defineStore(
+
+  'cosmicrafts',
+
+    () => {
+
+      let actor = null;
+
+  return {
+    state: () => ({
+      hash: hash,
+      loadded: false,
+      loading: true,
+      player: false,
+      settings: false,
+      referrals: false,
+      achs: false,
+      stats: false,
+      tokens: false,
+      tourneys: false,
+      missions: false,
+      tops: false,
+    }),
+
+    actions: {
+      async init() {
+        if (!actor) {
+          const factory = useCanisterStore();
+          actor = await factory.get("cosmicrafts");
         }
-      } catch (error) {
-        console.error(error);
-      }
+      },
+
+      async load() {
+        try 
+        {
+          if (!this.loadded) {
+            this.loading = true;
+            await this.init();
+            const funcTypes= Object.values(Func);
+            const funcArray = names.map(
+            name => actor[`get_${name}`]());
+            const newState = await Promise.all(funcArray);
+            funcTypes.forEach((type, key) => {
+              this[type] = newState[key];
+            });
+            this.updHashes();
+            this.loadded = true;
+            this.loading = false;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      },
+
+      async fetchAllData() {
+        const funcNames = Object.values(Func);
+        const functions = funcNames.map(
+        name => actor[`get_${name}`]());
+        const data = await Promise.all(functions);
+        funcNames.forEach((type, index) => {
+          this[type] = data[index];
+        });
+
+        this.updHashes();
+      },
+
+      updHashes() {
+        const funcNames = Object.values(Func);
+        funcNames.forEach(type => {
+          const str = JSON.stringify(this[type], (key, val) =>
+            typeof value === 'bigint' ? val.toString() : val
+          );
+          this.hashes[type] = md5(str);
+        });
+      },
+      
+      async hasChangedState(type) {
+        await this.init();
+        const newState = await actor[`get_${funcName}`]();
+        const str = JSON.stringify(newState, (key, val) =>
+        typeof val === 'bigint' ? val.toString() : val);
+        const newHash = md5(str);
+        if (newHash !== this.hashes[type]) {
+          this[type] = newState;
+          this.hashes[type] = newHash;
+        }
+      },
+
+      async reload() {
+        const funcs = Object.keys(this.$options.actions);
+        const results = {};
+
+        for (const types of funcs) {
+          if (typeof this[types] === 'function' && 
+            types !== 'callAllActions') {
+            try {
+              results[types] = await this[types]();
+            } catch (error) {
+              console.error(`Error calling action ${types}:`, error);
+            }
+          }
+        }
+        for (const [key, val] of 
+          Object.entries(results)) {
+          if (key in this.$state) {
+            this.$state[key] = val;
+          }
+        }
+        this.updHashes();
+      },
+
+      async reloadFunc() {
+        const funcNames = Object.values(Func);
+        for (const types of funcNames) {
+          await this.hasChangedState(types);
+        }
+      },
     },
-    async get_player() {
-      await this.init();
-      this.player = await this.cosmicrafts.get_player();
-    },
-    async get_settings() {
-      await this.init();
-      this.settings = await this.cosmicrafts.get_settings();
-    },
-    async get_referrals() {
-      await this.init();
-      this.referrals = await this.cosmicrafts.get_referrals();
-    },
-    async get_tourneys() {
-      await this.init();
-      this.tourneys = await this.cosmicrafts.get_tourneys();
-    },
-    async get_missions() {
-      await this.init();
-      this.missions = await this.cosmicrafts.get_missions();
-    },
-    async get_stats() {
-      await this.init();
-      this.stats = await this.cosmicrafts.get_stats();
-    },
-    async get_tokens() {
-      await this.init();
-      this.tokens = await this.cosmicrafts.get_tokens();
-    },
-    async get_tops() {
-      await this.init();
-      this.tops = await this.canister.get_tops();
-    },
-    async get_achs() {
-      await this.init();
-      this.achs = await this.canister.get_achs();
-    },
-  }
+  };
 });
