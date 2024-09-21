@@ -2,152 +2,92 @@ import md5 from 'md5';
 import { defineStore } from 'pinia';
 import { useCanisterStore } from '@/stores/canister';
 
-const F = Object.freeze({
-  Player: 'player',
-  Settings: 'settings',
-  Referrals: 'referrals',
-  Achs: 'achs',
-  Stats: 'stats',
-  Tokens: 'tokens',
-  Tourneys: 'tourneys',
-  Missions: 'missions',
-  Tops: 'tops',
-});
-
-const hash = {
-  player: '',
-  settings: '',
-  referrals: '',
-  achs: '',
-  stats: '',
-  tokens: '',
-  tourneys: '',
-  missions: '',
-  tops: '',
+let DataViewFunctions = {
+  get_player: null,
+  get_settings: null,
+  get_referrals: null,
+  get_achievements: null,
+  get_missions: null,
+  get_tourneys: null,
+  get_stats: null,
+  get_tokens: null,
+  get_tops: null,
 };
 
-export const actor = defineStore(
-  'cosmicrafts',
-    () => {
+const cosmicraftsStore = 
+defineStore(
+  'Cosmicrafts', {
 
-      let actor = null;
+  state: () => ({
+    loadded: false,
+    loading: false,
+    actor: null,
+    module: {},
+    hashes: {},
+  }),
 
-  return {
-    state: () => ({
-      hash: hash,
-      loadded: false,
-      loading: true,
-      player: false,
-      settings: false,
-      referrals: false,
-      achs: false,
-      stats: false,
-      tokens: false,
-      tourneys: false,
-      missions: false,
-      tops: false,
-    }),
-
-    actions: {
-      async init() {
-        if (!actor) {
-          const factory = useCanisterStore();
-          actor = await factory.get("cosmicrafts");
+  actions: {    
+    async load() {
+      try {
+        if (!this.actor) {
+          this.loading = true;
+          const canister = useCanisterStore();
+          this.actor = await canister.get("cosmicrafts");
         }
-      },
-
-      async load() {
-        try 
-        {
-          if (!this.loadded) {
-            this.loading = true;
-            await this.init();
-            const funcTypes= Object.values(F);
-            const funcArray = names.map(
-            name => actor[`get_${name}`]());
-            const newState = await Promise.all(funcArray);
-            funcTypes.forEach((type, key) => {
-              this[type] = newState[key];
-            });
-            this.updHashes();
-            this.loadded = true;
-            this.loading = false;
-          }
-        } catch (error) {
-          console.error(error);
+        if (Object.keys(this.module).length === 0) {
+          await this.call(Object.keys(DataViewFunctions));
         }
-      },
-
-      async fetchAllData() {
-        const funcNames = Object.values(F);
-        const actions = funcNames.map(
-        name => actor[`get_${name}`]());
-        const data = await Promise.all(actions);
-        actions.forEach((type, index) => { // falta de aqui pa arriba (type, index)
-          this[type] = data[index];
-        });
-
-        this.updHashes();
-      },
-
-      updHashes() {
-        Object.values(F).forEach(indexByName => {
-          const str = JSON.stringify(
-            this[indexByName], (key, value) =>
-            typeof value === 'bigint' ? 
-            value.toString() : value
-          );
-          this.hashes[indexByName] = md5(str);
-        });
-      },
-      
-      async hasChangedState(funcName) {
-        await this.init();
-        const data = await actor[`get_${funcName}`]();
-        const str = JSON.stringify(stateVar, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value);
-        const hash = md5(str);
-        const index = funcName;
-        if (hash !== this.hashes[index]) {
-          this[index] = data;
-          this.hashes[index] = hash;
-        }
-      },
-
-      async reloadF() {
-        const newState = {};
-        const actions = this.$options.actions;
-        const funcKeys = Object.keys(actions);   
-        for (const funcName of funcKeys) {
-          const i = funcName;
-          if (typeof this[i] === 'function' 
-            && i !== 'reloadF') {
-            try {
-              newState[i] = await this[i]();
-            } catch (err) {
-              console.error(
-                ` Error: ${i}:`, 
-                  err
-              );
-            }
-          }
-        }
-        for (const [key, value] of 
-          Object.entries(newState)) {
-            const varName = key;
-          if (varName in this.$state) {
-            this.$state[varName] = value;
-          }
-        }
-        this.updHashes();
-      },
-
-      async reloadF() {
-        const functions = Object.values(F);
-        for (const f of functions) {
-          await this.hasChangedState(f);
-        }
-      },
+      } catch (error) {
+        console.error(error);
+        this.loading = false;
+      }
+      this.loading = false;
+      this.loadded = true;
+      console.log("Cosmicrafts loaded");
     },
-  };
+    async call(functions = []) {
+      if (!this.loadded) {
+        for (const func of functions) {
+          const data = await this.actor[func]();
+          const dataString = JSON.stringify(
+            data,
+            (key, value) => (
+              typeof value === 'bigint' 
+              ? value.toString() : value)
+          );
+          const newHash = md5(dataString);
+          const strippedFunc = func.replace(/^get_/, ''); 
+          if (this.hashes[strippedFunc] !== newHash) {
+            this.module[strippedFunc] = data;
+            this.hashes[strippedFunc] = newHash;
+          }
+        }
+        this.updateHashes(this.module);
+        this.loadded = true;
+        this.loading = false;
+      }
+    },
+    updateHashes(module) {
+      const dataTypes = Object.keys(module);
+      dataTypes.forEach(type => {
+        const str = JSON.stringify(
+          module[type],
+          (key, value) => (
+            typeof value === 'bigint' 
+            ? value.toString() : value)
+        );
+        this.hashes[type] = md5(str);
+      });
+    },
+  },
 });
+
+export async function useCosmicraftsStore() {
+  const store = cosmicraftsStore();
+  await store.load();
+  let cosmicrafts = {
+    views : store.module,
+    actor : store.actor,
+  }
+  return cosmicrafts;
+}

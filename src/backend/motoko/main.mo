@@ -166,8 +166,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  //--
-  // Missions
+// #region Missions
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -332,9 +331,10 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
+// #endregion
 
-  //----
-  // General Missions
+// #region General Missions
+
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
   stable var _generalUserProgress : [(Principal, [MissionsUser])] = [];
@@ -680,6 +680,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+// #endregion
 
   //--
   // User-Specific Missions
@@ -7344,13 +7345,13 @@ system func postupgrade() {
     };
   };
 
-// Helper function to update stable arrays from hashmaps
-func updateStableArrays() {
-  _userProgress := Iter.toArray(userProgress.entries());
-  _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
-  _claimedAchievementLineRewards := Iter.toArray(claimedAchievementLineRewards.entries());
-  _claimedCategoryAchievementRewards := Iter.toArray(claimedCategoryAchievementRewards.entries());
-};
+  // Helper function to update stable arrays from hashmaps
+  func updateStableArrays() {
+    _userProgress := Iter.toArray(userProgress.entries());
+    _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
+    _claimedAchievementLineRewards := Iter.toArray(claimedAchievementLineRewards.entries());
+    _claimedCategoryAchievementRewards := Iter.toArray(claimedCategoryAchievementRewards.entries());
+  };
 
   public shared func claimIndACH(id : Principal, achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(id);
@@ -8327,13 +8328,14 @@ func updateStableArrays() {
 
   public query func get_player():async Bool{true};
   public query func get_settings():async Bool{true};
-  public query func get_tops():async Bool {true};
-  public query func get_tourneys():async Bool{true};
+  public query func get_referrals():async Bool{true};
+  public query func get_achievements():async Bool{true};
   public query func get_missions():async Bool{true};
+  public query func get_tourneys():async Bool{true};
   public query func get_stats():async Bool{true};
   public query func get_tokens():async Bool{true};
-  public query func get_referrals():async Bool{true};
-  public query func get_achs():async Bool{true};
+  public query func get_tops():async Bool {true};
+
  
   public func get_tops1(
     page : Nat 
