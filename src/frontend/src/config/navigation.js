@@ -10,6 +10,7 @@ import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 import TopView from '@/views/top/TopView.vue';
 import MainLayout from '@/views/layout/MainLayout.vue';
+import BKView from '@/views/BKView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -81,6 +82,18 @@ const navItems = [
           active: DashboardActiveIcon,
           hover: DashboardHoverIcon,
           inactive: DashboardInactiveIcon,
+        },
+        children: []
+      },
+      {
+        path: '/preview',
+        name: "Backend Preview", 
+        component: BKView,
+        meta: { requiresAuth: true },
+        icons: { 
+          active: AchievementsActiveIcon, 
+          hover: AchievementsHoverIcon,
+          inactive: AchievementsInactiveIcon,
         },
         children: []
       },

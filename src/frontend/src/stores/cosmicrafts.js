@@ -1,23 +1,40 @@
 import md5 from 'md5';
 import { defineStore } from 'pinia';
 import { useCanisterStore } from '@/stores/canister';
+import { toRaw } from 'vue';
 
-let DataViewFunctions = {
-  get_player: null,
-  get_settings: null,
-  get_referrals: null,
-  get_achievements: null,
-  get_missions: null,
-  get_tourneys: null,
-  get_stats: null,
-  get_tokens: null,
-  get_tops: null,
+let actorFunctions = {
+  get_all: null,
 };
 
-const cosmicraftsStore = 
-defineStore(
-  'Cosmicrafts', {
+const data = {
+  fullProfile: null,
+  friendsList: null,
+  allPlayers: null,
+  generalMissions: null,
+  userMissions: null,
+  allTournaments: null,
+  playerDeck: null,
+  totalReferrals: null,
+  multiplier: null,
+  topReferrals: null,
+  topELO: null,
+  topNFT: null,
+  topLevel: null,
+  topAchievements: null,
+  nfts: null,
+  chests: null,
+  avatars: null,
+  characters: null,
+  trophies: null,
+  units: null,
+  collectionOwner: null,
+  achievements: null,
+  friendRequests: null,
+  privacySettings: null,
+};
 
+const cosmicraftsStore = defineStore('Cosmicrafts', {
   state: () => ({
     loadded: false,
     loading: false,
@@ -26,7 +43,7 @@ defineStore(
     hashes: {},
   }),
 
-  actions: {    
+  actions: {
     async load() {
       try {
         if (!this.actor) {
@@ -35,7 +52,7 @@ defineStore(
           this.actor = await canister.get("cosmicrafts");
         }
         if (Object.keys(this.module).length === 0) {
-          await this.call(Object.keys(DataViewFunctions));
+          await this.call(Object.keys(actorFunctions));
         }
       } catch (error) {
         console.error(error);
@@ -56,10 +73,10 @@ defineStore(
               ? value.toString() : value)
           );
           const newHash = md5(dataString);
-          const strippedFunc = func.replace(/^get_/, ''); 
-          if (this.hashes[strippedFunc] !== newHash) {
-            this.module[strippedFunc] = data;
-            this.hashes[strippedFunc] = newHash;
+          const funcName = func.replace(/^get_/, ''); 
+          if (this.hashes[funcName] !== newHash) {
+            this.module[funcName] = data;
+            this.hashes[funcName] = newHash;
           }
         }
         this.updateHashes(this.module);
@@ -85,9 +102,17 @@ defineStore(
 export async function useCosmicraftsStore() {
   const store = cosmicraftsStore();
   await store.load();
-  let cosmicrafts = {
-    views : store.module,
-    actor : store.actor,
+ 
+  let i=0;
+  for(const func in data) {
+    data[func] = store.module.all[i];
+    i++;
   }
+
+  let cosmicrafts = {
+    module: data,
+    actor: store.actor,
+  };
+  console.log("Cosmicrafts loaded:");
   return cosmicrafts;
 }

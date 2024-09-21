@@ -33,10 +33,10 @@ export const useTopPlayersStore = defineStore('topPlayers', {
     },
     async fetchAllTopData() {
       const topData = await Promise.all([
-        this.canister.getTopRef(0),
+        this.canister.getTopReferrals(0),
         this.canister.getTopELO(0),
-        this.canister.getTopNFTs(0),
-        this.canister.getTopAch(0),
+        this.canister.getTopNFT(0),
+        this.canister.getTopAchievements(0),
         this.canister.getTopLevel(0),
       ]);
 

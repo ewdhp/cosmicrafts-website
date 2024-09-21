@@ -34,7 +34,10 @@ import MissionOptions "MissionOptions";
 import AchievementData "AchievementData";
 import Set "Set";
 
-shared actor class Cosmicrafts() = Self {
+shared actor 
+class Cosmicrafts() = 
+Self {
+
 //#region |Admin Functions|
   public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
     if (caller == ADMIN_PRINCIPAL) {
@@ -1682,6 +1685,659 @@ shared actor class Cosmicrafts() = Self {
   };
 // #endregion
 
+// #region |Players|
+
+  var ONE_SECOND : Nat64 = 1_000_000_000;
+  var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
+  stable var _players : [(PlayerId, Player)] = [];
+  stable var _friendRequests : [(PlayerId, [FriendRequest])] = [];
+  stable var _privacySettings : [(PlayerId, PrivacySetting)] = [];
+  stable var _blockedUsers : [(PlayerId, [PlayerId])] = [];
+  stable var _mutualFriendships : [((PlayerId, PlayerId), MutualFriendship)] = [];
+  stable var _notifications : [(PlayerId, [Notification])] = [];
+  stable var _updateTimestamps : [(PlayerId, UpdateTimestamps)] = [];
+
+  // Initialize HashMaps using the stable lists
+  var players : HashMap.HashMap<PlayerId, Player> = HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
+
+  var friendRequests : HashMap.HashMap<PlayerId, [FriendRequest]> = HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
+  var privacySettings : HashMap.HashMap<PlayerId, PrivacySetting> = HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
+  var blockedUsers : HashMap.HashMap<PlayerId, [PlayerId]> = HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
+  var mutualFriendships : HashMap.HashMap<(PlayerId, PlayerId), MutualFriendship> = HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
+  var notifications : HashMap.HashMap<PlayerId, [Notification]> = HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
+  var updateTimestamps : HashMap.HashMap<PlayerId, UpdateTimestamps> = HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
+
+  public shared ({ caller : PlayerId }) func registerPlayer(
+    username : Username,
+    avatar : AvatarID,
+    referralCode : ReferralCode,
+  ) : async (Bool, ?Player, Text) {
+    if (username.size() > 12) {
+      return (false, null, "Username must be 12 characters or less");
+    };
+
+    let playerId = caller;
+
+    // Check if the player is already registered
+    switch (players.get(playerId)) {
+      case (?existingPlayer) {
+        // If the player is already registered, return immediately without making any changes
+        return (false, ?existingPlayer, "User is already registered and cannot register again.");
+      };
+      case (null) {
+        // Validate the referral code against unassigned or assigned codes
+        let codeAssigned = await assignUnassignedReferralCode(playerId, referralCode);
+
+        var finalCode = referralCode;
+
+        switch (codeAssigned) {
+          case (#ok(true)) {
+            // Code was successfully assigned from unassigned codes
+            // The original referral code should be preserved.
+            finalCode := referralCode;
+          };
+          case (#err(errMsg)) {
+            return (false, null, errMsg); // Return error message if code is invalid
+          };
+          case (#ok(false)) {
+            // Code is valid but already assigned; identify the referrer
+            switch (referralCodes.get(referralCode)) {
+              case (null) {
+                return (false, null, "Invalid referral code");
+              };
+              case (?referrerId) {
+                // Update the referrer data and track referrals
+                trackReferrer(referrerId, playerId);
+              };
+            };
+          };
+        };
+
+        // Proceed with player registration if referral code is valid
+        let registrationDate = Time.now();
+        let newPlayer : Player = {
+          id = playerId;
+          username = username;
+          avatar = avatar;
+          description = "";
+          registrationDate = registrationDate;
+          level = 1;
+          elo = 1200;
+          friends = [];
+          title = "Starbound Initiate";
+        };
+        players.put(playerId, newPlayer);
+
+        // Initialize the player's multiplier with a base value
+        multiplierByPlayer.put(playerId, 1.0);
+        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
+
+        // Assign default avatars and titles
+        availableAvatars.put(playerId, Iter.toArray(Iter.range(1, 12)));
+        availableTitles.put(playerId, [1]);
+
+        // If the code was from the unassigned list, no need to generate a new one
+        if (codeAssigned != #ok(true)) {
+          let (assignedCode, _assignedReferrerId) = await assignReferralCode(playerId, null);
+          finalCode := assignedCode;
+        };
+
+        
+        let _ = await assignAchievementsToUser(caller);
+        return (true, ?newPlayer, "User registered successfully with referral code " # finalCode);
+      };
+    };
+  };
+
+  private func addNotification(to : PlayerId, notification : Notification) {
+    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(to), []);
+
+    let notificationBuffer = Buffer.Buffer<Notification>(userNotifications.size() + 1);
+
+    for (notif in userNotifications.vals()) {
+      notificationBuffer.add(notif);
+    };
+    notificationBuffer.add(notification);
+
+    notifications.put(to, Buffer.toArray(notificationBuffer));
+  };
+
+  private func getDefaultTimestamps() : UpdateTimestamps {
+    return {
+      username = 0;
+      avatar = 0;
+      description = 0;
+    };
+  };
+
+  private func cleanOldNotifications(playerId : PlayerId) {
+    let currentTime = Time.now();
+    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(playerId), []);
+    userNotifications := Array.filter(
+      userNotifications,
+      func(notification : Notification) : Bool {
+        (currentTime - notification.timestamp) < 30 * 24 * 60 * 60 * 1000000000; // 30 days in nanoseconds
+      },
+    );
+    notifications.put(playerId, userNotifications);
+  };
+
+  private func sendNotification(to : PlayerId, message : Text) {
+    let notification : Notification = {
+      from = to;
+      message = message;
+      timestamp = Time.now();
+    };
+
+    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(to), []);
+    if (
+      Array.find(
+        userNotifications,
+        func(n : Notification) : Bool {
+          n.message == message and Nat64.fromIntWrap(Time.now() - n.timestamp) < ONE_MINUTE;
+        },
+      ) == null
+    ) {
+      addNotification(to, notification);
+    };
+    cleanOldNotifications(to); // Clean old notifications after adding a new one
+  };
+
+  public shared ({ caller : PlayerId }) func updateUsername(username : Username) : async (Bool, PlayerId, Text) {
+    let playerId = caller;
+    let currentTime = Nat64.fromIntWrap(Time.now());
+
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, playerId, "User record does not exist");
+      };
+      case (?player) {
+        if (player.username == username) {
+          return (false, playerId, "New username cannot be the same as the current username");
+        };
+
+        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
+        let usernameTimestamp = timestamps.username;
+
+        if (Nat64.sub(currentTime, usernameTimestamp) < ONE_MINUTE) {
+          return (false, playerId, "You can only update your username once every minute");
+        };
+
+        let updatedPlayer : Player = {
+          id = player.id;
+          username = username;
+          avatar = player.avatar;
+          description = player.description;
+          registrationDate = player.registrationDate;
+          level = player.level;
+          elo = player.elo;
+          friends = player.friends;
+          title = player.title;
+        };
+        players.put(playerId, updatedPlayer);
+
+        let updatedTimestamps = {
+          timestamps with username = currentTime
+        };
+        updateTimestamps.put(playerId, updatedTimestamps);
+
+        return (true, playerId, "Username updated successfully");
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func updateDescription(description : Description) : async (Bool, PlayerId, Text) {
+    let playerId = caller;
+    let currentTime = Nat64.fromIntWrap(Time.now());
+
+    if (description.size() > 160) {
+      return (false, playerId, "Description must be 160 characters or less");
+    };
+
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, playerId, "User record does not exist");
+      };
+      case (?player) {
+        if (player.description == description) {
+          return (false, playerId, "New description cannot be the same as the current description");
+        };
+
+        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
+        let descriptionTimestamp = timestamps.description;
+
+        if (Nat64.sub(currentTime, descriptionTimestamp) < ONE_MINUTE) {
+          return (false, playerId, "You can only update your description once every minute");
+        };
+
+        let updatedPlayer : Player = {
+          id = player.id;
+          username = player.username;
+          avatar = player.avatar;
+          description = description;
+          registrationDate = player.registrationDate;
+          level = player.level;
+          elo = player.elo;
+          friends = player.friends;
+          title = player.title;
+        };
+        players.put(playerId, updatedPlayer);
+
+        let updatedTimestamps = {
+          timestamps with description = currentTime
+        };
+        updateTimestamps.put(playerId, updatedTimestamps);
+
+        return (true, playerId, "Description updated successfully");
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func sendFriendRequest(friendId : PlayerId) : async (Bool, Text) {
+    let playerId = caller;
+
+    // Prevent sending friend request to self
+    if (playerId == friendId) {
+      return (false, "Cannot send friend request to yourself");
+    };
+
+    // Check if the player is blocked by the recipient
+    if (isBlockedBy(friendId, playerId)) {
+      return (false, "You are blocked by this user");
+    };
+
+    // Check if the players are already friends
+    if (areFriends(playerId, friendId)) {
+      return (false, "You are already friends with this user");
+    };
+
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?player) {
+        switch (players.get(friendId)) {
+          case (null) {
+            return (false, "Friend principal not registered");
+          };
+          case (?_) {
+            if (not canSendRequestToNonFriend(playerId, friendId)) {
+              return (false, "Cannot send friend request to this user");
+            };
+
+            var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(friendId), []);
+            if (findFriendRequestIndex(requests, playerId) != null) {
+              return (false, "Friend request already sent");
+            };
+
+            let newRequest : FriendRequest = {
+              from = playerId;
+              to = friendId;
+              timestamp = Time.now();
+            };
+
+            let requestBuffer = Buffer.Buffer<FriendRequest>(requests.size() + 1);
+            for (req in requests.vals()) {
+              requestBuffer.add(req);
+            };
+            requestBuffer.add(newRequest);
+
+            friendRequests.put(friendId, Buffer.toArray(requestBuffer));
+
+            sendNotification(friendId, "You have a new friend request from " # player.username);
+
+            return (true, "Friend request sent successfully");
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func acceptFriendRequest(fromId : PlayerId) : async (Bool, Text) {
+    let playerId = caller;
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?_player) {
+        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
+        let requestIndex = findFriendRequestIndex(requests, fromId);
+        switch (requestIndex) {
+          case (null) {
+            return (false, "Friend request not found");
+          };
+          case (?_index) {
+            // Remove the request from the list
+            requests := Array.filter<FriendRequest>(requests, func(req : FriendRequest) : Bool { req.from != fromId });
+            friendRequests.put(playerId, requests);
+
+            // Add friend to both users' friends list
+            addFriendToUser(playerId, fromId);
+            addFriendToUser(fromId, playerId);
+
+            // Record the mutual friendship with timestamp
+            let friendship : MutualFriendship = {
+              friend1 = playerId;
+              friend2 = fromId;
+              friendsSince = Time.now();
+            };
+            mutualFriendships.put((playerId, fromId), friendship);
+            mutualFriendships.put((fromId, playerId), friendship);
+
+            // Update achievement progress for both players
+            let updateResult1 = await updateAddFriendAchievement(playerId);
+            let updateResult2 = await updateAddFriendAchievement(fromId);
+
+            if (updateResult1.0 and updateResult2.0) {
+              return (true, "Friend request accepted and achievements updated");
+            } else {
+              return (true, "Friend request accepted but achievements update failed");
+            };
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func declineFriendRequest(fromId : PlayerId) : async (Bool, Text) {
+    let playerId = caller;
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?_) {
+        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
+        let requestIndex = findFriendRequestIndex(requests, fromId);
+        switch (requestIndex) {
+          case (null) {
+            return (false, "Friend request not found");
+          };
+          case (?_index) {
+            // Remove the request from the list
+            requests := Array.filter<FriendRequest>(requests, func(req : FriendRequest) : Bool { req.from != fromId });
+            friendRequests.put(playerId, requests);
+            return (true, "Friend request declined");
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func blockUser(blockedId : PlayerId) : async (Bool, Text) {
+    let playerId = caller;
+
+    // Prevent blocking oneself
+    if (playerId == blockedId) {
+      return (false, "Cannot block yourself");
+    };
+
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?_player) {
+        var blockedUsersList = Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(playerId), []);
+
+        // Prevent blocking the same user more than once
+        if (isUserBlocked(blockedUsersList, blockedId)) {
+          return (false, "User is already blocked");
+        };
+
+        let blockedUsersBuffer = Buffer.Buffer<PlayerId>(blockedUsersList.size() + 1);
+        for (blockedUser in blockedUsersList.vals()) {
+          blockedUsersBuffer.add(blockedUser);
+        };
+        blockedUsersBuffer.add(blockedId);
+        blockedUsers.put(playerId, Buffer.toArray(blockedUsersBuffer));
+
+        // Remove friend request from blocked user if it exists
+        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
+        let requestBuffer = Buffer.Buffer<FriendRequest>(requests.size());
+        for (req in requests.vals()) {
+          if (req.from != blockedId) {
+            requestBuffer.add(req);
+          };
+        };
+        friendRequests.put(playerId, Buffer.toArray(requestBuffer));
+
+        return (true, "User blocked successfully");
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func unblockUser(blockedId : PlayerId) : async (Bool, Text) {
+    let playerId = caller;
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?_player) {
+        var blockedUsersList = Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(playerId), []);
+        blockedUsersList := Array.filter(blockedUsersList, func(blocked : PlayerId) : Bool { blocked != blockedId });
+        blockedUsers.put(playerId, blockedUsersList);
+        return (true, "User unblocked successfully");
+      };
+    };
+  };
+
+  public shared ({ caller : PlayerId }) func setPrivacySetting(setting : PrivacySetting) : async (Bool, Text) {
+    let playerId = caller;
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, "User record does not exist");
+      };
+      case (?_player) {
+        let currentSetting = Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
+        if (currentSetting != setting) {
+          privacySettings.put(playerId, setting);
+          sendNotification(playerId, "Your privacy settings have been updated.");
+        };
+        return (true, "Privacy settings updated successfully");
+      };
+    };
+  };
+
+  public query ({ caller : PlayerId }) func getBlockedUsers() : async [PlayerId] {
+    return Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(caller), []);
+  };
+
+  private func addFriendToUser(userId : PlayerId, friendId : PlayerId) {
+    switch (players.get(userId)) {
+      case (null) {};
+      case (?user) {
+        switch (players.get(friendId)) {
+          case (null) {};
+          case (?friend) {
+            // Ensure friend is not already in user's friends list
+            if (Array.find(user.friends, func(f : FriendDetails) : Bool { f.playerId == friendId }) == null) {
+              let userFriendsBuffer = Buffer.Buffer<FriendDetails>(user.friends.size() + 1);
+              for (f in user.friends.vals()) {
+                userFriendsBuffer.add(f);
+              };
+              userFriendsBuffer.add({
+                playerId = friendId;
+                username = friend.username;
+                avatar = friend.avatar;
+              });
+              players.put(userId, { user with friends = Buffer.toArray(userFriendsBuffer) });
+            };
+
+            // Ensure user is not already in friend's friends list
+            if (Array.find(friend.friends, func(f : FriendDetails) : Bool { f.playerId == userId }) == null) {
+              let friendFriendsBuffer = Buffer.Buffer<FriendDetails>(friend.friends.size() + 1);
+              for (f in friend.friends.vals()) {
+                friendFriendsBuffer.add(f);
+              };
+              friendFriendsBuffer.add({
+                playerId = userId;
+                username = user.username;
+                avatar = user.avatar;
+              });
+              players.put(friendId, { friend with friends = Buffer.toArray(friendFriendsBuffer) });
+            };
+          };
+        };
+      };
+    };
+  };
+
+  private func areFriends(playerId1 : PlayerId, playerId2 : PlayerId) : Bool {
+    switch (mutualFriendships.get((playerId1, playerId2))) {
+      case (null) false;
+      case (?_) true;
+    };
+  };
+
+  private func canSendRequestToNonFriend(senderId : PlayerId, recipientId : PlayerId) : Bool {
+    let privacySetting = getPrivacySettings(recipientId);
+    switch (privacySetting) {
+      case (#acceptAll) true;
+      case (#blockAll) false;
+      case (#friendsOfFriends) areFriends(senderId, recipientId);
+    };
+  };
+
+  private func findFriendRequestIndex(requests : [FriendRequest], fromId : PlayerId) : ?Nat {
+    for (index in Iter.range(0, Array.size(requests) - 1)) {
+      if (requests[index].from == fromId) {
+        return ?index;
+      };
+    };
+    return null;
+  };
+
+  private func isUserBlocked(blockedUsersList : [PlayerId], userId : PlayerId) : Bool {
+    return Array.find(blockedUsersList, func(blocked : PlayerId) : Bool { blocked == userId }) != null;
+  };
+
+  private func isBlockedBy(blockedId : PlayerId, playerId : PlayerId) : Bool {
+    switch (blockedUsers.get(blockedId)) {
+      case (null) false;
+      case (?userBlockedList) isUserBlocked(userBlockedList, playerId);
+    };
+  };
+
+  private func getPrivacySettings(playerId : PlayerId) : PrivacySetting {
+    Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
+  };
+
+  public query ({ caller : PlayerId }) func getNotifications() : async [Notification] {
+    return Utils.nullishCoalescing<[Notification]>(notifications.get(caller), []);
+  };
+
+  public query ({ caller : PlayerId }) func getFriendRequests() : async [FriendRequest] {
+    return Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(caller), []);
+  };
+
+  public query ({ caller : PlayerId }) func getMyPrivacySettings() : async PrivacySetting {
+    return getPrivacySettings(caller);
+  };
+
+  public query func getPlayer(id : Principal) : async (Bool, ?Player) {
+    switch (players.get(id)) {
+      case (null) { return (false, null) };
+      case (player) { return (true, player) };
+
+    };
+  };
+
+  public query ({ caller }) func getPlayerByCaller() : async (Bool, ?Player) {
+    switch (players.get(caller)) {
+      case (null) { return (false, null) };
+      case (player) { return (true, player) };
+
+    };
+  };
+
+  public query func getPlayerByUsername(username : Text) : async (Bool, ?Player) {
+    for ((_, player) in players.entries()) {
+      if (player.username == username) {
+        return (true, ?player);
+      };
+    };
+    return (false, null);
+  };
+
+  public query func getProfile(player : PlayerId) : async ?Player {
+    return players.get(player);
+  };
+
+  public query func getFullProfile(player : PlayerId) : async ?(Player, PlayerGamesStats, AverageStats) {
+    switch (players.get(player)) {
+      case (null) { return null };
+      case (?playerData) {
+        let playerStatsOpt = playerGamesStats.get(player);
+        let playerStats = switch (playerStatsOpt) {
+          case (null) {
+            let initialStats : PlayerGamesStats = {
+              gamesPlayed = 0;
+              gamesWon = 0;
+              gamesLost = 0;
+              energyGenerated = 0;
+              energyUsed = 0;
+              energyWasted = 0;
+              totalKills = 0;
+              totalDamageDealt = 0;
+              totalDamageTaken = 0;
+              totalDamageCrit = 0;
+              totalDamageEvaded = 0;
+              totalXpEarned = 0;
+              totalGamesWithFaction = [];
+              totalGamesGameMode = [];
+              totalGamesWithCharacter = [];
+            };
+            initialStats;
+          };
+          case (?stats) { stats };
+        };
+
+        let gamesPlayed = playerStats.gamesPlayed;
+        let averageStats : AverageStats = {
+          averageEnergyGenerated = if (gamesPlayed == 0) 0 else playerStats.energyGenerated / gamesPlayed;
+          averageEnergyUsed = if (gamesPlayed == 0) 0 else playerStats.energyUsed / gamesPlayed;
+          averageEnergyWasted = if (gamesPlayed == 0) 0 else playerStats.energyWasted / gamesPlayed;
+          averageDamageDealt = if (gamesPlayed == 0) 0 else playerStats.totalDamageDealt / gamesPlayed;
+          averageKills = if (gamesPlayed == 0) 0 else playerStats.totalDamageDealt / gamesPlayed;
+          averageXpEarned = if (gamesPlayed == 0) 0 else playerStats.totalXpEarned / gamesPlayed;
+        };
+
+        return ?(playerData, playerStats, averageStats);
+      };
+    };
+  };
+
+  public query func searchUserByUsername(username : Username) : async [Player] {
+    let result : Buffer.Buffer<Player> = Buffer.Buffer<Player>(0);
+    for ((_, userRecord) in players.entries()) {
+      if (userRecord.username == username) {
+        result.add(userRecord);
+      };
+    };
+    return Buffer.toArray(result);
+  };
+
+  public query ({ caller : PlayerId }) func getFriendsList() : async ?[PlayerId] {
+    switch (players.get(caller)) {
+      case (null) {
+        return null; // User record does not exist
+      };
+      case (?player) {
+        let friendIds = Array.map<FriendDetails, PlayerId>(
+          player.friends,
+          func(friend : FriendDetails) : PlayerId {
+            return friend.playerId;
+          },
+        );
+        return ?friendIds;
+      };
+    };
+  };
+
+  public query func getAllPlayers() : async [Player] {
+    return Iter.toArray(players.vals());
+  };
+// #endregion
+
 //#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * ONE_SECOND;
@@ -2306,670 +2962,6 @@ shared actor class Cosmicrafts() = Self {
   };
 // #endregion
 
-// #region |Players|
-
-  var ONE_SECOND : Nat64 = 1_000_000_000;
-  var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
-
-  stable var _players : [(PlayerId, Player)] = [];
-
-  stable var _friendRequests : [(PlayerId, [FriendRequest])] = [];
-  stable var _privacySettings : [(PlayerId, PrivacySetting)] = [];
-  stable var _blockedUsers : [(PlayerId, [PlayerId])] = [];
-  stable var _mutualFriendships : [((PlayerId, PlayerId), MutualFriendship)] = [];
-  stable var _notifications : [(PlayerId, [Notification])] = [];
-  stable var _updateTimestamps : [(PlayerId, UpdateTimestamps)] = [];
-
-  // Initialize HashMaps using the stable lists
-  var players : HashMap.HashMap<PlayerId, Player> = HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
-
-  var friendRequests : HashMap.HashMap<PlayerId, [FriendRequest]> = HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
-  var privacySettings : HashMap.HashMap<PlayerId, PrivacySetting> = HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
-  var blockedUsers : HashMap.HashMap<PlayerId, [PlayerId]> = HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
-  var mutualFriendships : HashMap.HashMap<(PlayerId, PlayerId), MutualFriendship> = HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
-  var notifications : HashMap.HashMap<PlayerId, [Notification]> = HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
-  var updateTimestamps : HashMap.HashMap<PlayerId, UpdateTimestamps> = HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
-
-  public shared ({ caller : PlayerId }) func registerPlayer(
-    username : Username,
-    avatar : AvatarID,
-    referralCode : ReferralCode,
-  ) : async (Bool, ?Player, Text) {
-    if (username.size() > 12) {
-      return (false, null, "Username must be 12 characters or less");
-    };
-
-    let playerId = caller;
-
-    // Check if the player is already registered
-    switch (players.get(playerId)) {
-      case (?existingPlayer) {
-        // If the player is already registered, return immediately without making any changes
-        return (false, ?existingPlayer, "User is already registered and cannot register again.");
-      };
-      case (null) {
-        // Validate the referral code against unassigned or assigned codes
-        let codeAssigned = await assignUnassignedReferralCode(playerId, referralCode);
-
-        var finalCode = referralCode;
-
-        switch (codeAssigned) {
-          case (#ok(true)) {
-            // Code was successfully assigned from unassigned codes
-            // The original referral code should be preserved.
-            finalCode := referralCode;
-          };
-          case (#err(errMsg)) {
-            return (false, null, errMsg); // Return error message if code is invalid
-          };
-          case (#ok(false)) {
-            // Code is valid but already assigned; identify the referrer
-            switch (referralCodes.get(referralCode)) {
-              case (null) {
-                return (false, null, "Invalid referral code");
-              };
-              case (?referrerId) {
-                // Update the referrer data and track referrals
-                trackReferrer(referrerId, playerId);
-              };
-            };
-          };
-        };
-
-        // Proceed with player registration if referral code is valid
-        let registrationDate = Time.now();
-        let newPlayer : Player = {
-          id = playerId;
-          username = username;
-          avatar = avatar;
-          description = "";
-          registrationDate = registrationDate;
-          level = 1;
-          elo = 1200;
-          friends = [];
-          title = "Starbound Initiate";
-        };
-        players.put(playerId, newPlayer);
-
-        // Initialize the player's multiplier with a base value
-        multiplierByPlayer.put(playerId, 1.0);
-        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-        // Assign default avatars and titles
-        availableAvatars.put(playerId, Iter.toArray(Iter.range(1, 12)));
-        availableTitles.put(playerId, [1]);
-
-        // If the code was from the unassigned list, no need to generate a new one
-        if (codeAssigned != #ok(true)) {
-          let (assignedCode, _assignedReferrerId) = await assignReferralCode(playerId, null);
-          finalCode := assignedCode;
-        };
-
-        
-        let _ = await assignAchievementsToUser(caller);
-        return (true, ?newPlayer, "User registered successfully with referral code " # finalCode);
-      };
-    };
-  };
-
-  private func addNotification(to : PlayerId, notification : Notification) {
-    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(to), []);
-
-    let notificationBuffer = Buffer.Buffer<Notification>(userNotifications.size() + 1);
-
-    for (notif in userNotifications.vals()) {
-      notificationBuffer.add(notif);
-    };
-    notificationBuffer.add(notification);
-
-    notifications.put(to, Buffer.toArray(notificationBuffer));
-  };
-
-  private func getDefaultTimestamps() : UpdateTimestamps {
-    return {
-      username = 0;
-      avatar = 0;
-      description = 0;
-    };
-  };
-
-  private func cleanOldNotifications(playerId : PlayerId) {
-    let currentTime = Time.now();
-    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(playerId), []);
-    userNotifications := Array.filter(
-      userNotifications,
-      func(notification : Notification) : Bool {
-        (currentTime - notification.timestamp) < 30 * 24 * 60 * 60 * 1000000000; // 30 days in nanoseconds
-      },
-    );
-    notifications.put(playerId, userNotifications);
-  };
-
-  private func sendNotification(to : PlayerId, message : Text) {
-    let notification : Notification = {
-      from = to;
-      message = message;
-      timestamp = Time.now();
-    };
-
-    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(to), []);
-    if (
-      Array.find(
-        userNotifications,
-        func(n : Notification) : Bool {
-          n.message == message and Nat64.fromIntWrap(Time.now() - n.timestamp) < ONE_MINUTE;
-        },
-      ) == null
-    ) {
-      addNotification(to, notification);
-    };
-    cleanOldNotifications(to); // Clean old notifications after adding a new one
-  };
-
-  public shared ({ caller : PlayerId }) func updateUsername(username : Username) : async (Bool, PlayerId, Text) {
-    let playerId = caller;
-    let currentTime = Nat64.fromIntWrap(Time.now());
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, playerId, "User record does not exist");
-      };
-      case (?player) {
-        if (player.username == username) {
-          return (false, playerId, "New username cannot be the same as the current username");
-        };
-
-        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
-        let usernameTimestamp = timestamps.username;
-
-        if (Nat64.sub(currentTime, usernameTimestamp) < ONE_MINUTE) {
-          return (false, playerId, "You can only update your username once every minute");
-        };
-
-        let updatedPlayer : Player = {
-          id = player.id;
-          username = username;
-          avatar = player.avatar;
-          description = player.description;
-          registrationDate = player.registrationDate;
-          level = player.level;
-          elo = player.elo;
-          friends = player.friends;
-          title = player.title;
-        };
-        players.put(playerId, updatedPlayer);
-
-        let updatedTimestamps = {
-          timestamps with username = currentTime
-        };
-        updateTimestamps.put(playerId, updatedTimestamps);
-
-        return (true, playerId, "Username updated successfully");
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func updateDescription(description : Description) : async (Bool, PlayerId, Text) {
-    let playerId = caller;
-    let currentTime = Nat64.fromIntWrap(Time.now());
-
-    if (description.size() > 160) {
-      return (false, playerId, "Description must be 160 characters or less");
-    };
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, playerId, "User record does not exist");
-      };
-      case (?player) {
-        if (player.description == description) {
-          return (false, playerId, "New description cannot be the same as the current description");
-        };
-
-        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
-        let descriptionTimestamp = timestamps.description;
-
-        if (Nat64.sub(currentTime, descriptionTimestamp) < ONE_MINUTE) {
-          return (false, playerId, "You can only update your description once every minute");
-        };
-
-        let updatedPlayer : Player = {
-          id = player.id;
-          username = player.username;
-          avatar = player.avatar;
-          description = description;
-          registrationDate = player.registrationDate;
-          level = player.level;
-          elo = player.elo;
-          friends = player.friends;
-          title = player.title;
-        };
-        players.put(playerId, updatedPlayer);
-
-        let updatedTimestamps = {
-          timestamps with description = currentTime
-        };
-        updateTimestamps.put(playerId, updatedTimestamps);
-
-        return (true, playerId, "Description updated successfully");
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func sendFriendRequest(friendId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-
-    // Prevent sending friend request to self
-    if (playerId == friendId) {
-      return (false, "Cannot send friend request to yourself");
-    };
-
-    // Check if the player is blocked by the recipient
-    if (isBlockedBy(friendId, playerId)) {
-      return (false, "You are blocked by this user");
-    };
-
-    // Check if the players are already friends
-    if (areFriends(playerId, friendId)) {
-      return (false, "You are already friends with this user");
-    };
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?player) {
-        switch (players.get(friendId)) {
-          case (null) {
-            return (false, "Friend principal not registered");
-          };
-          case (?_) {
-            if (not canSendRequestToNonFriend(playerId, friendId)) {
-              return (false, "Cannot send friend request to this user");
-            };
-
-            var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(friendId), []);
-            if (findFriendRequestIndex(requests, playerId) != null) {
-              return (false, "Friend request already sent");
-            };
-
-            let newRequest : FriendRequest = {
-              from = playerId;
-              to = friendId;
-              timestamp = Time.now();
-            };
-
-            let requestBuffer = Buffer.Buffer<FriendRequest>(requests.size() + 1);
-            for (req in requests.vals()) {
-              requestBuffer.add(req);
-            };
-            requestBuffer.add(newRequest);
-
-            friendRequests.put(friendId, Buffer.toArray(requestBuffer));
-
-            sendNotification(friendId, "You have a new friend request from " # player.username);
-
-            return (true, "Friend request sent successfully");
-          };
-        };
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func acceptFriendRequest(fromId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
-        let requestIndex = findFriendRequestIndex(requests, fromId);
-        switch (requestIndex) {
-          case (null) {
-            return (false, "Friend request not found");
-          };
-          case (?_index) {
-            // Remove the request from the list
-            requests := Array.filter<FriendRequest>(requests, func(req : FriendRequest) : Bool { req.from != fromId });
-            friendRequests.put(playerId, requests);
-
-            // Add friend to both users' friends list
-            addFriendToUser(playerId, fromId);
-            addFriendToUser(fromId, playerId);
-
-            // Record the mutual friendship with timestamp
-            let friendship : MutualFriendship = {
-              friend1 = playerId;
-              friend2 = fromId;
-              friendsSince = Time.now();
-            };
-            mutualFriendships.put((playerId, fromId), friendship);
-            mutualFriendships.put((fromId, playerId), friendship);
-
-            // Update achievement progress for both players
-            let updateResult1 = await updateAddFriendAchievement(playerId);
-            let updateResult2 = await updateAddFriendAchievement(fromId);
-
-            if (updateResult1.0 and updateResult2.0) {
-              return (true, "Friend request accepted and achievements updated");
-            } else {
-              return (true, "Friend request accepted but achievements update failed");
-            };
-          };
-        };
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func declineFriendRequest(fromId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_) {
-        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
-        let requestIndex = findFriendRequestIndex(requests, fromId);
-        switch (requestIndex) {
-          case (null) {
-            return (false, "Friend request not found");
-          };
-          case (?_index) {
-            // Remove the request from the list
-            requests := Array.filter<FriendRequest>(requests, func(req : FriendRequest) : Bool { req.from != fromId });
-            friendRequests.put(playerId, requests);
-            return (true, "Friend request declined");
-          };
-        };
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func blockUser(blockedId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-
-    // Prevent blocking oneself
-    if (playerId == blockedId) {
-      return (false, "Cannot block yourself");
-    };
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        var blockedUsersList = Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(playerId), []);
-
-        // Prevent blocking the same user more than once
-        if (isUserBlocked(blockedUsersList, blockedId)) {
-          return (false, "User is already blocked");
-        };
-
-        let blockedUsersBuffer = Buffer.Buffer<PlayerId>(blockedUsersList.size() + 1);
-        for (blockedUser in blockedUsersList.vals()) {
-          blockedUsersBuffer.add(blockedUser);
-        };
-        blockedUsersBuffer.add(blockedId);
-        blockedUsers.put(playerId, Buffer.toArray(blockedUsersBuffer));
-
-        // Remove friend request from blocked user if it exists
-        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
-        let requestBuffer = Buffer.Buffer<FriendRequest>(requests.size());
-        for (req in requests.vals()) {
-          if (req.from != blockedId) {
-            requestBuffer.add(req);
-          };
-        };
-        friendRequests.put(playerId, Buffer.toArray(requestBuffer));
-
-        return (true, "User blocked successfully");
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func unblockUser(blockedId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        var blockedUsersList = Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(playerId), []);
-        blockedUsersList := Array.filter(blockedUsersList, func(blocked : PlayerId) : Bool { blocked != blockedId });
-        blockedUsers.put(playerId, blockedUsersList);
-        return (true, "User unblocked successfully");
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func setPrivacySetting(setting : PrivacySetting) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        let currentSetting = Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
-        if (currentSetting != setting) {
-          privacySettings.put(playerId, setting);
-          sendNotification(playerId, "Your privacy settings have been updated.");
-        };
-        return (true, "Privacy settings updated successfully");
-      };
-    };
-  };
-
-  public query ({ caller : PlayerId }) func getBlockedUsers() : async [PlayerId] {
-    return Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(caller), []);
-  };
-
-  private func addFriendToUser(userId : PlayerId, friendId : PlayerId) {
-    switch (players.get(userId)) {
-      case (null) {};
-      case (?user) {
-        switch (players.get(friendId)) {
-          case (null) {};
-          case (?friend) {
-            // Ensure friend is not already in user's friends list
-            if (Array.find(user.friends, func(f : FriendDetails) : Bool { f.playerId == friendId }) == null) {
-              let userFriendsBuffer = Buffer.Buffer<FriendDetails>(user.friends.size() + 1);
-              for (f in user.friends.vals()) {
-                userFriendsBuffer.add(f);
-              };
-              userFriendsBuffer.add({
-                playerId = friendId;
-                username = friend.username;
-                avatar = friend.avatar;
-              });
-              players.put(userId, { user with friends = Buffer.toArray(userFriendsBuffer) });
-            };
-
-            // Ensure user is not already in friend's friends list
-            if (Array.find(friend.friends, func(f : FriendDetails) : Bool { f.playerId == userId }) == null) {
-              let friendFriendsBuffer = Buffer.Buffer<FriendDetails>(friend.friends.size() + 1);
-              for (f in friend.friends.vals()) {
-                friendFriendsBuffer.add(f);
-              };
-              friendFriendsBuffer.add({
-                playerId = userId;
-                username = user.username;
-                avatar = user.avatar;
-              });
-              players.put(friendId, { friend with friends = Buffer.toArray(friendFriendsBuffer) });
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Helper function to check if two players are friends
-  private func areFriends(playerId1 : PlayerId, playerId2 : PlayerId) : Bool {
-    switch (mutualFriendships.get((playerId1, playerId2))) {
-      case (null) false;
-      case (?_) true;
-    };
-  };
-
-  // Helper function to check if a request can be sent from a non-friend
-  private func canSendRequestToNonFriend(senderId : PlayerId, recipientId : PlayerId) : Bool {
-    let privacySetting = getPrivacySettings(recipientId);
-    switch (privacySetting) {
-      case (#acceptAll) true;
-      case (#blockAll) false;
-      case (#friendsOfFriends) areFriends(senderId, recipientId);
-    };
-  };
-
-  private func findFriendRequestIndex(requests : [FriendRequest], fromId : PlayerId) : ?Nat {
-    for (index in Iter.range(0, Array.size(requests) - 1)) {
-      if (requests[index].from == fromId) {
-        return ?index;
-      };
-    };
-    return null;
-  };
-
-  // Helper function to check if a user is in the blocked list
-  private func isUserBlocked(blockedUsersList : [PlayerId], userId : PlayerId) : Bool {
-    return Array.find(blockedUsersList, func(blocked : PlayerId) : Bool { blocked == userId }) != null;
-  };
-
-  private func isBlockedBy(blockedId : PlayerId, playerId : PlayerId) : Bool {
-    switch (blockedUsers.get(blockedId)) {
-      case (null) false;
-      case (?userBlockedList) isUserBlocked(userBlockedList, playerId);
-    };
-  };
-
-  private func getPrivacySettings(playerId : PlayerId) : PrivacySetting {
-    Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
-  };
-
-  // QPlayers
-
-  public query ({ caller : PlayerId }) func getNotifications() : async [Notification] {
-    return Utils.nullishCoalescing<[Notification]>(notifications.get(caller), []);
-  };
-
-  public query ({ caller : PlayerId }) func getFriendRequests() : async [FriendRequest] {
-    return Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(caller), []);
-  };
-
-  public query ({ caller : PlayerId }) func getMyPrivacySettings() : async PrivacySetting {
-    return getPrivacySettings(caller);
-  };
-
-  // Query function to self get player data
-  public query func getPlayer(id : Principal) : async (Bool, ?Player) {
-    switch (players.get(id)) {
-      case (null) { return (false, null) };
-      case (player) { return (true, player) };
-
-    };
-  };
-  public query ({ caller }) func getPlayerByCaller() : async (Bool, ?Player) {
-    switch (players.get(caller)) {
-      case (null) { return (false, null) };
-      case (player) { return (true, player) };
-
-    };
-  };
-
-  public query func getPlayerByUsername(username : Text) : async (Bool, ?Player) {
-    for ((_, player) in players.entries()) {
-      if (player.username == username) {
-        return (true, ?player);
-      };
-    };
-    return (false, null);
-  };
-
-  // Function to get another user profile
-  public query func getProfile(player : PlayerId) : async ?Player {
-    return players.get(player);
-  };
-
-  // Full User Profile with statistics and friends
-  public query func getFullProfile(player : PlayerId) : async ?(Player, PlayerGamesStats, AverageStats) {
-    switch (players.get(player)) {
-      case (null) { return null };
-      case (?playerData) {
-        let playerStatsOpt = playerGamesStats.get(player);
-        let playerStats = switch (playerStatsOpt) {
-          case (null) {
-            let initialStats : PlayerGamesStats = {
-              gamesPlayed = 0;
-              gamesWon = 0;
-              gamesLost = 0;
-              energyGenerated = 0;
-              energyUsed = 0;
-              energyWasted = 0;
-              totalKills = 0;
-              totalDamageDealt = 0;
-              totalDamageTaken = 0;
-              totalDamageCrit = 0;
-              totalDamageEvaded = 0;
-              totalXpEarned = 0;
-              totalGamesWithFaction = [];
-              totalGamesGameMode = [];
-              totalGamesWithCharacter = [];
-            };
-            initialStats;
-          };
-          case (?stats) { stats };
-        };
-
-        let gamesPlayed = playerStats.gamesPlayed;
-        let averageStats : AverageStats = {
-          averageEnergyGenerated = if (gamesPlayed == 0) 0 else playerStats.energyGenerated / gamesPlayed;
-          averageEnergyUsed = if (gamesPlayed == 0) 0 else playerStats.energyUsed / gamesPlayed;
-          averageEnergyWasted = if (gamesPlayed == 0) 0 else playerStats.energyWasted / gamesPlayed;
-          averageDamageDealt = if (gamesPlayed == 0) 0 else playerStats.totalDamageDealt / gamesPlayed;
-          averageKills = if (gamesPlayed == 0) 0 else playerStats.totalDamageDealt / gamesPlayed;
-          averageXpEarned = if (gamesPlayed == 0) 0 else playerStats.totalXpEarned / gamesPlayed;
-        };
-
-        return ?(playerData, playerStats, averageStats);
-      };
-    };
-  };
-
-  public query func searchUserByUsername(username : Username) : async [Player] {
-    let result : Buffer.Buffer<Player> = Buffer.Buffer<Player>(0);
-    for ((_, userRecord) in players.entries()) {
-      if (userRecord.username == username) {
-        result.add(userRecord);
-      };
-    };
-    return Buffer.toArray(result);
-  };
-
-  // self query Gets a list of friend's principals
-  public query ({ caller : PlayerId }) func getFriendsList() : async ?[PlayerId] {
-    switch (players.get(caller)) {
-      case (null) {
-        return null; // User record does not exist
-      };
-      case (?player) {
-        let friendIds = Array.map<FriendDetails, PlayerId>(
-          player.friends,
-          func(friend : FriendDetails) : PlayerId {
-            return friend.playerId;
-          },
-        );
-        return ?friendIds;
-      };
-    };
-  };
-
-  // List all players
-  public query func getAllPlayers() : async [Player] {
-    return Iter.toArray(players.vals());
-  };
-// #endregion
-
 // #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
@@ -3168,7 +3160,7 @@ shared actor class Cosmicrafts() = Self {
     nextMatchId : ?Nat; // Track the next match
   };
 
-  public shared ({ caller }) func createTournament(name : Text, startDate : Time.Time, prizePool : Text, expirationDate : Time.Time) : async Nat {
+  public shared  func createTournament(name : Text, startDate : Time.Time, prizePool : Text, expirationDate : Time.Time) : async Nat {
 
     let id = tournaments.size();
     let buffer = Buffer.Buffer<Tournament>(tournaments.size() + 1);
@@ -3319,7 +3311,7 @@ shared actor class Cosmicrafts() = Self {
     return true;
   };
 
-  public shared ({ caller }) func adminUpdateMatch(tournamentId : Nat, matchId : Nat, winnerIndex : Nat, score : Text) : async Bool {
+  public shared  func adminUpdateMatch(tournamentId : Nat, matchId : Nat, winnerIndex : Nat, score : Text) : async Bool {
     let matchOpt = Array.find<Match>(matches, func(m : Match) : Bool { m.id == matchId and m.tournamentId == tournamentId });
     switch (matchOpt) {
       case (?match) {
@@ -6832,8 +6824,7 @@ shared actor class Cosmicrafts() = Self {
     // Return the paginated list
     return paginatedPlayers;
   };
-
-  
+ 
   public type ReferralsTop = {
     playerId : Principal;
     totalReferrals : Nat;
@@ -6842,10 +6833,10 @@ shared actor class Cosmicrafts() = Self {
     avatar : Nat;
     referrer : ?Principal;
   };
-  public shared({caller}) func getTopRef(page : Nat) : async [ReferralsTop] {
-    let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
+  public shared func getTopReferrals(page : Nat) : async [ReferralsTop] {
+    let allReferrals : [(PlayerId, ReferralInfo)] = 
+    Iter.toArray(referralsByPlayer.entries());
     
-    // Sort by total referrals (direct, indirect, and beyond)
     let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
       allReferrals,
       func(a : (PlayerId, ReferralInfo), b : (PlayerId, ReferralInfo)) : {
@@ -6976,7 +6967,7 @@ shared actor class Cosmicrafts() = Self {
     level : Nat;
     nftCount : Nat;
   };
-  public  func getTopNFTs(page : Nat) : async [NFTTop] {
+  public  func getTopNFT(page : Nat) : async [NFTTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
     for ((playerId, player) in players.entries()) {
       let nftCount = (await getNFTs(playerId)).size();
@@ -7101,7 +7092,7 @@ shared actor class Cosmicrafts() = Self {
     username : Text;
     avatar : Nat;
   };
-  public query({caller}) func getTopAch(page : Nat) : async [AchievementsTop] {
+  public query({caller}) func getTopAchievements(page : Nat) : async [AchievementsTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(userProgress.size());
     for ((playerId, userCategoriesList) in userProgress.entries()) {
         var totalAchievements : Nat = 0;
@@ -7178,8 +7169,6 @@ shared actor class Cosmicrafts() = Self {
 // #endregion
 
 //#region |Achievements|
-
-  //check if get size instad of stable vars....
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -7204,7 +7193,6 @@ shared actor class Cosmicrafts() = Self {
   var claimedAchievementLineRewards : HashMap.HashMap<PlayerId, [Nat]> = HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
   var claimedCategoryAchievementRewards : HashMap.HashMap<PlayerId, [Nat]> = HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
 
-  //Init Achievements
   public func initAchievements() : async Bool {
 
     // Check if achievements are already initialized
@@ -7243,11 +7231,10 @@ shared actor class Cosmicrafts() = Self {
     return true;
   };
 
-  //Assign Achievements
   public func assignAchievementsToUser(user : PlayerId) : async ([AchievementCategory]) {
 
     if(achievementCategories.size() == 0) {
-      let initSuccess = await initAchievements();
+      let _ = await initAchievements();
     };
     let userProgressOpt = userProgress.get(user);
 
@@ -7309,7 +7296,6 @@ shared actor class Cosmicrafts() = Self {
     return true;
   };
 
-  //Get Achievements
   public func getUserAchievements(user : PlayerId) : async [AchievementCategory] {
     let userProgressOpt = userProgress.get(user);
     switch (userProgressOpt) {
@@ -7369,7 +7355,6 @@ shared actor class Cosmicrafts() = Self {
     return (null, null, null);
   };
 
-  //Register Achievements
   public func createAchievement(categoryId : Nat, name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = achievementIDCounter;
     achievementIDCounter += 1;
@@ -7431,6 +7416,7 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[createIndividualAchievement] Individual Achievement created with ID: " # Nat.toText(id));
     return (true, "Individual Achievement created successfully", id);
   };
+
   public func createAchievementCategory(name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = achievementCategoryIDCounter;
     achievementCategoryIDCounter += 1;
@@ -7452,7 +7438,6 @@ shared actor class Cosmicrafts() = Self {
     return (true, "Category created successfully", id);
   };
 
-  //Update Achievements
   public shared func addProgressToIndividualAchievement(user : PlayerId, individualAchievementId : Nat, progressToAdd : Nat) : async Bool {
     // Get the user's progress structure from the unified HashMap
     let userProgressOpt = userProgress.get(user);
@@ -7651,7 +7636,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Helper function to update stable arrays from hashmaps
   func updateStableArrays() {
     _userProgress := Iter.toArray(userProgress.entries());
     _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
@@ -7805,7 +7789,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Claim Individual Achievement Reward
   public shared (msg) func claimIndividualAchievementReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -7952,7 +7935,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   public shared (msg) func claimAchievementLineReward(achievementId : Nat) : async (Bool, Text) {
       let userProgressOpt = userProgress.get(msg.caller);
       switch (userProgressOpt) {
@@ -8060,7 +8042,6 @@ shared actor class Cosmicrafts() = Self {
       };
   };
 
-  // Claim Category Achievement Reward
   public shared (msg) func claimCategoryAchievementReward(categoryId : Nat) : async (Bool, Text) {
       let userProgressOpt = userProgress.get(msg.caller);
       switch (userProgressOpt) {
@@ -8142,8 +8123,6 @@ shared actor class Cosmicrafts() = Self {
       };
   };
 
-
-  //Mint Achievements
   public shared func mintAchievementRewards(reward : AchievementReward, caller : Types.PlayerId) : async (Bool, Text) {
     switch (reward.rewardType) {
       case (#Stardust) {
@@ -8261,13 +8240,39 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+// #endregion
 
-  //Views
-  public shared ({ caller }) func getAchievementsView() : async (
-    [AchievementCategory],
-    [AchievementLine],
-    [IndividualAchievement],
-  ) {
+//#region |Views|
+  public type PlayerView = {
+    notifications: [Notification];
+    friendRequests: [FriendRequest];
+    privacySettings: PrivacySetting;
+    fullProfile: ?(Player, PlayerGamesStats, AverageStats);
+    friendsList: ?[PlayerId];
+    allPlayers: [Player];
+
+  };
+  public type TopView = {
+    referralsTop : [ReferralsTop];
+    eloTop :  [ELOTop];
+    nftTop :  [NFTTop];
+    levelTop :  [LevelTop];
+    achTop :  [AchievementsTop];
+  };
+  public shared func get_tops() 
+    : async (
+      TopView
+      ) {
+        let topView : TopView = {
+          referralsTop = await getTopReferrals(0);
+          eloTop = await getTopELO(0);
+          nftTop = await getTopNFT(0);
+          levelTop = await getTopLevel(0);
+          achTop =  await getTopAchievements(0);
+        };
+    topView;
+  };
+  public shared ({ caller }) func getAchievementsView() : async ([AchievementCategory],[AchievementLine],[IndividualAchievement],) {
     let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
     var lines : [AchievementLine] = [];
@@ -8283,37 +8288,70 @@ shared actor class Cosmicrafts() = Self {
     };
     (categories, lines, individuals);
   };
-// #endregion
+  public shared ({ caller : PlayerId }) func get_players() : async PlayerView {
+    let notifications = await getNotifications();
+    let friendRequests = await getFriendRequests();
+    let privacySettings = await getMyPrivacySettings();
+    let fullProfile = await getFullProfile(caller);
+    let friendsList = await getFriendsList();
+    let allPlayers = await getAllPlayers();
 
-//#region |Views|
-
-  public query func get_player():async Bool{true};
-  public query func get_profile():async Bool{true};
-  public query func get_settings():async Bool{true};
-  public query func get_referrals():async Bool{true};
-  public query func get_achievements():async Bool{true};
-  public query func get_missions():async Bool{true};
-  public query func get_tourneys():async Bool{true};
-  public query func get_stats():async Bool{true};
-  public query func get_tokens():async Bool{true};
-  public query func get_tops():async Bool {true};
-
- 
-  public func get_tops1(
-    page : Nat 
-    ) : async (
-      [ReferralsTop], 
-      [ELOTop], 
-      [NFTTop], 
-      [LevelTop], 
-      [AchievementsTop]){
-    (
-      await getTopRef(page), 
-      await getTopELO(page),
-      await getTopNFTs(page),
-      await getTopLevel(page), 
-      await getTopAch(page)
+    return {
+        notifications = notifications;
+        friendRequests = friendRequests;
+        privacySettings = privacySettings;
+        fullProfile = fullProfile;
+        friendsList = friendsList;
+        allPlayers = allPlayers;
+    };
+  };
+  public shared ({ caller : PlayerId }) func get_all() : async (
+    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],[Player],
+    [MissionsUser],[MissionsUser],[Tournament],?[TypesICRC7.TokenId],
+    Nat,Float,[ReferralsTop],[ELOTop],[NFTTop],[LevelTop],[AchievementsTop],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
+    TypesICRC7.Account,([AchievementCategory],[AchievementLine],
+    [IndividualAchievement]),[FriendRequest], PrivacySetting ) {
+  
+    let notifications = await getNotifications();
+    let friendRequests = await getFriendRequests();
+    let privacySettings = await getMyPrivacySettings();
+    let fullProfile = await getFullProfile(caller);
+    let friendsList = await getFriendsList();
+    let allPlayers = await getAllPlayers();
+    let generalMissions = await getGeneralMissions();
+    let userMissions = await getUserMissions();
+    let allTournaments = await getAllTournaments();
+    let playerDeck = await getPlayerDeck(caller);
+    let totalReferrals = await getTotalReferrals(caller);
+    let multiplier = await getMultiplier(caller);
+    let topReferrals = await getTopReferrals(0);
+    let topELO = await getTopELO(0);
+    let topNFT = await getTopNFT(0);
+    let topLevel = await getTopLevel(0);
+    let topAchievements = await getTopAchievements(0); 
+    let achievements = await getAchievementsView();
+    let nfts = await getNFTs(caller);
+    let chests = await getChests(caller);
+    let avatars = await getAvatars(caller);
+    let characters = await getCharacters(caller);
+    let trophies = await getTrophies(caller);
+    let units = await getUnits(caller);
+    let collectionOwner = await get_collection_owner();
+    let (categories, lines, individuals) = await getAchievementsView();
+    return (
+    fullProfile,friendsList,allPlayers,generalMissions,userMissions,
+    allTournaments,playerDeck,totalReferrals,
+    multiplier,topReferrals,topELO,topNFT,topLevel,topAchievements,nfts,
+    chests,avatars,characters,trophies,units,collectionOwner,
+    (categories, lines, individuals),friendRequests,privacySettings
     );
   };
 // #endregion 
+
 };

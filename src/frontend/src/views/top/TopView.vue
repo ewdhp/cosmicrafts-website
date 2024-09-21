@@ -5,8 +5,6 @@ import TableMenuView from '@/components/TableMenuView.vue';
 import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 import md5 from 'md5'; // Assuming you have an md5 library installed
 
-import {useCosmicraftsStore} from '@/stores/cosmicrafts.js';
-
 export default {
   components: {
     TableMenuView,
@@ -33,10 +31,7 @@ export default {
     };
 
     onMounted(async () => {
-      const cosmicrafts = await useCosmicraftsStore();
-      console.log("cosmicrafts: ", cosmicrafts.views.referrals);
       await checkAndReloadData();
-      // Load data in the background and update if changed
       await topPlayersStore.reloadDataIfChanged();
     });
 
