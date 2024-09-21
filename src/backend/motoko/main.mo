@@ -25,20 +25,54 @@ import ICRC7Utils "/icrc7/utils";
 import TypesICRC7 "/icrc7/types";
 import TypesICRC1 "/icrc1/Types";
 import Result "mo:base/Result";
-
 import Int64 "mo:base/Int64";
 import ExperimentalCycles "mo:base/ExperimentalCycles";
-
 import ICRC1 "/icrc1/canisters/..";
 import MetadataUtils "MetadataUtils";
-
 import Validator "Validator";
 import MissionOptions "MissionOptions";
 import AchievementData "AchievementData";
 import Set "Set";
 
 shared actor class Cosmicrafts() = Self {
-  // Types
+//#region |Admin Functions|
+  public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
+    if (caller == ADMIN_PRINCIPAL) {
+      Debug.print("Admin function called by admin.");
+      switch (funcToCall) {
+        case (#CreateMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active)) {
+          let (success, message, id) = await createGeneralMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active);
+          return (success, message # " Mission ID: " # Nat.toText(id));
+        };
+        case (#CreateMissionsPeriodically()) {
+          await createMissionsPeriodically();
+          return (true, "Missions created.");
+        };
+        case (#MintChest(PlayerId, rarity)) {
+          let (success, message) = await mintChest(PlayerId, rarity);
+          return (success, message);
+        };
+        case (#BurnToken(_caller, from, tokenId, now)) {
+          let result = await _burnToken(_caller, from, tokenId, now);
+          switch (result) {
+            case null return (true, "Token burned successfully.");
+            case (?error) return (false, "Failed to burn token: " # Utils.transferErrorToText(error));
+          };
+        };
+        case (#GetCollectionOwner(_)) {
+          return (true, "Collection Owner: " # debug_show (icrc7_CollectionOwner));
+        };
+        case (#GetInitArgs(_)) {
+          return (true, "Init Args: " # debug_show (icrc7_InitArgs));
+        };
+      };
+    } else {
+      return (false, "Access denied: Only admin can call this function.");
+    };
+  };
+// #endregion 
+
+// #region |Types| 
 
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -130,43 +164,9 @@ shared actor class Cosmicrafts() = Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
+// #endregion
 
-  public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
-    if (caller == ADMIN_PRINCIPAL) {
-      Debug.print("Admin function called by admin.");
-      switch (funcToCall) {
-        case (#CreateMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active)) {
-          let (success, message, id) = await createGeneralMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active);
-          return (success, message # " Mission ID: " # Nat.toText(id));
-        };
-        case (#CreateMissionsPeriodically()) {
-          await createMissionsPeriodically();
-          return (true, "Missions created.");
-        };
-        case (#MintChest(PlayerId, rarity)) {
-          let (success, message) = await mintChest(PlayerId, rarity);
-          return (success, message);
-        };
-        case (#BurnToken(_caller, from, tokenId, now)) {
-          let result = await _burnToken(_caller, from, tokenId, now);
-          switch (result) {
-            case null return (true, "Token burned successfully.");
-            case (?error) return (false, "Failed to burn token: " # Utils.transferErrorToText(error));
-          };
-        };
-        case (#GetCollectionOwner(_)) {
-          return (true, "Collection Owner: " # debug_show (icrc7_CollectionOwner));
-        };
-        case (#GetInitArgs(_)) {
-          return (true, "Init Args: " # debug_show (icrc7_InitArgs));
-        };
-      };
-    } else {
-      return (false, "Access denied: Only admin can call this function.");
-    };
-  };
-
-// #region Missions
+// #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -333,7 +333,7 @@ shared actor class Cosmicrafts() = Self {
   };
 // #endregion
 
-// #region General Missions
+// #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -682,8 +682,7 @@ shared actor class Cosmicrafts() = Self {
   };
 // #endregion
 
-  //--
-  // User-Specific Missions
+// #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -1162,8 +1161,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+// #endregion
 
-  // Progress Manager
+// #region |Progress Manager|
 
   // Function to update achievement progress manager (cleaned version)
   func updateAchievementProgressManager(
@@ -1680,10 +1680,634 @@ shared actor class Cosmicrafts() = Self {
       case (null) {};
     };
   };
+// #endregion
 
-  //--
-  // Players
-  //vars
+//#region |MatchMaking|
+  stable var _matchID : Nat = 0;
+  var inactiveSeconds : Nat64 = 30 * ONE_SECOND;
+
+  stable var _searching : [(MatchID, MatchData)] = [];
+  var searching : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
+
+  stable var _playerStatus : [(PlayerId, MMPlayerStatus)] = [];
+  var playerStatus : HashMap.HashMap<PlayerId, MMPlayerStatus> = HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
+
+  stable var _inProgress : [(MatchID, MatchData)] = [];
+  var inProgress : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
+
+  stable var _finishedGames : [(MatchID, MatchData)] = [];
+  var finishedGames : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
+
+  public shared (msg) func getMatchSearching() : async (MMSearchStatus, Nat, Text) {
+    assert (Principal.notEqual(msg.caller, NULL_PRINCIPAL));
+    assert (Principal.notEqual(msg.caller, ANON_PRINCIPAL));
+    let _now : Nat64 = Nat64.fromIntWrap(Time.now());
+    let _pELO : Float = await getPlayerElo(msg.caller);
+
+    // Retrieve the player's stored deck
+    let playerDeckOpt = await getPlayerDeck(msg.caller);
+
+    // If no deck is found or the deck is empty, return an error
+    let deck = switch (playerDeckOpt) {
+      case (null) {
+        return (#NotAvailable, 0, "No stored deck found for this player.");
+      };
+      case (?deck) {
+        if (deck.size() == 0) {
+          return (#NotAvailable, 0, "Stored deck is empty.");
+        };
+        deck;
+      };
+    };
+
+    var _gamesByELO : [MatchData] = Iter.toArray(searching.vals());
+
+    for (m in _gamesByELO.vals()) {
+      if (m.player2 == null and Principal.notEqual(m.player1.id, msg.caller) and (m.player1.lastPlayerActive + inactiveSeconds) > _now) {
+        let username = switch (await getProfile(msg.caller)) {
+          case (null) { "" };
+          case (?player) { player.username };
+        };
+        let _p2 : MMInfo = {
+          id = msg.caller;
+          elo = _pELO;
+          matchAccepted = true;
+          playerGameData = {
+            deck = deck; // Use the retrieved deck
+            // Add other relevant fields if necessary
+          };
+          lastPlayerActive = Nat64.fromIntWrap(Time.now());
+          username = username;
+        };
+        let _p1 : MMInfo = {
+          id = m.player1.id;
+          elo = m.player1.elo;
+          matchAccepted = true;
+          playerGameData = m.player1.playerGameData;
+          lastPlayerActive = m.player1.lastPlayerActive;
+          username = m.player1.username;
+        };
+        let _gameData : MatchData = {
+          matchID = m.matchID;
+          player1 = _p1;
+          player2 = ?_p2;
+          status = #Accepted;
+        };
+        let _p_s : MMPlayerStatus = {
+          status = #Accepted;
+          matchID = m.matchID;
+        };
+        inProgress.put(m.matchID, _gameData);
+        let _removedSearching = searching.remove(m.matchID);
+        removePlayersFromSearching(m.player1.id, msg.caller, m.matchID);
+        playerStatus.put(msg.caller, _p_s);
+        playerStatus.put(m.player1.id, _p_s);
+        return (#Assigned, m.matchID, "Game found");
+      };
+    };
+
+    switch (playerStatus.get(msg.caller)) {
+      case (null) {};
+      case (?_p) {
+        switch (_p.status) {
+          case (#Searching) {
+            let _active : Bool = activatePlayerSearching(msg.caller, _p.matchID);
+            if (_active == true) {
+              return (#Assigned, _p.matchID, "Searching for game");
+            };
+          };
+          case (#Reserved) {};
+          case (#Accepting) {};
+          case (#Accepted) {};
+          case (#InGame) {};
+          case (#Ended) {};
+        };
+      };
+    };
+
+    _matchID := _matchID + 1;
+    let username = switch (await getProfile(msg.caller)) {
+      case (null) { "" };
+      case (?player) { player.username };
+    };
+    let _player : MMInfo = {
+      id = msg.caller;
+      elo = _pELO;
+      matchAccepted = false;
+      playerGameData = {
+        deck = deck; // Use the retrieved deck
+        // Add other relevant fields if necessary
+      };
+      lastPlayerActive = Nat64.fromIntWrap(Time.now());
+      username = username;
+    };
+    let _match : MatchData = {
+      matchID = _matchID;
+      player1 = _player;
+      player2 = null;
+      status = #Searching;
+    };
+    searching.put(_matchID, _match);
+    let _ps : MMPlayerStatus = {
+      status = #Searching;
+      matchID = _matchID;
+    };
+    playerStatus.put(msg.caller, _ps);
+    return (#Assigned, _matchID, "Lobby created");
+  };
+
+  public query func getPlayerElo(player : Principal) : async Float {
+    return switch (players.get(player)) {
+      case (null) {
+        1200;
+      };
+      case (?player) {
+        player.elo;
+      };
+    };
+  };
+
+  public shared (msg) func setPlayerActive() : async Bool {
+    assert (Principal.notEqual(msg.caller, NULL_PRINCIPAL));
+    assert (Principal.notEqual(msg.caller, ANON_PRINCIPAL));
+
+    switch (playerStatus.get(msg.caller)) {
+      case (null) { return false };
+      case (?_ps) {
+        switch (searching.get(_ps.matchID)) {
+          case (null) { return false };
+          case (?_m) {
+            let _now = Nat64.fromIntWrap(Time.now());
+            if (_m.player1.id == msg.caller) {
+              if ((_m.player1.lastPlayerActive + inactiveSeconds) < _now) {
+                return false;
+              };
+              let _p : MMInfo = _m.player1;
+              let _p1 : MMInfo = structPlayerActiveNow(_p);
+              let _gameData : MatchData = structMatchData(_p1, _m.player2, _m);
+              searching.put(_m.matchID, _gameData);
+              return true;
+            } else {
+              let _p : MMInfo = switch (_m.player2) {
+                case (null) { return false };
+                case (?_p) { _p };
+              };
+              if ((_p.lastPlayerActive + inactiveSeconds) < _now) {
+                return false;
+              };
+              let _p2 : MMInfo = structPlayerActiveNow(_p);
+              let _gameData : MatchData = structMatchData(_m.player1, ?_p2, _m);
+              searching.put(_m.matchID, _gameData);
+              return true;
+            };
+          };
+        };
+        return false;
+      };
+    };
+  };
+
+  func structPlayerActiveNow(_p1 : MMInfo) : MMInfo {
+    let _p : MMInfo = {
+      id = _p1.id;
+      elo = _p1.elo;
+      matchAccepted = _p1.matchAccepted;
+      playerGameData = _p1.playerGameData;
+      lastPlayerActive = Nat64.fromIntWrap(Time.now());
+      username = _p1.username; // Use existing type
+    };
+    return _p;
+  };
+
+  func structMatchData(_p1 : MMInfo, _p2 : ?MMInfo, _m : MatchData) : MatchData {
+    let _md : MatchData = {
+      matchID = _m.matchID;
+      player1 = _p1;
+      player2 = _p2;
+      status = _m.status;
+    };
+    return _md;
+  };
+
+  func activatePlayerSearching(player : Principal, matchID : Nat) : Bool {
+    switch (searching.get(matchID)) {
+      case (null) { return false };
+      case (?_m) {
+        if (_m.status != #Searching) {
+          return false;
+        };
+        let _now = Nat64.fromIntWrap(Time.now());
+        if (_m.player1.id == player) {
+          /// Check if the time of expiration have passed already and return false
+          if ((_m.player1.lastPlayerActive + inactiveSeconds) < _now) {
+            return false;
+          };
+          let _p : MMInfo = _m.player1;
+          let _p1 : MMInfo = structPlayerActiveNow(_p);
+          let _gameData : MatchData = structMatchData(_p1, _m.player2, _m);
+          searching.put(_m.matchID, _gameData);
+          return true;
+        } else {
+          let _p : MMInfo = switch (_m.player2) {
+            case (null) { return false };
+            case (?_p) { _p };
+          };
+          if (player != _p.id) {
+            return false;
+          };
+          if ((_p.lastPlayerActive + inactiveSeconds) < _now) {
+            return false;
+          };
+          let _p2 : MMInfo = structPlayerActiveNow(_p);
+          let _gameData : MatchData = structMatchData(_m.player1, ?_p2, _m);
+          searching.put(_m.matchID, _gameData);
+          return true;
+        };
+      };
+    };
+  };
+
+  func removePlayersFromSearching(p1 : Principal, p2 : Principal, matchID : Nat) {
+    switch (playerStatus.get(p1)) {
+      case (null) {};
+      case (?_p1) {
+        if (_p1.matchID != matchID) {
+          searching.delete(_p1.matchID);
+        };
+      };
+    };
+    switch (playerStatus.get(p2)) {
+      case (null) {};
+      case (?_p2) {
+        if (_p2.matchID != matchID) {
+          searching.delete(_p2.matchID);
+        };
+      };
+    };
+  };
+
+  public shared (msg) func cancelMatchmaking() : async (Bool, Text) {
+    assert (msg.caller != NULL_PRINCIPAL and msg.caller != ANON_PRINCIPAL);
+    switch (playerStatus.get(msg.caller)) {
+      case (null) {
+        return (true, "Game not found for this player");
+      };
+      case (?_s) {
+        if (_s.status == #Searching) {
+          searching.delete(_s.matchID);
+          playerStatus.delete(msg.caller);
+          return (true, "Matchmaking canceled successfully");
+        } else {
+          return (false, "Match found, cannot cancel at this time");
+        };
+      };
+    };
+  };
+
+  func getOtherPlayer(_m : MatchData, caller : Principal) : ?Principal {
+    switch (_m.player1.id == caller) {
+      case (true) {
+        switch (_m.player2) {
+          case (null) {
+            return (null);
+          };
+          case (?_p2) {
+            return (?_p2.id);
+          };
+        };
+      };
+      case (false) {
+        return (?_m.player1.id);
+      };
+    };
+  };
+
+  public query func getPlayerStats(player : PlayerId) : async ?PlayerGamesStats {
+    return playerGamesStats.get(player);
+  };
+
+  public query func getPlayerAverageStats(_player : Principal) : async ?AverageStats {
+    switch (playerGamesStats.get(_player)) {
+      case (null) {
+        let _newAverageStats : AverageStats = {
+          averageEnergyGenerated = 0;
+          averageEnergyUsed = 0;
+          averageEnergyWasted = 0;
+          averageDamageDealt = 0;
+          averageKills = 0;
+          averageXpEarned = 0;
+        };
+        return ?_newAverageStats;
+      };
+      case (?_p) {
+        let _averageStats : AverageStats = {
+          averageEnergyGenerated = _p.energyGenerated / _p.gamesPlayed;
+          averageEnergyUsed = _p.energyUsed / _p.gamesPlayed;
+          averageEnergyWasted = _p.energyWasted / _p.gamesPlayed;
+          averageDamageDealt = _p.totalDamageDealt / _p.gamesPlayed;
+          averageKills = _p.totalKills / _p.gamesPlayed;
+          averageXpEarned = _p.totalXpEarned / _p.gamesPlayed;
+        };
+        return ?_averageStats;
+      };
+    };
+  };
+
+  public query func getAllSearching() : async [MatchData] {
+    let _searchingList = Buffer.Buffer<MatchData>(searching.size());
+    for (m in searching.vals()) {
+      _searchingList.add(m);
+    };
+    return Buffer.toArray(_searchingList);
+  };
+
+  public query (msg) func isGameMatched() : async (Bool, Text) {
+    switch (playerStatus.get(msg.caller)) {
+      case (null) {
+        return (false, "Game not found for this player");
+      };
+      case (?_s) {
+        switch (searching.get(_s.matchID)) {
+          case (null) {
+            switch (inProgress.get(_s.matchID)) {
+              case (null) {
+                return (false, "Game not found for this player");
+              };
+              case (?_m) {
+                return (true, "Game matched");
+              };
+            };
+          };
+          case (?_m) {
+            switch (_m.player2) {
+              case (null) {
+                return (false, "Not matched yet");
+              };
+              case (?_p2) {
+                return (true, "Game matched");
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  public query func getMatchParticipants(matchID : MatchID) : async ?(Principal, ?Principal) {
+    switch (finishedGames.get(matchID)) {
+      case (null) {
+        switch (inProgress.get(matchID)) {
+          case (null) {
+            switch (searching.get(matchID)) {
+              case (null) { return null };
+              case (?matchData) {
+                let player2Id = switch (matchData.player2) {
+                  case (null) { null };
+                  case (?p) { ?p.id };
+                };
+                return ?(matchData.player1.id, player2Id);
+              };
+            };
+          };
+          case (?matchData) {
+            let player2Id = switch (matchData.player2) {
+              case (null) { null };
+              case (?p) { ?p.id };
+            };
+            return ?(matchData.player1.id, player2Id);
+          };
+        };
+      };
+      case (?matchData) {
+        let player2Id = switch (matchData.player2) {
+          case (null) { null };
+          case (?p) { ?p.id };
+        };
+        return ?(matchData.player1.id, player2Id);
+      };
+    };
+  };
+
+  public shared composite query (msg) func getMyMatchData() : async (?FullMatchData, Nat) {
+    assert (msg.caller != NULL_PRINCIPAL and msg.caller != ANON_PRINCIPAL);
+    switch (playerStatus.get(msg.caller)) {
+      case (null) return (null, 0);
+      case (?_s) {
+        let _m = switch (searching.get(_s.matchID)) {
+          case (null) switch (inProgress.get(_s.matchID)) {
+            case (null) switch (finishedGames.get(_s.matchID)) {
+              case (null) return (null, 0);
+              case (?_m) _m;
+            };
+            case (?_m) _m;
+          };
+          case (?_m) _m;
+        };
+
+        let _p = if (_m.player1.id == msg.caller) 1 else switch (_m.player2) {
+          case (null) return (null, 0);
+          case (?_p2) 2;
+        };
+
+        let _p1Data = await getProfile(_m.player1.id);
+        let _p1Name = switch (_p1Data) {
+          case (null) "";
+          case (?p1) p1.username;
+        };
+        let _p1Avatar = switch (_p1Data) {
+          case (null) 0;
+          case (?p1) p1.avatar;
+        };
+        let _p1Level = switch (_p1Data) {
+          case (null) 0;
+          case (?p1) p1.level;
+        };
+
+        let _fullPlayer2 = switch (_m.player2) {
+          case null null;
+          case (?p2) {
+            let _p2D = await getProfile(p2.id);
+            ?{
+              id = p2.id;
+              username = switch (_p2D) {
+                case (null) "";
+                case (?p) p.username;
+              };
+              avatar = switch (_p2D) {
+                case (null) 0;
+                case (?p) p.avatar;
+              };
+              level = switch (_p2D) {
+                case (null) 0;
+                case (?p) p.level;
+              };
+              matchAccepted = p2.matchAccepted;
+              elo = p2.elo;
+              playerGameData = p2.playerGameData;
+            };
+          };
+        };
+
+        let _fullPlayer1 = {
+          id = _m.player1.id;
+          username = _p1Name;
+          avatar = _p1Avatar;
+          level = _p1Level;
+          matchAccepted = _m.player1.matchAccepted;
+          elo = _m.player1.elo;
+          playerGameData = _m.player1.playerGameData;
+        };
+
+        let fm : FullMatchData = {
+          matchID = _m.matchID;
+          player1 = _fullPlayer1;
+          player2 = _fullPlayer2;
+          status = _m.status;
+        };
+
+        return (?fm, _p);
+      };
+    };
+  };
+
+  public query func getMatchIDsByPrincipal(player : PlayerId) : async [MatchID] {
+    let buffer = Buffer.Buffer<MatchID>(0);
+    for ((matchID, matchData) in finishedGames.entries()) {
+      if (matchData.player1.id == player) {
+        buffer.add(matchID);
+      } else {
+        switch (matchData.player2) {
+          case (null) {};
+          case (?p2) {
+            if (p2.id == player) {
+              buffer.add(matchID);
+            };
+          };
+        };
+      };
+    };
+    return Buffer.toArray(buffer);
+  };
+
+  public query func getMatchStats(MatchID : MatchID) : async ?BasicStats {
+    return basicStats.get(MatchID);
+  };
+
+  public query func getMatchDetails(matchID : MatchID) : async ?(MatchData, [(Player, PlayerGamesStats)]) {
+    let matchDataOpt = switch (finishedGames.get(matchID)) {
+      case (null) {
+        switch (inProgress.get(matchID)) {
+          case (null) {
+            switch (searching.get(matchID)) {
+              case (null) { return null };
+              case (?matchData) { ?matchData };
+            };
+          };
+          case (?matchData) { ?matchData };
+        };
+      };
+      case (?matchData) { ?matchData };
+    };
+
+    switch (matchDataOpt) {
+      case (null) { return null };
+      case (?matchData) {
+        let playerStats = Buffer.Buffer<(Player, PlayerGamesStats)>(2); // Assuming max 2 players
+
+        switch (players.get(matchData.player1.id)) {
+          case (null) {};
+          case (?player1Data) {
+            switch (playerGamesStats.get(matchData.player1.id)) {
+              case (null) {};
+              case (?player1Stats) {
+                playerStats.add((player1Data, player1Stats));
+              };
+            };
+          };
+        };
+
+        switch (matchData.player2) {
+          case (null) {};
+          case (?player2Info) {
+            switch (players.get(player2Info.id)) {
+              case (null) {};
+              case (?player2Data) {
+                switch (playerGamesStats.get(player2Info.id)) {
+                  case (null) {};
+                  case (?player2Stats) {
+                    playerStats.add((player2Data, player2Stats));
+                  };
+                };
+              };
+            };
+          };
+        };
+
+        return ?(matchData, Buffer.toArray(playerStats));
+      };
+    };
+  };
+
+  public query func getMatchHistoryByPrincipal(player : PlayerId) : async [(MatchID, ?BasicStats)] {
+    let buffer = Buffer.Buffer<(MatchID, ?BasicStats)>(0);
+    for ((matchID, matchData) in finishedGames.entries()) {
+      if (matchData.player1.id == player) {
+        let matchStats = basicStats.get(matchID);
+        buffer.add((matchID, matchStats));
+      } else {
+        switch (matchData.player2) {
+          case (null) {};
+          case (?p2) {
+            if (p2.id == player) {
+              let matchStats = basicStats.get(matchID);
+              buffer.add((matchID, matchStats));
+            };
+          };
+        };
+      };
+    };
+    return Buffer.toArray(buffer);
+  };
+
+  public query func getCosmicraftsStats() : async OverallStats {
+    return overallStats;
+  };
+  
+  public query func test(playerId : PlayerId) : async ?{username : Username;level : Level;elo : Float;xp : Nat;gamesWon : Nat;
+    gamesLost : Nat;
+  } {
+    // Retrieve player details
+    let playerOpt = players.get(playerId);
+    let playerStatsOpt = playerGamesStats.get(playerId);
+
+    switch (playerOpt, playerStatsOpt) {
+      case (null, _) {
+        // Player does not exist
+        return null;
+      };
+      case (_, null) {
+        // Player stats do not exist
+        return null;
+      };
+      case (?player, ?stats) {
+        // Gather the required data
+        let result = {
+          username = player.username;
+          level = player.level;
+          elo = player.elo;
+          xp = stats.totalXpEarned;
+          gamesWon = stats.gamesWon;
+          gamesLost = stats.gamesLost;
+        };
+
+        return ?result;
+      };
+    };
+  };
+// #endregion
+
+// #region |Players|
+
   var ONE_SECOND : Nat64 = 1_000_000_000;
   var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
 
@@ -2344,10 +2968,9 @@ shared actor class Cosmicrafts() = Self {
   public query func getAllPlayers() : async [Player] {
     return Iter.toArray(players.vals());
   };
+// #endregion
 
-  //--
-  // Statistics
-
+// #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -2505,646 +3128,10 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  //--
-  // MatchMaking
+// #endregion
 
-  stable var _matchID : Nat = 0;
-  var inactiveSeconds : Nat64 = 30 * ONE_SECOND;
+//#region |Tournaments Matchmaking|
 
-  stable var _searching : [(MatchID, MatchData)] = [];
-  var searching : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
-
-  stable var _playerStatus : [(PlayerId, MMPlayerStatus)] = [];
-  var playerStatus : HashMap.HashMap<PlayerId, MMPlayerStatus> = HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
-
-  stable var _inProgress : [(MatchID, MatchData)] = [];
-  var inProgress : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
-
-  stable var _finishedGames : [(MatchID, MatchData)] = [];
-  var finishedGames : HashMap.HashMap<MatchID, MatchData> = HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
-
-  public shared (msg) func getMatchSearching() : async (MMSearchStatus, Nat, Text) {
-    assert (Principal.notEqual(msg.caller, NULL_PRINCIPAL));
-    assert (Principal.notEqual(msg.caller, ANON_PRINCIPAL));
-    let _now : Nat64 = Nat64.fromIntWrap(Time.now());
-    let _pELO : Float = await getPlayerElo(msg.caller);
-
-    // Retrieve the player's stored deck
-    let playerDeckOpt = await getPlayerDeck(msg.caller);
-
-    // If no deck is found or the deck is empty, return an error
-    let deck = switch (playerDeckOpt) {
-      case (null) {
-        return (#NotAvailable, 0, "No stored deck found for this player.");
-      };
-      case (?deck) {
-        if (deck.size() == 0) {
-          return (#NotAvailable, 0, "Stored deck is empty.");
-        };
-        deck;
-      };
-    };
-
-    var _gamesByELO : [MatchData] = Iter.toArray(searching.vals());
-
-    for (m in _gamesByELO.vals()) {
-      if (m.player2 == null and Principal.notEqual(m.player1.id, msg.caller) and (m.player1.lastPlayerActive + inactiveSeconds) > _now) {
-        let username = switch (await getProfile(msg.caller)) {
-          case (null) { "" };
-          case (?player) { player.username };
-        };
-        let _p2 : MMInfo = {
-          id = msg.caller;
-          elo = _pELO;
-          matchAccepted = true;
-          playerGameData = {
-            deck = deck; // Use the retrieved deck
-            // Add other relevant fields if necessary
-          };
-          lastPlayerActive = Nat64.fromIntWrap(Time.now());
-          username = username;
-        };
-        let _p1 : MMInfo = {
-          id = m.player1.id;
-          elo = m.player1.elo;
-          matchAccepted = true;
-          playerGameData = m.player1.playerGameData;
-          lastPlayerActive = m.player1.lastPlayerActive;
-          username = m.player1.username;
-        };
-        let _gameData : MatchData = {
-          matchID = m.matchID;
-          player1 = _p1;
-          player2 = ?_p2;
-          status = #Accepted;
-        };
-        let _p_s : MMPlayerStatus = {
-          status = #Accepted;
-          matchID = m.matchID;
-        };
-        inProgress.put(m.matchID, _gameData);
-        let _removedSearching = searching.remove(m.matchID);
-        removePlayersFromSearching(m.player1.id, msg.caller, m.matchID);
-        playerStatus.put(msg.caller, _p_s);
-        playerStatus.put(m.player1.id, _p_s);
-        return (#Assigned, m.matchID, "Game found");
-      };
-    };
-
-    switch (playerStatus.get(msg.caller)) {
-      case (null) {};
-      case (?_p) {
-        switch (_p.status) {
-          case (#Searching) {
-            let _active : Bool = activatePlayerSearching(msg.caller, _p.matchID);
-            if (_active == true) {
-              return (#Assigned, _p.matchID, "Searching for game");
-            };
-          };
-          case (#Reserved) {};
-          case (#Accepting) {};
-          case (#Accepted) {};
-          case (#InGame) {};
-          case (#Ended) {};
-        };
-      };
-    };
-
-    _matchID := _matchID + 1;
-    let username = switch (await getProfile(msg.caller)) {
-      case (null) { "" };
-      case (?player) { player.username };
-    };
-    let _player : MMInfo = {
-      id = msg.caller;
-      elo = _pELO;
-      matchAccepted = false;
-      playerGameData = {
-        deck = deck; // Use the retrieved deck
-        // Add other relevant fields if necessary
-      };
-      lastPlayerActive = Nat64.fromIntWrap(Time.now());
-      username = username;
-    };
-    let _match : MatchData = {
-      matchID = _matchID;
-      player1 = _player;
-      player2 = null;
-      status = #Searching;
-    };
-    searching.put(_matchID, _match);
-    let _ps : MMPlayerStatus = {
-      status = #Searching;
-      matchID = _matchID;
-    };
-    playerStatus.put(msg.caller, _ps);
-    return (#Assigned, _matchID, "Lobby created");
-  };
-
-  public query func getPlayerElo(player : Principal) : async Float {
-    return switch (players.get(player)) {
-      case (null) {
-        1200;
-      };
-      case (?player) {
-        player.elo;
-      };
-    };
-  };
-
-  public shared (msg) func setPlayerActive() : async Bool {
-    assert (Principal.notEqual(msg.caller, NULL_PRINCIPAL));
-    assert (Principal.notEqual(msg.caller, ANON_PRINCIPAL));
-
-    switch (playerStatus.get(msg.caller)) {
-      case (null) { return false };
-      case (?_ps) {
-        switch (searching.get(_ps.matchID)) {
-          case (null) { return false };
-          case (?_m) {
-            let _now = Nat64.fromIntWrap(Time.now());
-            if (_m.player1.id == msg.caller) {
-              if ((_m.player1.lastPlayerActive + inactiveSeconds) < _now) {
-                return false;
-              };
-              let _p : MMInfo = _m.player1;
-              let _p1 : MMInfo = structPlayerActiveNow(_p);
-              let _gameData : MatchData = structMatchData(_p1, _m.player2, _m);
-              searching.put(_m.matchID, _gameData);
-              return true;
-            } else {
-              let _p : MMInfo = switch (_m.player2) {
-                case (null) { return false };
-                case (?_p) { _p };
-              };
-              if ((_p.lastPlayerActive + inactiveSeconds) < _now) {
-                return false;
-              };
-              let _p2 : MMInfo = structPlayerActiveNow(_p);
-              let _gameData : MatchData = structMatchData(_m.player1, ?_p2, _m);
-              searching.put(_m.matchID, _gameData);
-              return true;
-            };
-          };
-        };
-        return false;
-      };
-    };
-  };
-
-  func structPlayerActiveNow(_p1 : MMInfo) : MMInfo {
-    let _p : MMInfo = {
-      id = _p1.id;
-      elo = _p1.elo;
-      matchAccepted = _p1.matchAccepted;
-      playerGameData = _p1.playerGameData;
-      lastPlayerActive = Nat64.fromIntWrap(Time.now());
-      username = _p1.username; // Use existing type
-    };
-    return _p;
-  };
-
-  func structMatchData(_p1 : MMInfo, _p2 : ?MMInfo, _m : MatchData) : MatchData {
-    let _md : MatchData = {
-      matchID = _m.matchID;
-      player1 = _p1;
-      player2 = _p2;
-      status = _m.status;
-    };
-    return _md;
-  };
-
-  func activatePlayerSearching(player : Principal, matchID : Nat) : Bool {
-    switch (searching.get(matchID)) {
-      case (null) { return false };
-      case (?_m) {
-        if (_m.status != #Searching) {
-          return false;
-        };
-        let _now = Nat64.fromIntWrap(Time.now());
-        if (_m.player1.id == player) {
-          /// Check if the time of expiration have passed already and return false
-          if ((_m.player1.lastPlayerActive + inactiveSeconds) < _now) {
-            return false;
-          };
-          let _p : MMInfo = _m.player1;
-          let _p1 : MMInfo = structPlayerActiveNow(_p);
-          let _gameData : MatchData = structMatchData(_p1, _m.player2, _m);
-          searching.put(_m.matchID, _gameData);
-          return true;
-        } else {
-          let _p : MMInfo = switch (_m.player2) {
-            case (null) { return false };
-            case (?_p) { _p };
-          };
-          if (player != _p.id) {
-            return false;
-          };
-          if ((_p.lastPlayerActive + inactiveSeconds) < _now) {
-            return false;
-          };
-          let _p2 : MMInfo = structPlayerActiveNow(_p);
-          let _gameData : MatchData = structMatchData(_m.player1, ?_p2, _m);
-          searching.put(_m.matchID, _gameData);
-          return true;
-        };
-      };
-    };
-  };
-
-  func removePlayersFromSearching(p1 : Principal, p2 : Principal, matchID : Nat) {
-    switch (playerStatus.get(p1)) {
-      case (null) {};
-      case (?_p1) {
-        if (_p1.matchID != matchID) {
-          searching.delete(_p1.matchID);
-        };
-      };
-    };
-    switch (playerStatus.get(p2)) {
-      case (null) {};
-      case (?_p2) {
-        if (_p2.matchID != matchID) {
-          searching.delete(_p2.matchID);
-        };
-      };
-    };
-  };
-
-  public shared (msg) func cancelMatchmaking() : async (Bool, Text) {
-    assert (msg.caller != NULL_PRINCIPAL and msg.caller != ANON_PRINCIPAL);
-    switch (playerStatus.get(msg.caller)) {
-      case (null) {
-        return (true, "Game not found for this player");
-      };
-      case (?_s) {
-        if (_s.status == #Searching) {
-          searching.delete(_s.matchID);
-          playerStatus.delete(msg.caller);
-          return (true, "Matchmaking canceled successfully");
-        } else {
-          return (false, "Match found, cannot cancel at this time");
-        };
-      };
-    };
-  };
-
-  func getOtherPlayer(_m : MatchData, caller : Principal) : ?Principal {
-    switch (_m.player1.id == caller) {
-      case (true) {
-        switch (_m.player2) {
-          case (null) {
-            return (null);
-          };
-          case (?_p2) {
-            return (?_p2.id);
-          };
-        };
-      };
-      case (false) {
-        return (?_m.player1.id);
-      };
-    };
-  };
-
-  // QStatistics
-  public query func getPlayerStats(player : PlayerId) : async ?PlayerGamesStats {
-    return playerGamesStats.get(player);
-  };
-
-  public query func getPlayerAverageStats(_player : Principal) : async ?AverageStats {
-    switch (playerGamesStats.get(_player)) {
-      case (null) {
-        let _newAverageStats : AverageStats = {
-          averageEnergyGenerated = 0;
-          averageEnergyUsed = 0;
-          averageEnergyWasted = 0;
-          averageDamageDealt = 0;
-          averageKills = 0;
-          averageXpEarned = 0;
-        };
-        return ?_newAverageStats;
-      };
-      case (?_p) {
-        let _averageStats : AverageStats = {
-          averageEnergyGenerated = _p.energyGenerated / _p.gamesPlayed;
-          averageEnergyUsed = _p.energyUsed / _p.gamesPlayed;
-          averageEnergyWasted = _p.energyWasted / _p.gamesPlayed;
-          averageDamageDealt = _p.totalDamageDealt / _p.gamesPlayed;
-          averageKills = _p.totalKills / _p.gamesPlayed;
-          averageXpEarned = _p.totalXpEarned / _p.gamesPlayed;
-        };
-        return ?_averageStats;
-      };
-    };
-  };
-
-  // QMatchmaking
-  public query func getAllSearching() : async [MatchData] {
-    let _searchingList = Buffer.Buffer<MatchData>(searching.size());
-    for (m in searching.vals()) {
-      _searchingList.add(m);
-    };
-    return Buffer.toArray(_searchingList);
-  };
-
-  public query (msg) func isGameMatched() : async (Bool, Text) {
-    switch (playerStatus.get(msg.caller)) {
-      case (null) {
-        return (false, "Game not found for this player");
-      };
-      case (?_s) {
-        switch (searching.get(_s.matchID)) {
-          case (null) {
-            switch (inProgress.get(_s.matchID)) {
-              case (null) {
-                return (false, "Game not found for this player");
-              };
-              case (?_m) {
-                return (true, "Game matched");
-              };
-            };
-          };
-          case (?_m) {
-            switch (_m.player2) {
-              case (null) {
-                return (false, "Not matched yet");
-              };
-              case (?_p2) {
-                return (true, "Game matched");
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  public query func getMatchParticipants(matchID : MatchID) : async ?(Principal, ?Principal) {
-    switch (finishedGames.get(matchID)) {
-      case (null) {
-        switch (inProgress.get(matchID)) {
-          case (null) {
-            switch (searching.get(matchID)) {
-              case (null) { return null };
-              case (?matchData) {
-                let player2Id = switch (matchData.player2) {
-                  case (null) { null };
-                  case (?p) { ?p.id };
-                };
-                return ?(matchData.player1.id, player2Id);
-              };
-            };
-          };
-          case (?matchData) {
-            let player2Id = switch (matchData.player2) {
-              case (null) { null };
-              case (?p) { ?p.id };
-            };
-            return ?(matchData.player1.id, player2Id);
-          };
-        };
-      };
-      case (?matchData) {
-        let player2Id = switch (matchData.player2) {
-          case (null) { null };
-          case (?p) { ?p.id };
-        };
-        return ?(matchData.player1.id, player2Id);
-      };
-    };
-  };
-
-  // For loading match screen
-  public shared composite query (msg) func getMyMatchData() : async (?FullMatchData, Nat) {
-    assert (msg.caller != NULL_PRINCIPAL and msg.caller != ANON_PRINCIPAL);
-    switch (playerStatus.get(msg.caller)) {
-      case (null) return (null, 0);
-      case (?_s) {
-        let _m = switch (searching.get(_s.matchID)) {
-          case (null) switch (inProgress.get(_s.matchID)) {
-            case (null) switch (finishedGames.get(_s.matchID)) {
-              case (null) return (null, 0);
-              case (?_m) _m;
-            };
-            case (?_m) _m;
-          };
-          case (?_m) _m;
-        };
-
-        let _p = if (_m.player1.id == msg.caller) 1 else switch (_m.player2) {
-          case (null) return (null, 0);
-          case (?_p2) 2;
-        };
-
-        let _p1Data = await getProfile(_m.player1.id);
-        let _p1Name = switch (_p1Data) {
-          case (null) "";
-          case (?p1) p1.username;
-        };
-        let _p1Avatar = switch (_p1Data) {
-          case (null) 0;
-          case (?p1) p1.avatar;
-        };
-        let _p1Level = switch (_p1Data) {
-          case (null) 0;
-          case (?p1) p1.level;
-        };
-
-        let _fullPlayer2 = switch (_m.player2) {
-          case null null;
-          case (?p2) {
-            let _p2D = await getProfile(p2.id);
-            ?{
-              id = p2.id;
-              username = switch (_p2D) {
-                case (null) "";
-                case (?p) p.username;
-              };
-              avatar = switch (_p2D) {
-                case (null) 0;
-                case (?p) p.avatar;
-              };
-              level = switch (_p2D) {
-                case (null) 0;
-                case (?p) p.level;
-              };
-              matchAccepted = p2.matchAccepted;
-              elo = p2.elo;
-              playerGameData = p2.playerGameData;
-            };
-          };
-        };
-
-        let _fullPlayer1 = {
-          id = _m.player1.id;
-          username = _p1Name;
-          avatar = _p1Avatar;
-          level = _p1Level;
-          matchAccepted = _m.player1.matchAccepted;
-          elo = _m.player1.elo;
-          playerGameData = _m.player1.playerGameData;
-        };
-
-        let fm : FullMatchData = {
-          matchID = _m.matchID;
-          player1 = _fullPlayer1;
-          player2 = _fullPlayer2;
-          status = _m.status;
-        };
-
-        return (?fm, _p);
-      };
-    };
-  };
-
-  // QMatch History
-  public query func getMatchIDsByPrincipal(player : PlayerId) : async [MatchID] {
-    let buffer = Buffer.Buffer<MatchID>(0);
-    for ((matchID, matchData) in finishedGames.entries()) {
-      if (matchData.player1.id == player) {
-        buffer.add(matchID);
-      } else {
-        switch (matchData.player2) {
-          case (null) {};
-          case (?p2) {
-            if (p2.id == player) {
-              buffer.add(matchID);
-            };
-          };
-        };
-      };
-    };
-    return Buffer.toArray(buffer);
-  };
-
-  // Basic Stats sent for a MatchID
-  public query func getMatchStats(MatchID : MatchID) : async ?BasicStats {
-    return basicStats.get(MatchID);
-  };
-
-  // Basic Stats + User Profiles for a MatchID
-  public query func getMatchDetails(matchID : MatchID) : async ?(MatchData, [(Player, PlayerGamesStats)]) {
-    let matchDataOpt = switch (finishedGames.get(matchID)) {
-      case (null) {
-        switch (inProgress.get(matchID)) {
-          case (null) {
-            switch (searching.get(matchID)) {
-              case (null) { return null };
-              case (?matchData) { ?matchData };
-            };
-          };
-          case (?matchData) { ?matchData };
-        };
-      };
-      case (?matchData) { ?matchData };
-    };
-
-    switch (matchDataOpt) {
-      case (null) { return null };
-      case (?matchData) {
-        let playerStats = Buffer.Buffer<(Player, PlayerGamesStats)>(2); // Assuming max 2 players
-
-        switch (players.get(matchData.player1.id)) {
-          case (null) {};
-          case (?player1Data) {
-            switch (playerGamesStats.get(matchData.player1.id)) {
-              case (null) {};
-              case (?player1Stats) {
-                playerStats.add((player1Data, player1Stats));
-              };
-            };
-          };
-        };
-
-        switch (matchData.player2) {
-          case (null) {};
-          case (?player2Info) {
-            switch (players.get(player2Info.id)) {
-              case (null) {};
-              case (?player2Data) {
-                switch (playerGamesStats.get(player2Info.id)) {
-                  case (null) {};
-                  case (?player2Stats) {
-                    playerStats.add((player2Data, player2Stats));
-                  };
-                };
-              };
-            };
-          };
-        };
-
-        return ?(matchData, Buffer.toArray(playerStats));
-      };
-    };
-  };
-
-  public query func getMatchHistoryByPrincipal(player : PlayerId) : async [(MatchID, ?BasicStats)] {
-    let buffer = Buffer.Buffer<(MatchID, ?BasicStats)>(0);
-    for ((matchID, matchData) in finishedGames.entries()) {
-      if (matchData.player1.id == player) {
-        let matchStats = basicStats.get(matchID);
-        buffer.add((matchID, matchStats));
-      } else {
-        switch (matchData.player2) {
-          case (null) {};
-          case (?p2) {
-            if (p2.id == player) {
-              let matchStats = basicStats.get(matchID);
-              buffer.add((matchID, matchStats));
-            };
-          };
-        };
-      };
-    };
-    return Buffer.toArray(buffer);
-  };
-
-  public query func test(playerId : PlayerId) : async ?{
-    username : Username;
-    level : Level;
-    elo : Float;
-    xp : Nat;
-    gamesWon : Nat;
-    gamesLost : Nat;
-  } {
-    // Retrieve player details
-    let playerOpt = players.get(playerId);
-    let playerStatsOpt = playerGamesStats.get(playerId);
-
-    switch (playerOpt, playerStatsOpt) {
-      case (null, _) {
-        // Player does not exist
-        return null;
-      };
-      case (_, null) {
-        // Player stats do not exist
-        return null;
-      };
-      case (?player, ?stats) {
-        // Gather the required data
-        let result = {
-          username = player.username;
-          level = player.level;
-          elo = player.elo;
-          xp = stats.totalXpEarned;
-          gamesWon = stats.gamesWon;
-          gamesLost = stats.gamesLost;
-        };
-
-        return ?result;
-      };
-    };
-  };
-
-  public query func getCosmicraftsStats() : async OverallStats {
-    return overallStats;
-  };
-
-  //--
-  // Custom Matchmaking
-  //--
-  // Tournaments
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
   stable var feedback : [{
@@ -3703,9 +3690,9 @@ shared actor class Cosmicrafts() = Self {
     matches := [];
     return true;
   };
+// #endregion
 
-  //--
-  // ICRC7
+//#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -4589,9 +4576,9 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(resultBuffer);
   };
+// #endregion
 
-  //--
-  // GameNFTs
+//#region |GameNFTs|
   public shared (msg) func upgradeNFT(nftID : TokenID) : async (Bool, Text) {
     // Perform ownership check
     let ownerof : TypesICRC7.OwnerResult = await icrc7_owner_of(nftID);
@@ -4974,30 +4961,9 @@ shared actor class Cosmicrafts() = Self {
     },
     // Add more templates as needed
   ];
+// #endregion
 
-  /*
-    Arguments to mint Unit
-    let result = await mintCustomUnit(
-        #Spaceship,
-        "Custom Spaceship",
-        "A powerful custom spaceship.",
-        "url_to_image",
-        #Cosmicon,
-        3,
-        1,
-        200,
-        50,
-        ?#CriticalStrike,
-        null,
-        100,
-        null,
-        null,
-        null
-    );
-    */
-
-  //--
-  // Chests
+//#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5096,9 +5062,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+// #endregion
 
-  //--
-  // ICRC1
+//#region |ICRC1|
 
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
@@ -5199,11 +5165,10 @@ shared actor class Cosmicrafts() = Self {
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
+// #endregion
 
-  //--
-  //Logging
+//#region |Logging|
 
-  // Types
   public type MintedStardust = {
     quantity : Nat;
   };
@@ -5354,8 +5319,7 @@ shared actor class Cosmicrafts() = Self {
   public query func getMintedInfo(user : Principal) : async {
     stardust : Nat;
     chests : { quantity : Nat; tokenIDs : [TokenID] };
-    gameNFTs : { quantity : Nat; tokenIDs : [TokenID] };
-  } {
+    gameNFTs : { quantity : Nat; tokenIDs : [TokenID] };} {
     let stardust = switch (mintedStardustMap.get(user)) {
       case (null) 0;
       case (?stardustData) stardustData.quantity;
@@ -5377,9 +5341,9 @@ shared actor class Cosmicrafts() = Self {
       gameNFTs = gameNFTs;
     };
   };
+// #endregion
 
-  //--
-  // Migrations
+//#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
@@ -5424,55 +5388,55 @@ shared actor class Cosmicrafts() = Self {
     _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
     _claimedAchievementLineRewards := Iter.toArray(claimedAchievementLineRewards.entries());
     _claimedCategoryAchievementRewards := Iter.toArray(claimedCategoryAchievementRewards.entries());
-};
+  };
 
-system func postupgrade() {
-    // Restore the state of the stable variables
-    generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
-    missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
-    activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
-    claimedRewards := HashMap.fromIter(_claimedRewards.vals(), 0, Principal.equal, Principal.hash);
+  system func postupgrade() {
+      // Restore the state of the stable variables
+      generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
+      missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
+      activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
+      claimedRewards := HashMap.fromIter(_claimedRewards.vals(), 0, Principal.equal, Principal.hash);
 
-    individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
-    achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
+      individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
+      achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
 
-    players := HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
-    friendRequests := HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
-    privacySettings := HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
-    blockedUsers := HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
-    mutualFriendships := HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
-    notifications := HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
-    updateTimestamps := HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
+      players := HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
+      friendRequests := HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
+      privacySettings := HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
+      blockedUsers := HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
+      mutualFriendships := HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
+      notifications := HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
+      updateTimestamps := HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
 
-    userMissionProgress := HashMap.fromIter(_userMissionProgress.vals(), 0, Principal.equal, Principal.hash);
-    userMissions := HashMap.fromIter(_userMissions.vals(), 0, Principal.equal, Principal.hash);
-    userMissionCounters := HashMap.fromIter(_userMissionCounters.vals(), 0, Principal.equal, Principal.hash);
-    userClaimedRewards := HashMap.fromIter(_userClaimedRewards.vals(), 0, Principal.equal, Principal.hash);
+      userMissionProgress := HashMap.fromIter(_userMissionProgress.vals(), 0, Principal.equal, Principal.hash);
+      userMissions := HashMap.fromIter(_userMissions.vals(), 0, Principal.equal, Principal.hash);
+      userMissionCounters := HashMap.fromIter(_userMissionCounters.vals(), 0, Principal.equal, Principal.hash);
+      userClaimedRewards := HashMap.fromIter(_userClaimedRewards.vals(), 0, Principal.equal, Principal.hash);
 
-    basicStats := HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
-    playerGamesStats := HashMap.fromIter(_playerGamesStats.vals(), 0, Principal.equal, Principal.hash);
-    onValidation := HashMap.fromIter(_onValidation.vals(), 0, Utils._natEqual, Utils._natHash);
-    countedMatches := HashMap.fromIter(_countedMatches.vals(), 0, Utils._natEqual, Utils._natHash);
+      basicStats := HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
+      playerGamesStats := HashMap.fromIter(_playerGamesStats.vals(), 0, Principal.equal, Principal.hash);
+      onValidation := HashMap.fromIter(_onValidation.vals(), 0, Utils._natEqual, Utils._natHash);
+      countedMatches := HashMap.fromIter(_countedMatches.vals(), 0, Utils._natEqual, Utils._natHash);
 
-    searching := HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
-    playerStatus := HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
-    inProgress := HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
-    finishedGames := HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
+      searching := HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
+      playerStatus := HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
+      inProgress := HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
+      finishedGames := HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
 
-    // Restore the state of the achievement-related stable variables
-    achievementCategories := HashMap.fromIter(_achievementCategories.vals(), 0, Utils._natEqual, Utils._natHash);
-    achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
-    individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
+      // Restore the state of the achievement-related stable variables
+      achievementCategories := HashMap.fromIter(_achievementCategories.vals(), 0, Utils._natEqual, Utils._natHash);
+      achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
+      individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
 
-    userProgress := HashMap.fromIter(_userProgress.vals(), 0, Principal.equal, Principal.hash);
+      userProgress := HashMap.fromIter(_userProgress.vals(), 0, Principal.equal, Principal.hash);
 
-    claimedIndividualAchievementRewards := HashMap.fromIter(_claimedIndividualAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
-    claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
-    claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
-};
+      claimedIndividualAchievementRewards := HashMap.fromIter(_claimedIndividualAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
+      claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
+      claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
+  };
+// #endregion
 
-  //--
-  // Soul NFT
+//#region |Soul NFT|
 
   stable var playerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
 
@@ -5803,9 +5767,9 @@ system func postupgrade() {
     #Ok;
     #Err : Text;
   };
+// #endregion
 
-  //--
-  // Avatars and Titles
+//#region |Avatars and Titles|
 
   // Types for Avatars and Titles
   public type Avatar = {
@@ -6108,9 +6072,9 @@ system func postupgrade() {
 
     return titleDetails;
   };
+// #endregion
 
-  //--
-  // Referrals
+//#region |Referrals|
 
   public type ReferralCode = Text;
 
@@ -6809,9 +6773,9 @@ system func postupgrade() {
       case (?multiplier) { return multiplier };
     };
   };
+// #endregion
 
-  //--
-  // Tops
+//#region |Tops|
   public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
     for ((playerId, multiplier) in multiplierByPlayer.entries()) {
@@ -6869,9 +6833,351 @@ system func postupgrade() {
     return paginatedPlayers;
   };
 
-  // Achievements
+  
+  public type ReferralsTop = {
+    playerId : Principal;
+    totalReferrals : Nat;
+    multiplier : Float;
+    username : Text;
+    avatar : Nat;
+    referrer : ?Principal;
+  };
+  public shared({caller}) func getTopRef(page : Nat) : async [ReferralsTop] {
+    let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
+    
+    // Sort by total referrals (direct, indirect, and beyond)
+    let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
+      allReferrals,
+      func(a : (PlayerId, ReferralInfo), b : (PlayerId, ReferralInfo)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        let totalA = a.1.directReferrals + a.1.indirectReferrals + a.1.beyondReferrals;
+        let totalB = b.1.directReferrals + b.1.indirectReferrals + b.1.beyondReferrals;
+        
+        if (totalA > totalB) {
+          #less;
+        } else if (totalA < totalB) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
 
+    let pageSize = 10;
+    let start = page * pageSize;
+    let end = if (start + pageSize > Array.size(sortedReferrals)) {
+      Array.size(sortedReferrals);
+    } else {
+      start + pageSize;
+    };
 
+    let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(
+      Array.slice(sortedReferrals, start, end)
+    );
+
+    var topReferrals : [ReferralsTop] = [];
+    for (entry in paginatedReferrals.vals()) {
+
+      let playerId = entry.0;
+      let referrer = await getReferrer(playerId);
+      let totalReferrals = await getTotalReferrals(playerId);
+      let multiplier = await getMultiplier(playerId);
+      let (_, playerOpt) = await getPlayer(playerId);
+      let username = switch (playerOpt) {
+        case (?player) { player.username };
+        case (null) { "Unknown" };
+      };
+      let avatar = switch (playerOpt) {
+        case (?player) { player.avatar };
+        case (null) { 0 };
+      };
+
+      let r : ReferralsTop = {
+        playerId = playerId;
+        totalReferrals = totalReferrals;
+        multiplier = multiplier;
+        username = username;
+        avatar = avatar;
+        referrer = referrer;
+      };
+      topReferrals := Array.append(topReferrals, [r]);
+    };
+    return topReferrals;
+  };
+  public type ELOTop = {
+    playerId : Principal;
+    elo : Float;
+    username : Text;
+    avatar : Nat;
+  };
+  public query({caller}) func getTopELO(page : Nat) : async [ELOTop] {
+    let buffer = Buffer.Buffer<(PlayerId, Float)>(players.size());
+    for ((playerId, player) in players.entries()) {
+        buffer.add((playerId, player.elo));
+    };
+
+    let allPlayersWithELO = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+        allPlayersWithELO,
+        func(a : (PlayerId, Float), b : (PlayerId, Float)) : { #less; #equal; #greater; } {
+            if (a.1 > b.1) {
+                #less;
+            } else if (a.1 < b.1) {
+                #greater;
+            } else {
+                #equal;
+            };
+        },
+    );
+
+    let pageSize = 10;
+    let start = page * pageSize;
+    let end = if (start + pageSize > Array.size(sortedPlayers)) {
+        Array.size(sortedPlayers);
+    } else {
+        start + pageSize;
+    };
+
+    let paginatedPlayers : [(PlayerId, Float)] = Iter.toArray(
+        Array.slice(sortedPlayers, start, end)
+    );
+
+    var topELOPlayers : [ELOTop] = [];
+    for (entry in paginatedPlayers.vals()) {
+        let playerId = entry.0;
+        let elo = entry.1;
+       let playerOpt = players.get(caller);
+        let username = switch (playerOpt) {
+            case (?player) { player.username };
+            case (null) { "Unknown" };
+        };
+        let avatar = switch (playerOpt) {
+            case (?player) { player.avatar };
+            case (null) { 0 };
+        };
+
+        let p : ELOTop= {
+            playerId = playerId;
+            elo = elo;
+            username = username;
+            avatar = avatar;
+        };
+        topELOPlayers := Array.append(topELOPlayers, [p]);
+    };
+    return topELOPlayers;
+  };
+  public type NFTTop = {
+    playerId : Principal;
+    avatar : Nat;
+    username : Text;
+    level : Nat;
+    nftCount : Nat;
+  };
+  public  func getTopNFTs(page : Nat) : async [NFTTop] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      let nftCount = (await getNFTs(playerId)).size();
+      buffer.add((playerId, nftCount));
+    };
+    let allPlayersWithNFTs = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithNFTs,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+
+    let pageSize = 10;
+    let start = page * pageSize;
+    let end = if (start + pageSize > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + pageSize;
+    };
+
+    let paginatedPlayers : [(PlayerId, Nat)] = Iter.toArray(
+      Array.slice(sortedPlayers, start, end)
+    );
+
+    var topNFTPlayers : [NFTTop] = [];
+    for (entry in paginatedPlayers.vals()) {
+      let playerId = entry.0;
+      let nftCount = entry.1;
+      let playerOpt = players.get(playerId);
+      let username = switch (playerOpt) {
+        case (?player) { player.username };
+        case (null) { "Unknown" };
+      };
+      let avatar = switch (playerOpt) {
+        case (?player) { player.avatar };
+        case (null) { 0 };
+      };
+      let level = switch (playerOpt) {
+        case (?player) { player.level };
+        case (null) { 0 };
+      };
+
+      let p : NFTTop = {
+        playerId = playerId;
+        avatar = avatar;
+        username = username;
+        level = level;
+        nftCount = nftCount;
+      };
+      topNFTPlayers := Array.append(topNFTPlayers, [p]);
+    };
+    return topNFTPlayers;
+  };
+  public type LevelTop = {
+    playerId : Principal;
+    level : Nat;
+    username : Text;
+    avatar : Nat;
+  }; 
+  public query({caller}) func getTopLevel(page : Nat) : async [LevelTop] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
+    for ((playerId, player) in players.entries()) {
+      buffer.add((playerId, player.level));
+    };
+    let allPlayersWithLevels = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+      allPlayersWithLevels,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
+    );
+    let start = page * 10;
+    let end = if (start + 10 > Array.size(sortedPlayers)) {
+      Array.size(sortedPlayers);
+    } else {
+      start + 10;
+    };
+    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
+    var topPlayers : [LevelTop] = [];
+    for (entry in paginatedPlayers.vals()) {
+      let playerId = entry.0;
+      let level = entry.1;
+      let playerOpt = players.get(caller);
+      let username = switch (playerOpt) {
+        case (?player) { player.username };
+        case (null) { "Unknown" };
+      };
+      let avatar = switch (playerOpt) {
+        case (?player) { player.avatar };
+        case (null) { 0 };
+      };
+      let p : LevelTop = {
+        playerId = playerId;
+        level = level;
+        username = username;
+        avatar = avatar;
+      };
+      topPlayers := Array.append(topPlayers, [p]);
+    };
+    return topPlayers;
+  };
+  public type AchievementsTop = {
+    playerId : Principal;
+    totalAchievements : Nat;
+    username : Text;
+    avatar : Nat;
+  };
+  public query({caller}) func getTopAch(page : Nat) : async [AchievementsTop] {
+    let buffer = Buffer.Buffer<(PlayerId, Nat)>(userProgress.size());
+    for ((playerId, userCategoriesList) in userProgress.entries()) {
+        var totalAchievements : Nat = 0;
+
+        // Count category achievements based on progress
+        for (category in userCategoriesList.vals()) {
+            totalAchievements += category.progress;
+
+            // Count line achievements based on progress
+            for (achievementLine in category.achievements.vals()) {
+                totalAchievements += achievementLine.progress;
+
+                // Count individual achievements based on progress
+                for (individualAchievement in achievementLine.individualAchievements.vals()) {
+                    totalAchievements += individualAchievement.progress;
+                };
+            };
+        };
+
+        buffer.add((playerId, totalAchievements));
+    };
+
+    let allPlayersWithAchievements = Buffer.toArray(buffer);
+    let sortedPlayers = Array.sort(
+        allPlayersWithAchievements,
+        func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
+            if (a.1 > b.1) {
+                #less;
+            } else if (a.1 < b.1) {
+                #greater;
+            } else {
+                #equal;
+            };
+        },
+    );
+
+    let pageSize = 10;
+    let start = page * pageSize;
+    let end = if (start + pageSize > Array.size(sortedPlayers)) {
+        Array.size(sortedPlayers);
+    } else {
+        start + pageSize;
+    };
+
+    let paginatedPlayers : [(PlayerId, Nat)] = Iter.toArray(
+        Array.slice(sortedPlayers, start, end)
+    );
+
+    var topAchievementPlayers : [AchievementsTop] = [];
+    for (entry in paginatedPlayers.vals()) {
+        let playerId = entry.0;
+        let totalAchievements = entry.1;
+       
+        let playerOpt = players.get(caller);
+        let username = switch (playerOpt) {
+            case (?player) { player.username };
+            case (null) { "Unknown" };
+        };
+        let avatar = switch (playerOpt) {
+            case (?player) { player.avatar };
+            case (null) { 0 };
+        };
+
+        let p : AchievementsTop = {
+            playerId = playerId;
+            totalAchievements = totalAchievements;
+            username = username;
+            avatar = avatar;
+        };
+        topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
+    };
+    return topAchievementPlayers;
+  };
+// #endregion
+
+//#region |Achievements|
 
   //check if get size instad of stable vars....
   stable var achievementCategoryIDCounter : Nat = 1;
@@ -7977,356 +8283,12 @@ system func postupgrade() {
     };
     (categories, lines, individuals);
   };
+// #endregion
 
-
-  //////////////////////////////////////////////////////////////////////////
-  //
-  //  Tops
-  //
-  //
-
-  public type ReferralsTop = {
-    playerId : Principal;
-    totalReferrals : Nat;
-    multiplier : Float;
-    username : Text;
-    avatar : Nat;
-    referrer : ?Principal;
-  };
-  public shared func getTopRef(page : Nat) : async [ReferralsTop] {
-    let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
-    
-    // Sort by total referrals (direct, indirect, and beyond)
-    let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
-      allReferrals,
-      func(a : (PlayerId, ReferralInfo), b : (PlayerId, ReferralInfo)) : {
-        #less;
-        #equal;
-        #greater;
-      } {
-        let totalA = a.1.directReferrals + a.1.indirectReferrals + a.1.beyondReferrals;
-        let totalB = b.1.directReferrals + b.1.indirectReferrals + b.1.beyondReferrals;
-        
-        if (totalA > totalB) {
-          #less;
-        } else if (totalA < totalB) {
-          #greater;
-        } else {
-          #equal;
-        };
-      },
-    );
-
-    let pageSize = 10;
-    let start = page * pageSize;
-    let end = if (start + pageSize > Array.size(sortedReferrals)) {
-      Array.size(sortedReferrals);
-    } else {
-      start + pageSize;
-    };
-
-    let paginatedReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(
-      Array.slice(sortedReferrals, start, end)
-    );
-
-    var topReferrals : [ReferralsTop] = [];
-    for (entry in paginatedReferrals.vals()) {
-
-      let playerId = entry.0;
-      let referrer = await getReferrer(playerId);
-      let totalReferrals = await getTotalReferrals(playerId);
-      let multiplier = await getMultiplier(playerId);
-      let (_, playerOpt) = await getPlayer(playerId);
-      let username = switch (playerOpt) {
-        case (?player) { player.username };
-        case (null) { "Unknown" };
-      };
-      let avatar = switch (playerOpt) {
-        case (?player) { player.avatar };
-        case (null) { 0 };
-      };
-
-      let r : ReferralsTop = {
-        playerId = playerId;
-        totalReferrals = totalReferrals;
-        multiplier = multiplier;
-        username = username;
-        avatar = avatar;
-        referrer = referrer;
-      };
-      topReferrals := Array.append(topReferrals, [r]);
-    };
-    return topReferrals;
-  };
-  public type ELOTop = {
-    playerId : Principal;
-    elo : Float;
-    username : Text;
-    avatar : Nat;
-  };
-  public shared func getTopELO(page : Nat) : async [ELOTop] {
-    let buffer = Buffer.Buffer<(PlayerId, Float)>(players.size());
-    for ((playerId, player) in players.entries()) {
-        buffer.add((playerId, player.elo));
-    };
-
-    let allPlayersWithELO = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-        allPlayersWithELO,
-        func(a : (PlayerId, Float), b : (PlayerId, Float)) : { #less; #equal; #greater; } {
-            if (a.1 > b.1) {
-                #less;
-            } else if (a.1 < b.1) {
-                #greater;
-            } else {
-                #equal;
-            };
-        },
-    );
-
-    let pageSize = 10;
-    let start = page * pageSize;
-    let end = if (start + pageSize > Array.size(sortedPlayers)) {
-        Array.size(sortedPlayers);
-    } else {
-        start + pageSize;
-    };
-
-    let paginatedPlayers : [(PlayerId, Float)] = Iter.toArray(
-        Array.slice(sortedPlayers, start, end)
-    );
-
-    var topELOPlayers : [ELOTop] = [];
-    for (entry in paginatedPlayers.vals()) {
-        let playerId = entry.0;
-        let elo = entry.1;
-        let (_, playerOpt) = await getPlayer(playerId);
-        let username = switch (playerOpt) {
-            case (?player) { player.username };
-            case (null) { "Unknown" };
-        };
-        let avatar = switch (playerOpt) {
-            case (?player) { player.avatar };
-            case (null) { 0 };
-        };
-
-        let p : ELOTop= {
-            playerId = playerId;
-            elo = elo;
-            username = username;
-            avatar = avatar;
-        };
-        topELOPlayers := Array.append(topELOPlayers, [p]);
-    };
-    return topELOPlayers;
-  };
-  public type NFTTop = {
-    playerId : Principal;
-    avatar : Nat;
-    username : Text;
-    level : Nat;
-    nftCount : Nat;
-  };
-  public shared func getTopNFTs(page : Nat) : async [NFTTop] {
-    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
-    for ((playerId, player) in players.entries()) {
-      let nftCount = (await getNFTs(playerId)).size();
-      buffer.add((playerId, nftCount));
-    };
-    let allPlayersWithNFTs = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-      allPlayersWithNFTs,
-      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
-        if (a.1 > b.1) {
-          #less;
-        } else if (a.1 < b.1) {
-          #greater;
-        } else {
-          #equal;
-        };
-      },
-    );
-
-    let pageSize = 10;
-    let start = page * pageSize;
-    let end = if (start + pageSize > Array.size(sortedPlayers)) {
-      Array.size(sortedPlayers);
-    } else {
-      start + pageSize;
-    };
-
-    let paginatedPlayers : [(PlayerId, Nat)] = Iter.toArray(
-      Array.slice(sortedPlayers, start, end)
-    );
-
-    var topNFTPlayers : [NFTTop] = [];
-    for (entry in paginatedPlayers.vals()) {
-      let playerId = entry.0;
-      let nftCount = entry.1;
-      let (_, playerOpt) = await getPlayer(playerId);
-      let username = switch (playerOpt) {
-        case (?player) { player.username };
-        case (null) { "Unknown" };
-      };
-      let avatar = switch (playerOpt) {
-        case (?player) { player.avatar };
-        case (null) { 0 };
-      };
-      let level = switch (playerOpt) {
-        case (?player) { player.level };
-        case (null) { 0 };
-      };
-
-      let p : NFTTop = {
-        playerId = playerId;
-        avatar = avatar;
-        username = username;
-        level = level;
-        nftCount = nftCount;
-      };
-      topNFTPlayers := Array.append(topNFTPlayers, [p]);
-    };
-    return topNFTPlayers;
-  };
-  public type LevelTop = {
-    playerId : Principal;
-    level : Nat;
-    username : Text;
-    avatar : Nat;
-  }; 
-  public shared func getTopLevel(page : Nat) : async [LevelTop] {
-    let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
-    for ((playerId, player) in players.entries()) {
-      buffer.add((playerId, player.level));
-    };
-    let allPlayersWithLevels = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-      allPlayersWithLevels,
-      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
-        #less;
-        #equal;
-        #greater;
-      } {
-        if (a.1 > b.1) {
-          #less;
-        } else if (a.1 < b.1) {
-          #greater;
-        } else {
-          #equal;
-        };
-      },
-    );
-    let start = page * 10;
-    let end = if (start + 10 > Array.size(sortedPlayers)) {
-      Array.size(sortedPlayers);
-    } else {
-      start + 10;
-    };
-    let paginatedPlayers = Iter.toArray(Array.slice(sortedPlayers, start, end));
-    var topPlayers : [LevelTop] = [];
-    for (entry in paginatedPlayers.vals()) {
-      let playerId = entry.0;
-      let level = entry.1;
-      let (_, playerOpt) = await getPlayer(playerId);
-      let username = switch (playerOpt) {
-        case (?player) { player.username };
-        case (null) { "Unknown" };
-      };
-      let avatar = switch (playerOpt) {
-        case (?player) { player.avatar };
-        case (null) { 0 };
-      };
-      let p : LevelTop = {
-        playerId = playerId;
-        level = level;
-        username = username;
-        avatar = avatar;
-      };
-      topPlayers := Array.append(topPlayers, [p]);
-    };
-    return topPlayers;
-  };
-  public type AchievementsTop = {
-    playerId : Principal;
-    totalAchievements : Nat;
-    username : Text;
-    avatar : Nat;
-  };
-  public shared func getTopAch(page : Nat) : async [AchievementsTop] {
-    let buffer = Buffer.Buffer<(PlayerId, Nat)>(userProgress.size());
-    for ((playerId, userCategoriesList) in userProgress.entries()) {
-        var totalAchievements : Nat = 0;
-
-        // Count category achievements based on progress
-        for (category in userCategoriesList.vals()) {
-            totalAchievements += category.progress;
-
-            // Count line achievements based on progress
-            for (achievementLine in category.achievements.vals()) {
-                totalAchievements += achievementLine.progress;
-
-                // Count individual achievements based on progress
-                for (individualAchievement in achievementLine.individualAchievements.vals()) {
-                    totalAchievements += individualAchievement.progress;
-                };
-            };
-        };
-
-        buffer.add((playerId, totalAchievements));
-    };
-
-    let allPlayersWithAchievements = Buffer.toArray(buffer);
-    let sortedPlayers = Array.sort(
-        allPlayersWithAchievements,
-        func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
-            if (a.1 > b.1) {
-                #less;
-            } else if (a.1 < b.1) {
-                #greater;
-            } else {
-                #equal;
-            };
-        },
-    );
-
-    let pageSize = 10;
-    let start = page * pageSize;
-    let end = if (start + pageSize > Array.size(sortedPlayers)) {
-        Array.size(sortedPlayers);
-    } else {
-        start + pageSize;
-    };
-
-    let paginatedPlayers : [(PlayerId, Nat)] = Iter.toArray(
-        Array.slice(sortedPlayers, start, end)
-    );
-
-    var topAchievementPlayers : [AchievementsTop] = [];
-    for (entry in paginatedPlayers.vals()) {
-        let playerId = entry.0;
-        let totalAchievements = entry.1;
-        let (_, playerOpt) = await getPlayer(playerId);
-        let username = switch (playerOpt) {
-            case (?player) { player.username };
-            case (null) { "Unknown" };
-        };
-        let avatar = switch (playerOpt) {
-            case (?player) { player.avatar };
-            case (null) { 0 };
-        };
-
-        let p : AchievementsTop = {
-            playerId = playerId;
-            totalAchievements = totalAchievements;
-            username = username;
-            avatar = avatar;
-        };
-        topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
-    };
-    return topAchievementPlayers;
-  };
+//#region |Views|
 
   public query func get_player():async Bool{true};
+  public query func get_profile():async Bool{true};
   public query func get_settings():async Bool{true};
   public query func get_referrals():async Bool{true};
   public query func get_achievements():async Bool{true};
@@ -8352,8 +8314,6 @@ system func postupgrade() {
       await getTopLevel(page), 
       await getTopAch(page)
     );
-  };       
+  };
+// #endregion 
 };
-
-//definir una funcion de tops para regresar todos los datos utilizados en la vista 
-
