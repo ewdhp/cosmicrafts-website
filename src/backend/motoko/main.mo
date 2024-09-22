@@ -8272,7 +8272,8 @@ Self {
         };
     topView;
   };
-  public shared ({ caller }) func getAchievementsView() : async ([AchievementCategory],[AchievementLine],[IndividualAchievement],) {
+  public shared ({ caller }) func getAchievementsView() 
+  : async ([AchievementCategory],[AchievementLine],[IndividualAchievement],) {
     let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
     var lines : [AchievementLine] = [];

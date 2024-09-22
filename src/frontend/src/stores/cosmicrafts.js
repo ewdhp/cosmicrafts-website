@@ -110,7 +110,8 @@ export async function useCosmicraftsStore() {
   }
 
   let cosmicrafts = {
-    module: data,
+    all: data,
+    module: store.module,
     actor: store.actor,
   };
   console.log("Cosmicrafts loaded:");
