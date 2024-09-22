@@ -110,7 +110,7 @@ export async function useCosmicraftsStore() {
   }
 
   let cosmicrafts = {
-    all: data,
+    player: data,
     module: store.module,
     actor: store.actor,
   };

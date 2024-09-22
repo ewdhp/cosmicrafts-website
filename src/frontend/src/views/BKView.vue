@@ -25,11 +25,14 @@ export default {
 
     onMounted(async () => {
       const cosmicrafts = await useCosmicraftsStore();
-      data.value = cosmicrafts.all;
+      data.value = cosmicrafts.player;
     });
 
     const isObject = (value) => {
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
+      return typeof 
+      value === 'object' && 
+      value !== null && 
+      !Array.isArray(value);
     };
 
     const isArray = (value) => {
@@ -42,7 +45,10 @@ export default {
       } else if (Array.isArray(value)) {
         return value.map(formatValue).join(', ');
       } else if (typeof value === 'object' && value !== null) {
-        return Object.entries(value).map(([key, val]) => `${key}: ${formatValue(val)}`).join(', ');
+        return Object.entries(value).map(
+          ([key, val]) => 
+          `${key}: ${formatValue(val)}`)
+          .join(', ');
       }
       return value;
     };

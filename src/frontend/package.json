@@ -8,9 +8,8 @@
     "start": "vite --port 3000",
     "prebuild": "dfx generate",
     "build": "tsc && vite build",
-    "test": "export NODE_OPTIONS=--no-deprecation && vitest",
-    "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
-    "all": "dfx deploy && npm run test && npm start"
+    "test": "vitest",
+    "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\""
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
