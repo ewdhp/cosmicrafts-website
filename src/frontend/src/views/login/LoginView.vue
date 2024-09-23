@@ -29,7 +29,7 @@
 
       <!-- Clarification Message -->
       <div class="clarification-message">
-        <p>Create a new account by connecting.</p>
+        <p>Log In with your preferred method.</p>
       </div>
     </div>
 
@@ -178,7 +178,7 @@ const authMethods = [
   font-weight: 600;
   margin-top: 4vh;
   margin-bottom: 2vh;
-  font-size: 2vh;
+  font-size: 12px;
 }
 
 /* Custom Google Button & Auth Methods Grid */
@@ -221,7 +221,8 @@ const authMethods = [
   width: 100%;
   justify-content: flex-start;
   color: #d6d6d6;
-  font-size: 1.8vh; /* Responsive font size */
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .btn-text {

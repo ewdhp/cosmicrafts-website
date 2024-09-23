@@ -1,9 +1,22 @@
 <template>
       <div class="profile-container">
-        <!-- Banner -->
-        <div class="profile-banner">
-          <img src="@/assets/images/banner.jpg" alt="Profile Banner" class="banner-img" />
-        </div>
+       <!-- SVG Definition for ClipPath -->
+    <svg width="0" height="0">
+      <defs>
+        <clipPath id="bannerClip">
+          <circle cx="88" cy="88" r="72" />
+        </clipPath>
+        <clipPath id="bannerClip2">
+          <circle cx="70" cy="70" r="54" />
+        </clipPath>
+      </defs>
+    </svg>
+
+    <!-- Banner with the masked circle using the SVG clip-path -->
+    <div class="profile-banner">
+      <div class="banner-mask"></div>
+      <img src="@/assets/images/banner.jpg" alt="Profile Banner" class="banner-img" />
+    </div>
     
         <!-- Avatar, Username, Title, and Buttons -->
         <div class="profile-header">
@@ -125,7 +138,7 @@
           gamesWon: 60,
           damageDone: "124M",
           energySpent: "12.5K",
-          timePlayed: "40 hours",
+          timePlayed: "40 Hrs",
           cxp: "44.6K",
         };
       },
@@ -143,34 +156,45 @@
     </script>
     
     <style scoped>
+
     .profile-container {
-      padding: 2px;
+      padding: 4px;
+      margin-top: 88px;
     }
     
     /* Banner */
     .profile-banner {
-      width: 100%;
-      height: 128px;
-      position: relative;
-      overflow: hidden;
-    }
-    
+  margin-top: -42px;
+  position: relative;
+  width: 100%;
+  height: 128px;
+}
+
     .profile-banner img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      border-radius: 24px;
     }
-    
-    /* Avatar Masked */
+
+.banner-mask {
+  position: absolute;
+  top: 42px;
+  width: 100%;
+  height: 100%;
+  background: rgba(28, 36, 44, 1);
+  clip-path: url(#bannerClip); /* Use SVG clip-path */
+  z-index: 0;
+}
+
     .avatar-wrapper {
       position: absolute;
-      top: -50px;
-      left: 20px;
-      width: 120px;
-      height: 120px;
+      top: -64px;
+      left: 24px;
+      width: 128px;
+      height: 128px;
       overflow: hidden;
       border-radius: 50%;
-      border: 4px solid #fff;
     }
     
     .profile-avatar {
@@ -218,6 +242,7 @@
     
     .verified-icon {
       margin-left: 8px;
+      width: 21px;
     }
     
     .profile-id {
@@ -251,15 +276,16 @@
       display: flex;
       gap: 4px;
       position: absolute;
-      right: 20px;
+      right: 4px;
       top: 12px;
     }
 
     .follow-btn{
       border-radius: 10px;
-      font-weight: bold;
+      width: 96px;
     }
-    .dm-btn,
+
+.dm-btn,
 .more-btn {
   border-radius: 50%;
   width: 40px; /* Ensures consistent size */
@@ -281,7 +307,8 @@
       color: white;
       cursor: pointer;
       border: .25px solid #ffffff1d;
-      font-weight: bold;
+      font-weight: 600;
+      font-size: 12px;
     }
     
     .dm-btn img,
@@ -406,28 +433,20 @@
       color: #888;
     }
     
-    /* Media Queries for mobile responsiveness */
-    @media screen and (max-width: 768px) {
+
+    @media screen and (max-width: 480px) {
+
+
       .profile-title {
         font-size: 18px;
       }
     
       .profile-username {
-        font-size: 28px;
-      }
-    
-      .verified-icon {
-        width: 24px;
+        font-size: 24px;
       }
     
       .profile-id {
         font-size: 12px;
-      }
-    
-      .follow-btn,
-      .dm-btn,
-      .more-btn {
-        padding: 4px;
       }
     
       .profile-stats .stat-value {
@@ -437,6 +456,42 @@
       .profile-stats .stat-label {
         font-size: 12px;
       }
+
+      .follow-btn{
+        width: 78px;
+      }
+      .followers-count {
+      font-size: 12px;
+    }
+    
+      .profile-stats .stat-value {
+        font-size: 21px;
+      }
+    
+      .profile-stats .stat-label {
+        font-size: 12px;
+      }
+
+      .profile-links {
+      display: flex;
+      gap: 6px;
+      font-size: 10px;
+
+    }
+
+    .banner-mask {
+  position: absolute;
+  top: 42px;
+  background: rgba(28, 36, 44, 1);
+  clip-path: url(#bannerClip2);
+  z-index: 0;
+}
+
+    .avatar-wrapper {
+      width: 92px;
+      height: 92px;
+    }
+    
     }
     </style>
     

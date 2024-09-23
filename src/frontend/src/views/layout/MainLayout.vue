@@ -80,18 +80,22 @@ export default {
 </template>
 
 <style scoped lang="scss">
+
+* {
+  box-sizing: border-box;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg');
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  
+}
 
-  .layout-container {
-    display: flex;
-    flex-grow: 1;
-    padding: 66px;
-    background: linear-gradient(to bottom, rgba(38, 50, 60, 0.812), rgba(16, 26, 34, 0.958)); /* 20% opacity gradient */
-  }
+.layout-container {
+  display: absolute;
+  width: 100vw;
+  flex-direction: column;
 }
 
 .header {
@@ -146,7 +150,9 @@ export default {
   flex-grow: 0;
   margin-left: 9vw;
   margin-right: 10px;
-  padding: 20px;
+  padding: 24px;
+  margin-left: 64px;
+  margin-right: 0;
 
   &::before {
     content: '';
@@ -180,14 +186,9 @@ export default {
 
 /* Media query for screens below 1080px */
 @media (max-width: 1080px) {
-  .layout-container {
-    flex-direction: column;
-    padding: 16px;
-  }
 
   .header {
   width: 95%;
-
   }
 
   .left-panel {
@@ -198,18 +199,14 @@ export default {
     bottom: 0;
     flex-direction: row;
     justify-content: space-around;
-    padding: 8px;
-    max-height: none;
-    border-radius: 16px;
-    border-top: 0.25px solid rgba(255, 255, 255, 0.086);
-    border-left: none;
-    border-right: none;
-
+  padding: 8px;
+  max-height: none;
   left: 0;
   right: 0;
-  
   margin-left: auto;
   margin-right: auto;
+  overflow: hidden;
+  border-radius: 0px; 
   }
 
   .content-panel {
@@ -223,31 +220,4 @@ export default {
   }
 }
 
-@media (max-width: 480px) {
-  .search {
-    max-width: 65%; /* Even larger for very small screens */
-  }
-
-  .header {
-
-  display: flex;
-  justify-content: space-between;
-  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
-  position: fixed;
-  top: 0px;
-  border-bottom: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
-  border-radius: 0px;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  backdrop-filter: blur(12px); /* Keep the blurring effect */
-  }
-
-  .left-panel {
-  top: 92%;
-  width: 92%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-}
 </style>
