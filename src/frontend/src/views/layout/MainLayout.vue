@@ -82,6 +82,8 @@ export default {
 <style scoped lang="scss">
 
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -100,28 +102,28 @@ export default {
 
 .header {
   width: 98%;
-  height: 64px;
+  height: 4rem;
   display: flex;
   justify-content: space-between;
   background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
-  padding: 1px;
+  padding: .25rem;
   position: fixed;
-  top: 12px; /* Lower it by 12px from the top of the viewport */
+  top: 1rem;
   left: 50%; /* Move it 50% from the left */
   transform: translateX(-50%); /* Center it horizontally */
   z-index: 10;
-  border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
-  border-radius: 10px; /* Round the edges with 10px radius */
-  backdrop-filter: blur(12px); /* Keep the blurring effect */
+  border: 0.25px solid rgba(255, 255, 255, 0.086);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
 }
 
 .link-nav {
   display: flex;
-  margin-left: 12px;
+  margin-left: 1rem;
   align-items: center;
 
   img {
-    width: 42px;
+    width: 2.5rem;
   }
 }
 
@@ -133,12 +135,12 @@ export default {
 
 
 .left-panel {
-  padding: 8px;
+  padding: .5rem;
   display: flex;
   flex-direction: column;
   position: absolute;
-  top: 96px;
-  left: 12px;
+  top: 6rem;
+  left: 1rem;
   background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2));
   border: 0.25px solid rgba(255, 255, 255, 0.086);
   border-radius: 10px;
@@ -147,25 +149,11 @@ export default {
 }
 
 .content-panel {
-  flex-grow: 0;
-  margin-left: 9vw;
-  margin-right: 10px;
-  padding: 24px;
-  margin-left: 64px;
+  flex-grow: 1;
+  margin: 0 2rem;
+  padding: 2rem;
+  margin-left: 4rem;
   margin-right: 0;
-
-  &::before {
-    content: '';
-    background-size: 100%;
-    opacity: 0.015;
-    position: absolute;
-    width: 512px;
-    height: 512px;
-    top: 50%;
-    right: 0;
-    right: 12px;
-    transform: translateY(-50%);
-  }
 }
 
 .right-panel {
@@ -194,13 +182,12 @@ export default {
   .left-panel {
     top: 92%;
     width: auto;
-    height: 64px;
+    height: 4rem;
     position: fixed;
     bottom: 0;
     flex-direction: row;
     justify-content: space-around;
-  padding: 8px;
-  max-height: none;
+  padding: .5rem;
   left: 0;
   right: 0;
   margin-left: auto;
@@ -212,7 +199,8 @@ export default {
   .content-panel {
     margin-left: 0;
     margin-right: 0;
-    padding: 16px;
+    margin-top: 1rem;
+    padding: .5rem;
   }
 
   .right-panel {

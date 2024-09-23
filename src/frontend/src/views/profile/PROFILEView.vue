@@ -4,10 +4,10 @@
     <svg width="0" height="0">
       <defs>
         <clipPath id="bannerClip">
-          <circle cx="88" cy="88" r="72" />
+          <circle cx="88" cy="87" r="74" />
         </clipPath>
         <clipPath id="bannerClip2">
-          <circle cx="70" cy="70" r="54" />
+          <circle cx="71" cy="69" r="54" />
         </clipPath>
       </defs>
     </svg>
@@ -53,9 +53,10 @@
 
           <!-- Buttons: Follow, DM, More -->
           <div class="profile-actions">
-            <button class="follow-btn">Following</button>
-            <button class="dm-btn"><img src="@/assets/icons/dm_icon.svg" /></button>
+          
             <button class="more-btn"><img src="@/assets/icons/more_icon.svg" /></button>
+            <button class="dm-btn"><img src="@/assets/icons/dm_icon.svg" /></button>
+            <button class="follow-btn">Following</button>
           </div>
         </div>
     
@@ -158,28 +159,27 @@
     <style scoped>
 
     .profile-container {
-      padding: 4px;
-      margin-top: 88px;
+      padding: 1rem;
+      margin-top: 2rem;
     }
     
     /* Banner */
     .profile-banner {
-  margin-top: -42px;
   position: relative;
   width: 100%;
-  height: 128px;
+  height: 8rem;
 }
 
     .profile-banner img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: 24px;
+      border-radius: 12px;
     }
 
 .banner-mask {
   position: absolute;
-  top: 42px;
+  top: 2.5rem;
   width: 100%;
   height: 100%;
   background: rgba(28, 36, 44, 1);
@@ -189,8 +189,8 @@
 
     .avatar-wrapper {
       position: absolute;
-      top: -64px;
-      left: 24px;
+      top: -4rem;
+      left: 1.5rem;
       width: 128px;
       height: 128px;
       overflow: hidden;
@@ -209,7 +209,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 64px;
+      padding-top: 3rem;
       position: relative;
       text-align: center;
     }
@@ -218,7 +218,7 @@
       text-align: left;
       margin-left: 0;
       width: 100%;
-      padding-top: 4px;
+      padding-top: .5rem;
     }
     
     .username-row {
@@ -227,22 +227,22 @@
     }
     
     .profile-title {
-      font-size: 24px;
+      font-size: 1.5rem;
       color: gray;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
       font-weight: 600;
     }
     
     .profile-username {
-      font-size: 36px;
+      font-size: 2.5rem;
       margin: 0;
       padding: 0;
       font-weight: 800;
     }
     
     .verified-icon {
-      margin-left: 8px;
-      width: 21px;
+      margin-left: .5rem;
+      width: 1.5rem;
     }
     
     .profile-id {
@@ -253,7 +253,7 @@
     .principal-id-label {
   color: #aaa; /* Label is lighter */
   font-weight: 500;
-  margin-right: 8px;
+  margin-right: .5rem;
 }
 
 .principal-id-text {
@@ -262,34 +262,34 @@
 }
     
     .principal-icon {
-      width: 14px;
-      margin-right: 5px;
+      width: 1rem;
+      margin-right: .25rem;
     }
     
     .copy-icon {
-      width: 14px;
-      margin-left: 5px;
+      width: 1rem;
+      margin-left: .25rem;
       cursor: pointer;
     }
     
     .profile-actions {
       display: flex;
-      gap: 4px;
+      gap: .5rem;
       position: absolute;
-      right: 4px;
-      top: 12px;
+      right: .25rem;
+      top: .5rem;
     }
 
     .follow-btn{
       border-radius: 10px;
-      width: 96px;
+      width: 8rem;
     }
 
 .dm-btn,
 .more-btn {
   border-radius: 50%;
-  width: 40px; /* Ensures consistent size */
-  height: 40px; /* Ensures consistent size */
+  width: 42px; /* Ensures consistent size */
+  height: 42px; /* Ensures consistent size */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,13 +308,14 @@
       cursor: pointer;
       border: .25px solid #ffffff1d;
       font-weight: 600;
-      font-size: 12px;
+      font-size: .9rem;
+      font-family: 'Montserrat', sans-serif;
     }
     
     .dm-btn img,
 .more-btn img {
-  width: 18px; /* SVG size inside the button */
-  height: 18px;
+  width: 1.25rem; /* SVG size inside the button */
+  height: 1.25rem;
 }
     
     .follow-btn:hover,
@@ -326,14 +327,14 @@
     /* Links and Info */
     .profile-description {
       margin: 4px 0;
-      font-size: 12px;
+      font-size: 1rem;
       
     }
     
     .profile-links {
       display: flex;
-      gap: 12px;
-      font-size: 12px;
+      gap: 1rem;
+      font-size: 1rem;
       color:#ADADAD;
     }
 
@@ -344,15 +345,16 @@
       }
 
       .profile-links img {
-      width: 12px; /* Adjust as necessary */
-      height: 12px; /* Ensure a uniform height as well */
-      margin-right: 2px;
+      width: 1rem;
+      height: 1rem;
+      margin-right: .25rem;
+      margin-bottom: .25rem;
       vertical-align: middle; /* Ensures alignment with the text */
       }
     
 
     .followers-count {
-      font-size: 16px;
+      font-size: 1.1rem;
       font-weight: 600;
     }
 
@@ -362,16 +364,16 @@
 
       .followers-count span:nth-child(2n) {
       color: #ADADAD; /* Gray color for the text */
-      font-size: 14px;
+      font-size: 1rem;
       
       }
     
     .followers-icons {
-      margin-top: 12px;
+      margin-top: 1rem;
       display: flex;
       align-items: center;
-      gap: 4px;
-      font-size: 12px;
+      gap: .25rem;
+      font-size: .75rem;
       color: #ADADAD;
     }
     
@@ -396,8 +398,8 @@
       border: none;
       color: white;
       cursor: pointer;
-      padding: 12px;
-      margin-top: 12px;
+      padding: .5rem;
+      margin-top: .5rem;
       font-weight: 600;
       font-family: 'Montserrat', sans-serif;
     }
@@ -414,7 +416,7 @@
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 2rem;
     }
     
     .stat-item {
@@ -424,64 +426,58 @@
     }
     
     .stat-value {
-      font-size: 24px;
+      font-size: 2rem;
       font-weight: bold;
     }
     
     .stat-label {
-      font-size: 14px;
+      font-size: 1rem;
       color: #888;
     }
     
 
     @media screen and (max-width: 480px) {
-
-
       .profile-title {
-        font-size: 18px;
+        font-size: 1.25rem;
       }
     
       .profile-username {
-        font-size: 24px;
+        font-size: 2rem;
       }
     
       .profile-id {
-        font-size: 12px;
+        font-size: 1rem;
       }
-    
-      .profile-stats .stat-value {
-        font-size: 24px;
-      }
+
+
+      .profile-description {
+      font-size: .75rem;
+    }
     
       .profile-stats .stat-label {
-        font-size: 12px;
+        font-size: .5rem;
       }
 
       .follow-btn{
-        width: 78px;
+        width: 88px;
       }
       .followers-count {
-      font-size: 12px;
+      font-size: 1rem;
     }
     
       .profile-stats .stat-value {
-        font-size: 21px;
-      }
-    
-      .profile-stats .stat-label {
-        font-size: 12px;
+        font-size: 1.5rem;
       }
 
       .profile-links {
       display: flex;
-      gap: 6px;
-      font-size: 10px;
-
+      gap: .5rem;
+      font-size: .55rem;
     }
 
     .banner-mask {
   position: absolute;
-  top: 42px;
+  top: 2.5rem;
   background: rgba(28, 36, 44, 1);
   clip-path: url(#bannerClip2);
   z-index: 0;
@@ -492,6 +488,15 @@
       height: 92px;
     }
     
+    .dm-btn,
+.more-btn {
+  width: 36px; /* Ensures consistent size */
+  height: 36px; /* Ensures consistent size */
+
+}
+.profile-info {
+      padding-top: 0rem;
+    }
     }
     </style>
     
