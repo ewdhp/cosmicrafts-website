@@ -18,6 +18,11 @@ import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
 import DashboardHoverIcon from '@/assets/icons/dashboard-hover.svg';
 import DashboardInactiveIcon from '@/assets/icons/dashboard-inactive.svg';
 
+import ProfileActiveIcon from '@/assets/icons/profile-active.svg';
+import ProfileHoverIcon from '@/assets/icons/profile-hover.svg';
+import ProfileInactiveIcon from '@/assets/icons/profile-inactive.svg';
+
+
 import AchievementsActiveIcon from '@/assets/icons/achievements-active.svg';
 import AchievementsHoverIcon from '@/assets/icons/achievements-hover.svg';
 import AchievementsInactiveIcon from '@/assets/icons/achievements-inactive.svg';
@@ -177,9 +182,9 @@ const navItems = [
         component: PROView,
         meta: { requiresAuth: true },
         icons: { 
-          active: StatisticsActiveIcon,
-          hover: StatisticsHoverIcon,
-          inactive: StatisticsInactiveIcon,
+          active: ProfileActiveIcon,
+          hover: ProfileHoverIcon,
+          inactive: ProfileInactiveIcon,
         },
         children: []
       },
