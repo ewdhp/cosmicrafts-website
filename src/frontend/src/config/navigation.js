@@ -11,6 +11,7 @@ import LoginView from '@/views/login/LoginView.vue';
 import TopView from '@/views/top/TopView.vue';
 import MainLayout from '@/views/layout/MainLayout.vue';
 import BKView from '@/views/BKView.vue';
+import PROView from '@/views/profile/PROFILEView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -171,9 +172,9 @@ const navItems = [
         ]
       },
       {
-        path: '/tokens',
-        name: "Tokens",
-        component: TKView,
+        path: '/profile',
+        name: "Profile",
+        component: PROView,
         meta: { requiresAuth: true },
         icons: { 
           active: StatisticsActiveIcon,

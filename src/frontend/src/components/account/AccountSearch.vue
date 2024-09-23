@@ -90,7 +90,7 @@ export default {
 <template>
   <div class="search">
     <div class="search-input">
-      <input v-model="query" @input="handleInput" placeholder="Search in Cosmicrafts..." />
+      <input v-model="query" @input="handleInput" placeholder="Search in Cosmicrafts... " />
       <img src="@/assets/icons/search_icon.svg" class="search-icon" />
     </div>
     <transition name="slide-fade" @before-enter="beforeEnter" @enter="enter" @leave="leave">
@@ -116,34 +116,39 @@ export default {
 .search {
   position: relative;
   display: flex;
-  background: linear-gradient(to bottom, #282828, #252525);
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(to bottom, #282828c7, #252525b7);
   border-radius: 24px;
-  border: 0.25px solid rgba(255, 255, 255, 0.239);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.285);
-
+  border: 0.25px solid rgba(255, 255, 255, 0.107);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.109);
+  width: 100%;
+  max-width: 60%; /* Maximum width to be 60% of the viewport */
+  margin: 0 auto; /* Center horizontally */
 }
 
 .search-input {
-  position: relative; /* Add relative positioning to control the icon */
+  position: relative;
   display: flex;
   align-items: center;
-  flex-grow: 1;
+  width: 100%;
 }
 
 .search-input input {
-  padding: 8px 16px 8px 42px; /* Adjust padding to ensure text is next to the icon */
+  padding: 8px 16px 8px 42px;
   background: none;
   border: none;
   color: #b4b4b4;
+  width: 100%;
 }
 
 .search-input input::placeholder {
-  color: #747474;
+  color: #828282;
 }
 
 .search-input input:focus {
-  background: linear-gradient(to top, #2d2d2d, rgb(43, 43, 43));
-  padding: 8px 16px 8px 42px; /* Adjust padding to ensure text is next to the icon */
+  background: linear-gradient(to bottom, #282828c7, #252525b7);
+  padding: 8px 16px 8px 42px;
   border-radius: 25px;
   outline: none;
   box-shadow: none;
@@ -152,12 +157,11 @@ export default {
 .search-input .search-icon {
   position: absolute;
   left: 12px;
-  width: 20px;
+  width: 16px;
   height: 20px;
-  pointer-events: none; /* Ensure the icon doesn't interfere with input */
+  pointer-events: none;
   transition: opacity 0.2s ease;
 }
-
 
 .search-results {
   position: absolute;
@@ -187,18 +191,6 @@ export default {
   border-bottom: none;
 }
 
-.search-results ul li a {
-  text-decoration: none;
-  color: #333;
-  display: block;
-  width: 100%;
-  padding: 10px;
-}
-
-.search-results ul li a:hover {
-  background-color: #f0f0f0;
-}
-
 .no-results {
   padding: 10px;
   text-align: center;
@@ -210,14 +202,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid;
   padding: 2px;
   border-radius: 5px;
 }
 
 .avatar {
   display: flex;
-  border: 1px solid;
   margin: 2px;
 }
 
@@ -258,5 +248,25 @@ export default {
 .slide-fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* Responsive Design */
+@media (max-width: 1080px) {
+  .search {
+    max-width: 60%; /* 60% of the viewport on 1080px */
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .search {
+    max-width: 66%; /* Make it larger on smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .search {
+    max-width: 50%; /* Even larger for very small screens */
+  }
 }
 </style>
