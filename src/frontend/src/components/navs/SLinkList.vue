@@ -81,42 +81,37 @@ export default {
 <style scoped>
 .nav-container {
   display: flex;
-  justify-content: center;
+  justify-content: center; /* Center the nav-container horizontally */
+  align-items: center; /* Align the items vertically */
+  margin: 0 auto; /* Horizontally center the container */
 }
 
 .section {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px;
-  border-radius: 8px;
-  border: .25px solid rgb(255, 255, 255);
+  padding: 5px;
+  border-radius: 10px;
   cursor: pointer;
-  /* Ensure smooth transition for all properties */
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
   margin-bottom: 12px;
 }
 
 .nav-icon {
-  width: 24px;
-  height: 24px;
-
-  transition: transform 0.2s ease-in-out; /* Consistent transition for icon scaling */
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease-in-out;
 }
 
-/* Scaling the SVG only on hover */
 .link-list li:not(.active):hover .nav-icon {
   transform: scale(1.1);
   transition: background 0.4s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.1s ease-in-out;
 }
 
-/* SVG Animation when switch to active */
 .link-list li.active .nav-icon {
-
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
 }
 
-/* Button Animation when switch to active */
 .link-list li.active .section {
   background: linear-gradient(to bottom, #00C0FC, #0039BA);
   border: 1px solid #00ffff88;
@@ -125,32 +120,27 @@ export default {
   transition: background 0.6s ease-in-out, border 0.2s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
 }
 
-/* Default inactive state */
 .link-list li .section {
-  
   background: linear-gradient(to bottom, #292c3729, #0c0f1684);
-  border: .5px solid #ffffff2e;
-  box-shadow: 0 4px 2px brgba(0, 0, 0, 0.139);
+  border: 0.5px solid #ffffff2e;
+  box-shadow: 0 4px 2px rgba(0, 0, 0, 0.139);
   transition: background 0.6s ease-in-out, border 0.25s ease-in-out, box-shadow 0.5s ease-in-out, transform 0.25s ease-in-out;
   margin-bottom: 24px;
 }
 
-/* Hover state for non-active buttons */
 .link-list li:not(.active):hover .section {
   background: linear-gradient(to bottom, #151927, #293547);
-  border: 2px solid #41c79f;
-  box-shadow: 0 0 16px cyan;
-  transform: scale(1.05); /* Slightly bigger on hover */
+  border: 1px solid #41c79f;
+  box-shadow: 0 0 8px rgba(0, 255, 251, 0.197);
+  transform: scale(1.05);
   transition: background 0.4s ease-in-out, border 0.2s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
 }
 
-/* Ensure all buttons have the same base size */
 .link-list li .section,
 .link-list li.active .section,
 .link-list li:not(.active):hover .section {
   width: 24px;
   height: 24px;
-  
 }
 
 .link-list ul {
@@ -159,11 +149,10 @@ export default {
   margin: 0;
 }
 
-/* Media query for screens below 768px */
 @media (max-width: 1080px) {
   .nav-container {
-    flex-direction: column;
-    align-items: center;
+    width: 60%; /* Limit the width to 60% of the viewport */
+    margin: 0 auto; /* Ensure it's centered horizontally */
   }
 
   .link-list {

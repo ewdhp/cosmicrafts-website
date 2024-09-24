@@ -11,11 +11,17 @@ import LoginView from '@/views/login/LoginView.vue';
 import TopView from '@/views/top/TopView.vue';
 import MainLayout from '@/views/layout/MainLayout.vue';
 import BKView from '@/views/BKView.vue';
+import PROView from '@/views/profile/PROFILEView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
 import DashboardHoverIcon from '@/assets/icons/dashboard-hover.svg';
 import DashboardInactiveIcon from '@/assets/icons/dashboard-inactive.svg';
+
+import ProfileActiveIcon from '@/assets/icons/profile-active.svg';
+import ProfileHoverIcon from '@/assets/icons/profile-hover.svg';
+import ProfileInactiveIcon from '@/assets/icons/profile-inactive.svg';
+
 
 import AchievementsActiveIcon from '@/assets/icons/achievements-active.svg';
 import AchievementsHoverIcon from '@/assets/icons/achievements-hover.svg';
@@ -171,14 +177,14 @@ const navItems = [
         ]
       },
       {
-        path: '/tokens',
-        name: "Tokens",
-        component: TKView,
+        path: '/profile',
+        name: "Profile",
+        component: PROView,
         meta: { requiresAuth: true },
         icons: { 
-          active: StatisticsActiveIcon,
-          hover: StatisticsHoverIcon,
-          inactive: StatisticsInactiveIcon,
+          active: ProfileActiveIcon,
+          hover: ProfileHoverIcon,
+          inactive: ProfileInactiveIcon,
         },
         children: []
       },

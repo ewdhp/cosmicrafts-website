@@ -52,7 +52,7 @@ export default {
 
     <header class="header">
       <div class="link-nav">
-        <img src="@/assets/logos/logo_menu.svg" alt="Logo" class="logo-menu" />
+        <img src="@/assets/logos/cosmicrafts.svg" alt="Logo" class="logo-menu" />
       </div>
       <div class="account-nav">
         <AccountSearch />
@@ -80,76 +80,80 @@ export default {
 </template>
 
 <style scoped lang="scss">
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background-image: url('@/assets/login/fondo.jpg');
-  /*needs to use grid*/
-  .layout-container {
-    display: flex;
-    flex-grow: 1;
-    padding: 66px;
-    background: linear-gradient(to bottom, rgba(38, 50, 60, 0.812), rgba(16, 26, 34, 0.958)); /* 20% opacity gradient */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  
+}
 
-  }
+.layout-container {
+  display: absolute;
+  width: 100vw;
+  flex-direction: column;
 }
 
 .header {
-  width: 97.5%; /* Limit the width to 90% of the viewport */
-  height: 8vh;
+  width: 98%;
+  height: 4rem;
   display: flex;
   justify-content: space-between;
   background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
-  padding: 1px;
+  padding: .25rem;
   position: fixed;
-  top: 12px; /* Lower it by 25px from the top of the viewport */
+  top: 1rem;
   left: 50%; /* Move it 50% from the left */
   transform: translateX(-50%); /* Center it horizontally */
   z-index: 10;
-  border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
-  border-radius: 10px; /* Round the edges with 10px radius */
-  backdrop-filter: blur(12px); /* Keep the blurring effect */
-  
-  .link-nav {
-    display: flex;
-    margin-left: 24px;
-    align-items: center; 
-    
-
-    img {  // Target the img tag within .link-nav
-        width: 96px;
-    }
+  border: 0.25px solid rgba(255, 255, 255, 0.086);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
 }
 
-  .account-nav {
-    display: flex;
-    align-items: center;
+.link-nav {
+  display: flex;
+  margin-left: 1rem;
+  align-items: center;
+
+  img {
+    width: 2.5rem;
   }
 }
 
-.left-panel {
-  padding: 12px;
+.account-nav {
   display: flex;
-  flex-direction: column;
-  position: absolute; /* Changed to fixed positioning */
-  top: 12%; /* Pin to the bottom */
-  left: 12px; /* Left offset */
-  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2)); /* 20% opacity gradient */
-  border: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
-  border-radius: 10px; /* Round the edges with 10px radius */
-  backdrop-filter: blur(12px); /* Blurring effect */
-  overflow-y: auto; /* Make it scrollable if content overflows */
+  align-items: center;
+  width: 100%;
 }
 
 
-.content-panel {
-  flex-grow: 0;
-  margin-left: 9vw; /* Space for the left panel */
-  margin-right: 10px; /* Space for the right panel */
-  padding: 20px;
- 
+.left-panel {
+  padding: .5rem;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 6rem;
+  left: 1rem;
+  background: linear-gradient(to bottom, rgba(101, 153, 201, 0.2), rgba(50, 76, 99, 0.2));
+  border: 0.25px solid rgba(255, 255, 255, 0.086);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+}
 
+.content-panel {
+  flex-grow: 1;
+  margin: 0 2rem;
+  padding: 2rem;
+  margin-left: 4rem;
+  margin-right: 0;
 }
 
 .right-panel {
@@ -167,39 +171,41 @@ export default {
   transition: width 0.3s ease;
 }
 
-/* Media query for screens below 768px */
+
+/* Media query for screens below 1080px */
 @media (max-width: 1080px) {
-  .layout-container {
-    flex-direction: column;
-    padding: 16px;
+
+  .header {
+  width: 95%;
   }
 
   .left-panel {
     top: 92%;
-    width: 100%;
-    height: 6%;
+    width: auto;
+    height: 4rem;
     position: fixed;
     bottom: 0;
-    left: 0;
     flex-direction: row;
     justify-content: space-around;
-    padding: 8px;
-    max-height: none;
-    border-radius: 0;
-    border-top: 0.25px solid rgba(255, 255, 255, 0.086); /* White stroke with 0.25px width and 25% opacity */
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
+  padding: .5rem;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+  border-radius: 0px; 
   }
 
   .content-panel {
     margin-left: 0;
     margin-right: 0;
-    padding: 16px;
+    margin-top: 1rem;
+    padding: .5rem;
   }
 
   .right-panel {
     display: none;
   }
 }
+
 </style>
