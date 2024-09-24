@@ -288,7 +288,7 @@ Self {
     );
   };
 
-  func createMissionsPeriodically() : async () {
+  public func createMissionsPeriodically() : async () {
     let now = Nat64.fromIntWrap(Time.now());
     Debug.print("[createMissionsPeriodically] Current time: " # Nat64.toText(now));
 
@@ -818,9 +818,7 @@ Self {
   };
 
   // Function to update progress for user-specific missions
-  func updateUserMissionsProgress(
-    user : Principal,
-    playerStats : {
+  func updateUserMissionsProgress(user : Principal, playerStats : {
       secRemaining : Nat;
       energyGenerated : Nat;
       damageDealt : Nat;
@@ -832,8 +830,7 @@ Self {
       xpEarned : Nat;
       kills : Nat;
       wonGame : Bool;
-    },
-  ) : async (Bool, Text) {
+    }) : async (Bool, Text) {
 
     //Debug.print("[updateUserMissions] Updating user-specific mission progress for user: " # Principal.toText(user));
     //Debug.print("[updateUserMissions] Player stats: " # debug_show(playerStats));
@@ -1707,11 +1704,7 @@ Self {
   var notifications : HashMap.HashMap<PlayerId, [Notification]> = HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
   var updateTimestamps : HashMap.HashMap<PlayerId, UpdateTimestamps> = HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
 
-  public shared ({ caller : PlayerId }) func registerPlayer(
-    username : Username,
-    avatar : AvatarID,
-    referralCode : ReferralCode,
-  ) : async (Bool, ?Player, Text) {
+  public shared ({ caller : PlayerId }) func registerPlayer(username : Username,avatar : AvatarID,referralCode : ReferralCode) : async (Bool, ?Player, Text) {
     if (username.size() > 12) {
       return (false, null, "Username must be 12 characters or less");
     };
@@ -1784,7 +1777,12 @@ Self {
 
         
         let _ = await assignAchievementsToUser(caller);
-        return (true, ?newPlayer, "User registered successfully with referral code " # finalCode);
+
+        let (_, tDeck, _) = await mintDeck();
+        let (_, _) = await mintChest(caller, 1);
+
+        
+        return (true, ?newPlayer, "User registered successfully with referral code " # finalCode # " Deck: " # tDeck);
       };
     };
   };
@@ -5339,6 +5337,8 @@ Self {
 
   system func preupgrade() {
     // Save the state of the stable variables
+     savedPlayerDecks := playerDecks;
+
     _generalUserProgress := Iter.toArray(generalUserProgress.entries());
     _missions := Iter.toArray(missions.entries());
     _activeMissions := Iter.toArray(activeMissions.entries());
@@ -5384,6 +5384,8 @@ Self {
 
   system func postupgrade() {
       // Restore the state of the stable variables
+      playerDecks := savedPlayerDecks;
+
       generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
       missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
       activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
@@ -5430,7 +5432,9 @@ Self {
 
 //#region |Soul NFT|
 
-  stable var playerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
+  stable var savedPlayerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
+  stable var playerDecks : Trie<Principal, PlayerGameData> = savedPlayerDecks;
+  
 
   private func _keyFromPrincipal(p : Principal) : Key<Principal> {
     { hash = Principal.hash p; key = p };
@@ -7233,9 +7237,6 @@ Self {
 
   public func assignAchievementsToUser(user : PlayerId) : async ([AchievementCategory]) {
 
-    if(achievementCategories.size() == 0) {
-      let _ = await initAchievements();
-    };
     let userProgressOpt = userProgress.get(user);
 
     var userCategoriesList : [AchievementCategory] = switch (userProgressOpt) {
@@ -8243,10 +8244,10 @@ Self {
 // #endregion
 
 //#region |Views|
+
   public type PlayerView = {
     notifications: [Notification];
     friendRequests: [FriendRequest];
-    privacySettings: PrivacySetting;
     fullProfile: ?(Player, PlayerGamesStats, AverageStats);
     friendsList: ?[PlayerId];
     allPlayers: [Player];
@@ -8259,6 +8260,7 @@ Self {
     levelTop :  [LevelTop];
     achTop :  [AchievementsTop];
   };
+
   public shared func get_tops() 
     : async (
       TopView
@@ -8272,12 +8274,18 @@ Self {
         };
     topView;
   };
+
   public shared ({ caller }) func getAchievementsView() 
-  : async ([AchievementCategory],[AchievementLine],[IndividualAchievement],) {
+    : async (
+      [AchievementCategory],
+      [AchievementLine],
+      [IndividualAchievement]) {
+
     let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
     var lines : [AchievementLine] = [];
     var individuals : [IndividualAchievement] = [];
+
     for (category in data.vals()) {
       categories := Array.append(categories, [category]);
       for (line in category.achievements.vals()) {
@@ -8289,27 +8297,27 @@ Self {
     };
     (categories, lines, individuals);
   };
-  public shared ({ caller : PlayerId }) func get_players() : async PlayerView {
-    let notifications = await getNotifications();
-    let friendRequests = await getFriendRequests();
-    let privacySettings = await getMyPrivacySettings();
-    let fullProfile = await getFullProfile(caller);
-    let friendsList = await getFriendsList();
-    let allPlayers = await getAllPlayers();
 
+  public shared ({ caller }) func get_players() 
+    : async PlayerView {
+      let notifications = await getNotifications();
+      let friendRequests = await getFriendRequests();
+      let fullProfile = await getFullProfile(caller);
+      let friendsList = await getFriendsList();
+      let allPlayers = await getAllPlayers();
     return {
         notifications = notifications;
         friendRequests = friendRequests;
-        privacySettings = privacySettings;
         fullProfile = fullProfile;
         friendsList = friendsList;
         allPlayers = allPlayers;
     };
   };
-  public shared ({ caller : PlayerId }) func get_all() : async (
-    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],[Player],
-    [MissionsUser],[MissionsUser],[Tournament],?[TypesICRC7.TokenId],
-    Nat,Float,[ReferralsTop],[ELOTop],[NFTTop],[LevelTop],[AchievementsTop],
+
+  public shared ({ caller}) func get_all() 
+    : async (
+    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],
+    [MissionsUser],[MissionsUser],[Tournament],?[TypesICRC7.TokenId],Nat,Float,
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
@@ -8318,38 +8326,32 @@ Self {
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
     TypesICRC7.Account,([AchievementCategory],[AchievementLine],
     [IndividualAchievement]),[FriendRequest], PrivacySetting ) {
-  
-    let notifications = await getNotifications();
-    let friendRequests = await getFriendRequests();
-    let privacySettings = await getMyPrivacySettings();
-    let fullProfile = await getFullProfile(caller);
-    let friendsList = await getFriendsList();
-    let allPlayers = await getAllPlayers();
-    let generalMissions = await getGeneralMissions();
-    let userMissions = await getUserMissions();
-    let allTournaments = await getAllTournaments();
-    let playerDeck = await getPlayerDeck(caller);
-    let totalReferrals = await getTotalReferrals(caller);
-    let multiplier = await getMultiplier(caller);
-    let topReferrals = await getTopReferrals(0);
-    let topELO = await getTopELO(0);
-    let topNFT = await getTopNFT(0);
-    let topLevel = await getTopLevel(0);
-    let topAchievements = await getTopAchievements(0); 
-    let achievements = await getAchievementsView();
-    let nfts = await getNFTs(caller);
-    let chests = await getChests(caller);
-    let avatars = await getAvatars(caller);
-    let characters = await getCharacters(caller);
-    let trophies = await getTrophies(caller);
-    let units = await getUnits(caller);
-    let collectionOwner = await get_collection_owner();
-    let (categories, lines, individuals) = await getAchievementsView();
+    
+      let notifications = await getNotifications();
+      let friendRequests = await getFriendRequests();
+      let privacySettings = await getMyPrivacySettings();
+      let fullProfile = await getFullProfile(caller);
+      let friendsList = await getFriendsList();
+      let generalMissions = await getGeneralMissions();
+      let userMissions = await getUserMissions();
+      let allTournaments = await getAllTournaments();
+      let playerDeck = await getPlayerDeck(caller);
+      let totalReferrals = await getTotalReferrals(caller);
+      let multiplier = await getMultiplier(caller);
+      let achievements = await getAchievementsView();
+      let nfts = await getNFTs(caller);
+      let chests = await getChests(caller);
+      let avatars = await getAvatars(caller);
+      let characters = await getCharacters(caller);
+      let trophies = await getTrophies(caller);
+      let units = await getUnits(caller);
+      let collectionOwner = await get_collection_owner();
+      let (categories, lines, individuals) = await getAchievementsView();
+
     return (
-    fullProfile,friendsList,allPlayers,generalMissions,userMissions,
-    allTournaments,playerDeck,totalReferrals,
-    multiplier,topReferrals,topELO,topNFT,topLevel,topAchievements,nfts,
-    chests,avatars,characters,trophies,units,collectionOwner,
+    fullProfile,friendsList,generalMissions,userMissions,
+    allTournaments,playerDeck,totalReferrals,multiplier,
+    nfts,chests,avatars,characters,trophies,units,collectionOwner,
     (categories, lines, individuals),friendRequests,privacySettings
     );
   };

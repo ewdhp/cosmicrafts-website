@@ -16,8 +16,8 @@ const init = () => {
 
 const get = async (canisterName) =>{
   const isLocal = process.env.DFX_NETWORK !== 'ic';
-  const host = isLocal ?  
-  'http://127.0.0.1:4943': 'https://ic0.app' ;
+  const host = isLocal ? 'http://localhost:3000' : 'https://ic0.app';
+
   const authStore = useAuthStore();
   const identity = authStore.getIdentity();
   const agent = new HttpAgent({ identity, host });

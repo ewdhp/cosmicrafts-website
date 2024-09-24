@@ -38,8 +38,8 @@ export const useAuthStore = defineStore('auth', {
     async isPlayerRegistered() {
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
-      const [result, player] = 
-      await cosmicrafts.getPlayerByCaller();
+      const [result, player] = await cosmicrafts.getPlayerByCaller();
+      console.log('isPlayerRegistered:', result);
       if (result) {
         registered = true;
         return registered;
@@ -70,6 +70,7 @@ export const useAuthStore = defineStore('auth', {
         console.log('Principal:', identity.getPrincipal().toText());
         authenticated = true;
         registered = await this.isPlayerRegistered();
+        console.log('isRegistered:', registered);
         console.log('AuthStore: loginWithMetaMask keys generated');
       }
     },
@@ -83,38 +84,35 @@ export const useAuthStore = defineStore('auth', {
         this.saveStateToLocalStorage();
       }
     },
-    async loginWithInternetIdentity() {
-      await this.loginWithAuthClient('https://identity.ic0.app');
+    async loginWithInternetIdentity(router) {
+      await this.loginWithAuthClient('https://identity.ic0.app',router);
       
     },
     async loginWithNFID() {
       await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize');
     },
-    async loginWithAuthClient(identityProviderUrl) {
-
+    async loginWithAuthClient(identityProviderUrl, router) {
       const authClient = await AuthClient.create();
 
-      if(authClient !== null){ 
-        this.authClient = authClient;
-        console.log('AuthStore: AuthClient initialized from loginWithAuthClient');
-      }else{
-        console.log('AuthStore: AuthClient not initialized loginWithAuthClient');
-        return false;
-      }
+      if (authClient !== null) {
+        await authClient.login({
+          identityProvider: identityProviderUrl,
+          windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
+          onSuccess: async () => {
+            console.log('AuthStore: AuthClient login success');
+            authenticated = true;
+            registered = await this.isPlayerRegistered();
 
-      authClient.login({
-        identityProvider: identityProviderUrl,
-        windowOpenerFeatures: `left=${window.screen.width / 2 - 525 / 2}, top=${window.screen.height / 2 - 705 / 2}, toolbar=0, location=0, menubar=0, width=525, height=705`,
-        onSuccess: async () => {
-          console.log('AuthStore: AuthClient login success');
-          authenticated = true;
-          registered = await this.isPlayerRegistered();
-        },
-        onError: (error) => {
-          console.error('Authentication error:', error);
-        },
-      });
-      
+            // Navigate to the root path
+            router.push('/');
+          },
+          onError: (error) => {
+            console.error('AuthStore: AuthClient login error', error);
+          },
+        });
+      } else {
+        console.error('AuthStore: AuthClient initialization failed');
+      }
     },
     async generateKeysFromSignature (signature) {
       const encoder = new TextEncoder();

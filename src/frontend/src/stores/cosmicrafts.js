@@ -10,18 +10,12 @@ let actorFunctions = {
 const data = {
   fullProfile: null,
   friendsList: null,
-  allPlayers: null,
   generalMissions: null,
   userMissions: null,
   allTournaments: null,
   playerDeck: null,
   totalReferrals: null,
   multiplier: null,
-  topReferrals: null,
-  topELO: null,
-  topNFT: null,
-  topLevel: null,
-  topAchievements: null,
   nfts: null,
   chests: null,
   avatars: null,
@@ -34,7 +28,10 @@ const data = {
   privacySettings: null,
 };
 
-const cosmicraftsStore = defineStore('Cosmicrafts', {
+const cosmicraftsStore = 
+defineStore(
+  'Cosmicrafts', {
+    
   state: () => ({
     loadded: false,
     loading: false,

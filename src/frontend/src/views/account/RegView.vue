@@ -1,3 +1,97 @@
+<script>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useCanisterStore } from '@/stores/canister';
+import AvatarSelector from '@/components/account/AvatarSelector.vue';
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
+
+export default {
+  components: {
+    AvatarSelector,
+    LoadingSpinner
+  },
+  setup() {
+    const authStore = useAuthStore();
+    const router = useRouter();
+    const loading = ref(false);
+    const username = ref('');
+    const referralCode = ref('');
+    const selectedAvatarId = ref(null);
+    const acceptedTerms = ref(true);
+    const registerResult = ref(null);
+
+    onMounted(async () => {
+      if (authStore.isAuthenticated === false) {
+        console.log('User is not authenticated');
+        router.push({ path: '/login' });
+      } else {
+        const isRegistered = await authStore.isPlayerRegistered();
+        if (isRegistered) {
+          router.push({ path: '/' });
+        }
+      }
+    });
+
+    
+    if(authStore.isAuthenticated == false) {
+      console.log('User is not authenticated');
+      router.push({path: '/login'});
+    }
+
+    const onAvatarSelected = (avatarId) => {
+      selectedAvatarId.value = avatarId;
+    };
+
+    const registerPlayer = async () => {
+      loading.value = true;
+      registerResult.value = null; // Clear previous result
+      const canister = useCanisterStore();
+      const cosmicrafts = await canister.get("cosmicrafts");
+      var result = false;
+      var rawMessage = '';
+
+      // Set default avatar ID to 1 if none is selected
+      const avatarId = selectedAvatarId.value || 1;
+
+      try {
+        const [r, a, c] = await cosmicrafts.registerPlayer(
+          username.value,
+          avatarId,  // Use default avatar ID if none is selected
+          referralCode.value || ''  // Provide an empty string if no referral code is given
+        );
+        console.log(r, a, c);
+        result = r;
+        rawMessage = a;  // Capture the raw message (assuming 'a' holds the message)
+      } catch (error) {
+        console.error(error);
+        rawMessage = error.toString();  // Capture the error message from blockchain if there's a failure
+      }
+
+      if (result) {
+        
+        await authStore.isPlayerRegistered() ? router.push('/') : registerResult.value = rawMessage;
+      } else {
+        registerResult.value = rawMessage;
+      }
+      
+      loading.value = false;
+    };
+
+    return {
+      loading,
+      username,
+      referralCode,
+      selectedAvatarId,
+      acceptedTerms,
+      onAvatarSelected,
+      registerPlayer,
+      registerResult
+    };
+  }
+};
+</script>
+
 <template>
   <div>
     <!-- Loading Spinner with Blurred Background -->
@@ -54,86 +148,6 @@
     </div>
   </div>
 </template>
-
-
-<script>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import { useCanisterStore } from '@/stores/canister';
-import AvatarSelector from '@/components/account/AvatarSelector.vue';
-import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
-
-export default {
-  components: {
-    AvatarSelector,
-    LoadingSpinner
-  },
-  setup() {
-    const authStore = useAuthStore();
-    const router = useRouter();
-    const loading = ref(false);
-    const username = ref('');
-    const referralCode = ref('');
-    const selectedAvatarId = ref(null);
-    const acceptedTerms = ref(true);
-    const registerResult = ref(null);
-
-    if(authStore.isAuthenticated == false) {
-      console.log('User is not authenticated');
-      router.push({path: '/login'});
-    }
-
-    const onAvatarSelected = (avatarId) => {
-      selectedAvatarId.value = avatarId;
-    };
-
-    const registerPlayer = async () => {
-      loading.value = true;
-      registerResult.value = null; // Clear previous result
-      const canister = useCanisterStore();
-      const cosmicrafts = await canister.get("cosmicrafts");
-      var result = false;
-      var rawMessage = '';
-
-      // Set default avatar ID to 1 if none is selected
-      const avatarId = selectedAvatarId.value || 1;
-
-      try {
-        const [r, a, c] = await cosmicrafts.registerPlayer(
-          username.value,
-          avatarId,  // Use default avatar ID if none is selected
-          referralCode.value || ''  // Provide an empty string if no referral code is given
-        );
-        result = r;
-        rawMessage = a;  // Capture the raw message (assuming 'a' holds the message)
-      } catch (error) {
-        console.error(error);
-        rawMessage = error.toString();  // Capture the error message from blockchain if there's a failure
-      }
-
-      if (result) {
-        await authStore.isPlayerRegistered() ? router.push('/') : registerResult.value = rawMessage;
-      } else {
-        registerResult.value = rawMessage;
-      }
-      
-      loading.value = false;
-    };
-
-    return {
-      loading,
-      username,
-      referralCode,
-      selectedAvatarId,
-      acceptedTerms,
-      onAvatarSelected,
-      registerPlayer,
-      registerResult
-    };
-  }
-};
-</script>
 
 <style scoped>
 .top {

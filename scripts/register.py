@@ -187,122 +187,64 @@ async def claim_achievements(player_principal):
     # Verifica el estado final de todos los logros
     await execute_dfx_command("dfx canister call cosmicrafts getAchievementsView")
 
-    # Prueba las funciones de los tops
-    page = 0  # Cambia el número de página según sea necesario
-
-    print("Testing getTopReferrals...")
-    await test_get_top_referrals(page)
-
-    print("Testing getTopELOPlayers...")
-    await test_get_top_elo_players(page)
-
-    print("Testing getTopNFTPlayers...")
-    await test_get_top_nft_players(page)
-
-    print("Testing getTopAchievementPlayers...")
-    await test_get_top_achievement_players(page)
-
-    print("Testing getTopLevelPlayers...")
-    await test_get_top_level_players(page)
-
-async def test_get_top_referrals(page):
-    command = f"dfx canister call cosmicrafts getReferralsTop {page}"
+async def call_create_missions_periodically():
+    print("Calling createMissionsPeriodically function in the canister")
+    command = 'dfx canister call cosmicrafts createMissionsPeriodically'
     success, output = await execute_dfx_command(command)
     if success:
-        print("Top Referrals:", output)
+        print("Successfully called createMissionsPeriodically")
     else:
-        print("Failed to fetch top referrals:", output)
+        print(f"Failed to call createMissionsPeriodically: {output}")
 
-async def test_get_top_elo_players(page):
-    command = f"dfx canister call cosmicrafts getTopELOPlayers {page}"
+async def call_init_achievements():
+    print("Calling initAchievements function in the canister")
+    command = 'dfx canister call cosmicrafts initAchievements'
     success, output = await execute_dfx_command(command)
     if success:
-        print("Top ELO Players:", output)
+        print("Successfully called initAchievements")
     else:
-        print("Failed to fetch top ELO players:", output)
-
-async def test_get_top_nft_players(page):
-    command = f"dfx canister call cosmicrafts getTopNFTPlayers {page}"
-    success, output = await execute_dfx_command(command)
-    if success:
-        print("Top NFT Players:", output)
-    else:
-        print("Failed to fetch top NFT players:", output)
-
-async def test_get_top_achievement_players(page):
-    command = f"dfx canister call cosmicrafts getTopAchievementPlayers {page}"
-    success, output = await execute_dfx_command(command)
-    if success:
-        print("Top Achievement Players:", output)
-    else:
-        print("Failed to fetch top achievement players:", output)
-
-async def test_get_top_level_players(page):
-    command = f"dfx canister call cosmicrafts getTopLevelPlayers {page}"
-    success, output = await execute_dfx_command(command)
-    if success:
-        print("Top Level Players:", output)
-    else:
-        print("Failed to fetch top level players:", output)
+        print(f"Failed to call initAchievements: {output}")
 
 async def main():
-    """Función principal para ejecutar los comandos iniciales y luego registrar usuarios."""
-    # Comandos iniciales
-    initial_commands = [
 
+    initial_commands = [
     ]
     
     for command in initial_commands:
         await execute_dfx_command(command)
 
-    # Cambia a la identidad bizkit
+
     await switch_identity("default")
 
-    num_users = 46  # Número de jugadores que coinciden con el árbol predefinido
+    num_users = 46 
 
-    users = [f"player{i}" for i in range(1, num_users + 1)]  # Crea identidades de jugadores
-    user_data = [(user, generate_random_username(), random.randint(1, 33)) for user in users]  # Pre-genera nombres de usuario e IDs de avatar
+    users = [f"player{i}" for i in range(1, num_users + 1)] 
+    user_data = [(user, generate_random_username(), random.randint(1, 33)) for user in users] 
 
-    semaphore = asyncio.Semaphore(1)  # Permite solo un cambio de identidad y llamada al canister a la vez
+    semaphore = asyncio.Semaphore(1) 
     registered_players = set()
 
-    # Paso 1: Crea un lote de códigos de referencia no asignados
     unassigned_codes = await create_batch_of_unassigned_codes()
     print(f"Created unassigned referral codes: {unassigned_codes}")
 
-    # Paso 2: Construye el árbol de referencias predefinido
     tree = build_hardcoded_tree()
 
-    # Paso 3: Registra al primer jugador con el primer código no asignado
     print(f"Starting cascade registration from player 0")
     await register_and_cascade(semaphore, user_data, tree, 0, unassigned_codes[0], registered_players)
 
-    # Cambia de nuevo a la identidad bizkit al final
+
     print("Switching back to bizkit identity")
     await switch_identity("default")
 
-    # Paso 4: Verifica las referencias para el primer jugador
     principal_id = await switch_identity(user_data[0][0])
     command = f'dfx canister call cosmicrafts getTotalReferralNetwork \'(principal "{principal_id}")\''
     success, output = await execute_dfx_command(command)
+
     if success:
         print(f"Total referral network for the first player ({principal_id}): {output}")
 
-    # Paso 5: Reclama logros
+
     await claim_achievements(principal_id)
-
-    # Paso 6: Prueba las funciones de los tops
-    page = 0  # Cambia el número de página según sea necesario
-
-    print("Testing getTopReferrals...")
-    await test_get_top_referrals(page)
-
-
-    final_commands = [
-
-    ]
-    for command in final_commands:
-        await execute_dfx_command(command)
 
 
 if __name__ == "__main__":
