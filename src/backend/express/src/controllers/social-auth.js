@@ -1,6 +1,7 @@
 import passport from 'passport';
 
 const SocialAuthController = {
+
   homePage: (req, res) => {
     if (req.isAuthenticated()) {
       res.send(`Hello, ${req.user.username}`);
@@ -38,19 +39,25 @@ const SocialAuthController = {
   },
 
   facebookAuth: passport.authenticate('facebook'),
+
   facebookCallback: (req, res, next) => {
+    console.log('Facebook callback invoked');
     passport.authenticate('facebook', (err, user, info) => {
       if (err) {
+        console.error('Error during Facebook authentication:', err);
         return next(err);
       }
       if (!user) {
-        return res.redirect('/'); // Redirect on failure
+        console.log('No user found, redirecting to home page');
+        return res.redirect('/');
       }
       req.logIn(user, (err) => {
         if (err) {
+          console.error('Error logging in user:', err);
           return next(err);
         }
-        return res.redirect('/');
+        console.log('User logged in successfully:', user);
+        return res.redirect('');
       });
     })(req, res, next);
   },
@@ -80,7 +87,7 @@ const SocialAuthController = {
         return next(err);
       }
       if (!user) {
-        return res.redirect('/'); // Redirect on failure
+        return res.redirect('/');
       }
       req.logIn(user, (err) => {
         if (err) {

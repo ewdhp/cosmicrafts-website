@@ -4490,7 +4490,11 @@ Self {
   // Queries
   public query func getNFTs(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     let entries = Iter.toArray(Trie.iter(tokens));
-    var resultBuffer = Buffer.Buffer<(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)>(0);
+    var resultBuffer = Buffer.Buffer<(
+      TypesICRC7.TokenId, 
+      TypesICRC7.TokenMetadata
+      )>(0);
+      
     for (entry in entries.vals()) {
       let key = entry.0;
       let value = entry.1;
@@ -8245,34 +8249,12 @@ Self {
 
 //#region |Views|
 
-  public type PlayerView = {
-    notifications: [Notification];
-    friendRequests: [FriendRequest];
-    fullProfile: ?(Player, PlayerGamesStats, AverageStats);
-    friendsList: ?[PlayerId];
-    allPlayers: [Player];
-
-  };
   public type TopView = {
     referralsTop : [ReferralsTop];
     eloTop :  [ELOTop];
     nftTop :  [NFTTop];
     levelTop :  [LevelTop];
     achTop :  [AchievementsTop];
-  };
-
-  public shared func get_tops() 
-    : async (
-      TopView
-      ) {
-        let topView : TopView = {
-          referralsTop = await getTopReferrals(0);
-          eloTop = await getTopELO(0);
-          nftTop = await getTopNFT(0);
-          levelTop = await getTopLevel(0);
-          achTop =  await getTopAchievements(0);
-        };
-    topView;
   };
 
   public shared ({ caller }) func getAchievementsView() 
@@ -8298,23 +8280,7 @@ Self {
     (categories, lines, individuals);
   };
 
-  public shared ({ caller }) func get_players() 
-    : async PlayerView {
-      let notifications = await getNotifications();
-      let friendRequests = await getFriendRequests();
-      let fullProfile = await getFullProfile(caller);
-      let friendsList = await getFriendsList();
-      let allPlayers = await getAllPlayers();
-    return {
-        notifications = notifications;
-        friendRequests = friendRequests;
-        fullProfile = fullProfile;
-        friendsList = friendsList;
-        allPlayers = allPlayers;
-    };
-  };
-
-  public shared ({ caller}) func get_all() 
+  public shared ({ caller}) func get_player() 
     : async (
     ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],
     [MissionsUser],[MissionsUser],[Tournament],?[TypesICRC7.TokenId],Nat,Float,
@@ -8355,6 +8321,46 @@ Self {
     (categories, lines, individuals),friendRequests,privacySettings
     );
   };
+
+  public shared ({ caller }) func get_ach() 
+    : async (
+      [AchievementCategory],
+      [AchievementLine],
+      [IndividualAchievement]) {
+
+    let data = await getUserAchievements(caller);
+    var categories : [AchievementCategory] = [];
+    var lines : [AchievementLine] = [];
+    var individuals : [IndividualAchievement] = [];
+
+    for (category in data.vals()) {
+      categories := Array.append(categories, [category]);
+      for (line in category.achievements.vals()) {
+        lines := Array.append(lines, [line]);
+        for (achievement in line.individualAchievements.vals()) {
+          individuals := Array.append(individuals, [achievement]);
+        };
+      };
+    };
+    (categories, lines, individuals);
+  };
+
+  public shared func get_tops() 
+    : async (
+      TopView
+      ) {
+        let topView : TopView = {
+          referralsTop = await getTopReferrals(0);
+          eloTop = await getTopELO(0);
+          nftTop = await getTopNFT(0);
+          levelTop = await getTopLevel(0);
+          achTop =  await getTopAchievements(0);
+        };
+    topView;
+  };
+
+  
+
 // #endregion 
 
 };

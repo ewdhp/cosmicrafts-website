@@ -1,0 +1,5 @@
+{
+  "clientID": "1288684305681350698",
+  "clientSecret": "TyqGHyyYEDuVAmRrCkEroEIX-2BMC2tY",
+  "callbackURL": "http://localhost:3000/auth/discord/callback"
+}

@@ -20,6 +20,7 @@ export const useACHStore = defineStore('ach', {
         this.categories = categories;
         this.lines = lines;
         this.individual = individual;
+        console.log(this.individual);
       } catch (error) {
         console.error('Failed to fetch player stats:', error);
         throw error;

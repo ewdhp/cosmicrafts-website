@@ -14,15 +14,16 @@
     "@dfinity/agent": "^2.0.0",
     "@dfinity/identity": "^2.0.0",
     "@dfinity/principal": "^2.0.0",
+    "discord.js": "^14.16.2",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.21.0",
     "express-session": "^1.18.0",
     "module-alias": "^2.2.3",
     "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
     "passport-facebook": "^3.0.0",
     "passport-twitter": "^1.0.4",
     "tweetnacl": "^1.0.3"
   },
-  "devDependencies": {},
   "description": ""
 }

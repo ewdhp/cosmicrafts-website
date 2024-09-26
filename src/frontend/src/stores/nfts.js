@@ -3,12 +3,16 @@ import { Principal } from '@dfinity/principal';
 import { useAuthStore } from './auth';
 import { useCanisterStore } from './canister.js';
 
-export const useNftsStore = defineStore('nfts', {
+export const useNftsStore = 
+defineStore(
+  'nfts', {
+    
   state: () => ({
     nfts: [],
     collection: {},
     loading: true,
   }),
+  
   actions: {
     async fetchNFTs() {
       try {

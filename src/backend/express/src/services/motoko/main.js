@@ -74,16 +74,6 @@ const CCanister = {
     return setting;
   },
 
-  ref_account: async (userId) => {
-    const actor = await createActor(userId, CANISTER_ID);
-    const setting = await callActorFunction(actor, 'ref_account');
-    return setting;
-  },
-  ref_id_gen: async (userId) => {
-    const actor = await createActor(userId, CANISTER_ID);
-    const setting = await callActorFunction(actor, 'ref_id_gen');
-    return setting;
-  },
 };
 
 export default CCanister;

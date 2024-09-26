@@ -1,13 +1,14 @@
 import md5 from 'md5';
 import { defineStore } from 'pinia';
 import { useCanisterStore } from '@/stores/canister';
-import { toRaw } from 'vue';
 
-let actorFunctions = {
-  get_all: null,
+let actorViewFunctions = {
+  get_tops: null,
+  get_player: null,
+  get_ach: null
 };
 
-const data = {
+const playerData = {
   fullProfile: null,
   friendsList: null,
   generalMissions: null,
@@ -49,7 +50,9 @@ defineStore(
           this.actor = await canister.get("cosmicrafts");
         }
         if (Object.keys(this.module).length === 0) {
-          await this.call(Object.keys(actorFunctions));
+          await this.call(
+            Object.keys(actorViewFunctions)
+          );
         }
       } catch (error) {
         console.error(error);
@@ -68,10 +71,10 @@ defineStore(
             (key, value) => (
               typeof value === 'bigint' 
               ? value.toString() : value)
-          );
+          );         
           const newHash = md5(dataString);
           const funcName = func.replace(/^get_/, ''); 
-          if (this.hashes[funcName] !== newHash) {
+          if (this.hashes[funcName] !== newHash) {u           
             this.module[funcName] = data;
             this.hashes[funcName] = newHash;
           }
@@ -97,20 +100,22 @@ defineStore(
 });
 
 export async function useCosmicraftsStore() {
+
   const store = cosmicraftsStore();
   await store.load();
  
   let i=0;
-  for(const func in data) {
-    data[func] = store.module.all[i];
+  for(const func in playerData) {
+    playerData[func] = store.module.player[i];
     i++;
   }
 
   let cosmicrafts = {
-    player: data,
+    player: playerData,
     module: store.module,
     actor: store.actor,
+    reloadView: store.call,
   };
-  console.log("Cosmicrafts loaded:");
+
   return cosmicrafts;
 }

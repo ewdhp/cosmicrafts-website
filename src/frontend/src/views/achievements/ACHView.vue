@@ -112,10 +112,8 @@ h2 {
   padding: 0px;
 }
 .ach-view {
+  margin-top: 100px;
   padding: 20px;
-
-
-padding: 25px;
 }
 
 .categories {

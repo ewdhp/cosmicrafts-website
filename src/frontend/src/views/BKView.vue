@@ -25,7 +25,7 @@ export default {
 
     onMounted(async () => {
       const cosmicrafts = await useCosmicraftsStore();
-      data.value = cosmicrafts.player;
+      data.value = cosmicrafts.module.player;
     });
 
     const isObject = (value) => {

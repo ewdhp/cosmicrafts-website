@@ -1,3 +1,92 @@
+<script>
+import { useNftsStore } from '@/stores/nfts';
+import NftItem from '@/components/nfts/CompactMD.vue';
+
+export default {
+  components: {
+    NftItem
+  },
+  data() {
+    return {
+      searchQuery: '',
+      selectedCategory: 'all',
+      nftsOwned: 0, 
+      categories: {
+        all: 'All'
+      },
+      mockNfts: [],
+      collection: {}
+    };
+  },
+  computed: {
+    filteredNFTs() {
+      return this.mockNfts.filter(nft => {
+        const matchesCategory = 
+        this.selectedCategory === 'all' || 
+        nft.category === this.selectedCategory;
+        const matchesQuery = nft.name.toLowerCase()
+        .includes(this.searchQuery.toLowerCase());
+        return matchesCategory && matchesQuery;
+      });
+    
+    },
+    nftsOwned() {
+      return this.mockNfts.length;
+    }
+  },
+  created() {
+    this.initializeMockNfts();
+    this.setCategories();
+  },
+  mounted() {
+    this.fetchCollection();
+  },
+  methods: {
+    async fetchCollection() {
+      const nftsStore = useNftsStore();
+      await nftsStore.fetchCollection();
+      this.collection = nftsStore.collection;
+    },
+    initializeMockNfts() { 
+      this.mockNfts = [
+        { tokenId: 1, name: 'Art NFT', category: 'art' },
+        { tokenId: 2, name: 'Music NFT', category: 'music' },
+        { tokenId: 3, name: 'Game NFT', category: 'games' },
+        { tokenId: 4, name: 'Art NFT', category: 'art' },
+        { tokenId: 5, name: 'Art NFT', category: 'art' },
+        { tokenId: 6, name: 'Music NFT', category: 'music' },
+        { tokenId: 7, name: 'Game NFT', category: 'games' },
+        { tokenId: 8, name: 'Art NFT', category: 'art' },
+      ];
+    },
+    setCategories() {
+      const categoriesSet = new Set(
+        this.mockNfts.map(nft => nft.category)
+      );
+      this.categories = {
+        all: 'All',
+        ...Object.fromEntries(
+          [...categoriesSet].map(
+            category => [
+              category, 
+              category.charAt(0).toUpperCase() +
+               category.slice(1)
+            ]
+          )
+        )
+      };
+    },
+    filterNFTs() {
+      // This method is now only needed to trigger reactivity
+    
+    },
+    setLayout(layout) {
+      this.layout = layout;
+    }
+  }
+};
+</script>
+
 <template>
   <div class="top-section">
     <div class="collection-metadata">     
@@ -7,13 +96,11 @@
             <img style="display: flex;  margin-right:15px" src="@/assets/logos/cosmicrafts.svg" alt="Logo" class="logo-menu" />
             <h2 style="display: flex;  min-width: 230px;">{{ collection.name || 'Unknown Collection' }}</h2>
           </div>
-    
           <div style="display:flex;justify-content: flex-end; margin:0px; width:100%;">
             <select v-model="selectedCategory" @change="filterNFTs">
               <option v-for="(displayName, category) in categories" :key="category" :value="category">{{ displayName }}</option>
             </select>
             <input style="display: flex; min-width:200px; width:100%;" type="text" v-model="searchQuery" placeholder="Search NFTs" @input="filterNFTs" /> 
-            
           </div>
         </div>
         <div style="display: flex; flex-direction:column; align-items: center; margin: 0px 30px 15px 40px;">
@@ -35,80 +122,6 @@
     <NftItem v-for="nft in filteredNFTs" :key="nft.tokenId" :nft="nft"  />
   </div>
 </template>
-
-<script>
-import { useNftsStore } from '@/stores/nfts';
-import NftItem from '@/components/nfts/CompactMD.vue';
-
-export default {
-  components: {
-    NftItem
-  },
-  data() {
-    return {
-      searchQuery: '',
-      selectedCategory: 'all',
-      nftsOwned: 0, // Default layout
-      categories: {
-        all: 'All'
-      },
-      mockNfts: [],
-      collection: {}
-    };
-  },
-  computed: {
-    filteredNFTs() {
-      return this.mockNfts.filter(nft => {
-        const matchesCategory = this.selectedCategory === 'all' || nft.category === this.selectedCategory;
-        const matchesQuery = nft.name.toLowerCase().includes(this.searchQuery.toLowerCase());
-        return matchesCategory && matchesQuery;
-      });
-    },
-    nftsOwned() {
-      return this.mockNfts.length;
-    }
-  },
-  created() {
-    this.initializeMockNfts();
-    this.setCategories();
-  },
-  mounted() {
-    this.fetchCollection();
-  },
-  methods: {
-    async fetchCollection() {
-      const nftsStore = useNftsStore();
-      await nftsStore.fetchCollection();
-      this.collection = nftsStore.collection;
-    },
-    initializeMockNfts() { //this is a test because no nfts are fetched
-      this.mockNfts = [
-        { tokenId: 1, name: 'Art NFT', category: 'art' },
-        { tokenId: 2, name: 'Music NFT', category: 'music' },
-        { tokenId: 3, name: 'Game NFT', category: 'games' },
-        { tokenId: 4, name: 'Art NFT', category: 'art' },
-        { tokenId: 5, name: 'Art NFT', category: 'art' },
-        { tokenId: 6, name: 'Music NFT', category: 'music' },
-        { tokenId: 7, name: 'Game NFT', category: 'games' },
-        { tokenId: 8, name: 'Art NFT', category: 'art' },
-      ];
-    },
-    setCategories() {
-      const categoriesSet = new Set(this.mockNfts.map(nft => nft.category));
-      this.categories = {
-        all: 'All',
-        ...Object.fromEntries([...categoriesSet].map(category => [category, category.charAt(0).toUpperCase() + category.slice(1)]))
-      };
-    },
-    filterNFTs() {
-      // This method is now only needed to trigger reactivity
-    },
-    setLayout(layout) {
-      this.layout = layout;
-    }
-  }
-};
-</script>
 
 <style scoped>
 /* Define keyframes for the color transition 

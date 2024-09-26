@@ -18,7 +18,7 @@ const app = express();
 
 // Session and Passport middleware
 app.use(session({
-  secret: process.env.SESSION_SECRET, // Ensure this is set
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true
 }));
@@ -39,7 +39,7 @@ app.use('/', tRoutes);
 app.use('/cosmicrafts', cRoutes);
 app.use('/twitter', tRoutes);
 app.use('/facebook', mRoutes);
-app.use('/instagram', mRoutes); // Ensure this is used
+app.use('/instagram', mRoutes); 
 
 // Home Route
 app.get('/', (req, res) => {
