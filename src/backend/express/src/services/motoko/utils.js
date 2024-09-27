@@ -18,34 +18,69 @@ const customJsonSerializer = (key, value) => {
     return value.toString();
   }
   if (value && value._isPrincipal) {
-    return Principal.fromUint8Array(value._arr).toText();
+    return Principal.fromUint8Array(
+      value._arr
+    ).toText();
   }
   return value;
 };
 
-const convertBigIntToString = (obj) => {
+const bigIntToString = (obj) => {
   if (Array.isArray(obj)) {
-    return obj.map(convertBigIntToString);
+    return obj.map(bigIntToString);
   } else if (typeof obj === 'object' && obj !== null) {
-    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, typeof v === 'bigint' ? v.toString() : convertBigIntToString(v)]));
+    return Object.fromEntries(
+      Object.entries(obj).map(
+        ([k, v]) => [
+          k, typeof v === 'bigint' ? v.toString() : 
+          bigIntToString(v)
+        ]
+      )
+    );
   }
   return obj;
 };
 
-const convertPrincipalToString = (principal) => {
+const idToString = (principal) => {
   if (principal && principal._isPrincipal) {
-    return Principal.fromUint8Array(principal._arr).toText();
+    return Principal.fromUint8Array(
+      principal._arr
+    ).toText();
   }
   return principal;
 };
 
-const parseBigIntAndPrincipalValues = (obj) => {
+
+const principalToString = (principal) => {
+  return Principal.from(principal).toText();
+};
+
+const parseBigIntAndPrincipal = (obj) => {
   if (Array.isArray(obj)) {
-    return obj.map(parseBigIntAndPrincipalValues);
+    return obj.map(parseBigIntAndPrincipal);
   } else if (typeof obj === 'object' && obj !== null) {
-    return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, typeof v === 'bigint' ? v.toString() : (v && v._isPrincipal ? convertPrincipalToString(v) : parseBigIntAndPrincipalValues(v))]));
+    return Object.fromEntries(
+      Object.entries(obj).map(
+        ([k, v]) => [
+          k, typeof v === 'bigint' ? v.toString() : 
+          (
+            v && v._isPrincipal ? principalToString(v) : 
+            parseBigIntAndPrincipal(v)
+          )
+        ]
+      )
+    );
   }
   return obj;
 };
 
-export { generateKeysFromSub, customJsonSerializer, convertBigIntToString, convertPrincipalToString, parseBigIntAndPrincipalValues, base64Decode, base64Encode };
+export { 
+  generateKeysFromSub, 
+  customJsonSerializer, 
+  bigIntToString, 
+  idToString,
+  principalToString, 
+  parseBigIntAndPrincipal, 
+  base64Decode, 
+  base64Encode,
+};

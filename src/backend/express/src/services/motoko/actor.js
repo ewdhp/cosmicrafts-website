@@ -3,35 +3,34 @@ import { Ed25519KeyIdentity } from '@dfinity/identity';
 import { idlFactory as cosmicraftsIdlFactory } from '../../../../../declarations/cosmicrafts/cosmicrafts.did.js';
 import { generateKeysFromSub, base64Decode } from './utils.js';
 
-const createActor = async (userId, CANISTER_ID) => {
+
+const cosmicraftsFromSub = async (userId) => {
   const { publicKeyBase64, privateKeyBase64 } = await generateKeysFromSub(userId);
   const identity = Ed25519KeyIdentity.fromKeyPair(
     base64Decode(publicKeyBase64),
     base64Decode(privateKeyBase64)
   );
-  const agent = new HttpAgent({ identity, host: 'https://ic0.app' });
-  if (process.env.NODE_ENV !== 'production') {
+
+  const isLocal = process.env.DFX_NETWORK !== 'ic';
+  const host = isLocal ? 'http://localhost:3000' : 'https://ic0.app';
+
+  const agent = new HttpAgent({ identity, host: host });
+  if (process.env.NODE_ENV !== 'ic') {
     await agent.fetchRootKey();
   }
-  return Actor.createActor(cosmicraftsIdlFactory, { agent, canisterId: CANISTER_ID });
+  return Actor.createActor(cosmicraftsIdlFactory, { agent, canisterId: process.env.CANISTER_ID_COSMICRAFTS });
 };
 
-const createPublicActor = async (CANISTER_ID) => {
+const cosmicraftsPublic = async () => {
   const agent = new HttpAgent({ host: 'https://ic0.app' });
-  if (process.env.NODE_ENV !== 'production') {
+
+  const isLocal = process.env.DFX_NETWORK !== 'ic';
+  const host = isLocal ? 'http://localhost:3000' : 'https://ic0.app';
+
+  if (process.env.NODE_ENV !== 'ic') {
     await agent.fetchRootKey();
   }
-  return Actor.createActor(cosmicraftsIdlFactory, { agent, canisterId: CANISTER_ID });
+  return Actor.createActor(cosmicraftsIdlFactory, { agent, canisterId: process.env.CANISTER_ID_COSMICRAFTS });
 };
 
-const callActorFunction = async (actor, functionName, ...args) => {
-  try {
-    const result = await actor[functionName](...args);
-    return result;
-  } catch (error) {
-    console.error(`Error calling ${functionName}:`, error);
-    throw new Error('Internal Server Error');
-  }
-};
-
-export { createActor, createPublicActor, callActorFunction };
+export { cosmicraftsFromSub, cosmicraftsPublic };
