@@ -74,7 +74,8 @@ defineStore(
           );         
           const newHash = md5(dataString);
           const funcName = func.replace(/^get_/, ''); 
-          if (this.hashes[funcName] !== newHash) {u           
+          if (this.hashes[funcName] !== newHash) { 
+            console.log(`Updating ${funcName}...`);         
             this.module[funcName] = data;
             this.hashes[funcName] = newHash;
           }
@@ -109,7 +110,7 @@ export async function useCosmicraftsStore() {
     playerData[func] = store.module.player[i];
     i++;
   }
-
+  store.module.player = playerData;
   let cosmicrafts = {
     player: playerData,
     module: store.module,

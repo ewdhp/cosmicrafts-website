@@ -7,14 +7,13 @@ const router = express.Router();
 // Define the route for getting all players
 router.get('/players', async (req, res) => {
   try {
-    console.log('Checking cosmicrafts and getAllPlayers...');
+    console.log('Fetching all players, cosmicrafts.getAllPlayers ...');
     if (!cosmicrafts || !cosmicrafts.getAllPlayers) {
       throw new Error('cosmicrafts.getAllPlayers is not defined');
     }
-    console.log('Fetching all players...');
     const p = await cosmicrafts.getAllPlayers();
     const players = parseBigIntAndPrincipal(p);
-    res.status(201).json(players);
+    res.status(201).json(parseBigIntAndPrincipal(p));
   } catch (error) {
     console.error('Error in /players route:', error);
     res.status(500).json({ error: 'Failed to get players' });
