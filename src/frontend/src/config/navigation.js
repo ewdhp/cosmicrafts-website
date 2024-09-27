@@ -1,17 +1,14 @@
 // Import view components
+import MainLayout from '@/views/layout/MainLayout.vue';
 import DBView from '@/views/dashboard/DBView.vue';
 import ACHView from '@/views/achievements/ACHView.vue';
-import NFTSView from '@/views/nfts/NFTSView.vue';
 import TNYDashView from '@/views/tournaments/DashboardView.vue';
 import TNYView from '@/views/tournaments/TournamentView.vue';
 import RegView from '@/views/account/RegView.vue';
-import STATView from '@/views/stats/STATView.vue';
-import TKView from '@/views/tokens/TKView.vue';
 import LoginView from '@/views/login/LoginView.vue';
 import TopView from '@/views/top/TopView.vue';
-import MainLayout from '@/views/layout/MainLayout.vue';
 import BKView from '@/views/BKView.vue';
-import PROView from '@/views/profile/PROFILEView.vue';
+import PROView from '@/views/profile/ProfileView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -124,30 +121,6 @@ const navItems = [
           active: AchievementsActiveIcon, 
           hover: AchievementsHoverIcon,
           inactive: AchievementsInactiveIcon,
-        },
-        children: []
-      },
-      {
-        path: '/nfts',
-        name: "NFTS",
-        component: NFTSView,
-        meta: { requiresAuth: true },
-        icons: { 
-          active: NFTSActiveIcon,
-          hover: NFTSHoverIcon,
-          inactive: NFTSInactiveIcon,
-        },
-        children: []
-      },
-      {
-        path: '/statistics',
-        name: "Statistics",
-        component: STATView,
-        meta: { requiresAuth: true },
-        icons: { 
-          active: StatisticsActiveIcon,
-          hover: StatisticsHoverIcon,
-          inactive: StatisticsInactiveIcon,
         },
         children: []
       },

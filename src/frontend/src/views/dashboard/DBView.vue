@@ -1,39 +1,18 @@
 <template>
-    <div>
-      <LoadingSpinner :isLoading="loading" />
-      <div v-if="!loading">
-        <!-- Content goes here -->
-      </div>
-    </div>
+  <div>
+    <h2>Dashboard... adjust position in mainLayout</h2>
+  </div>
 </template>
-  
+
 <script>
-import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
-  
-  export default {
-    name: 'DBView',
-    components: {
-      LoadingSpinner
-    },
-    data() {
-      return {
-        loading: false
-      };
-    },
-    methods: {
-  
-    },
-    async mounted() {
-  
-    }
-  };
-  </script>
-  
-  <style scoped>
+export default {
+  name: 'DashboardView',
+};
+</script>
+
+<style scoped>
 h2 {
-  color: #2c3e50;
-  padding: 0px;
-  margin: 0px;
-  margin-bottom: 1em;
+  text-align: center;
+  margin-top: 100px;
 }
-  </style>
+</style>
