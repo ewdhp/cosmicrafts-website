@@ -11,23 +11,41 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useCosmicraftsStore } from '@/stores/cosmicrafts.js';
 
 export default {
   name: 'BackendView',
-  components: {
-  },
+  components: {},
   setup() {
     const data = ref(null);
+    const cosmicrafts = useCosmicraftsStore();
 
     onMounted(async () => {
-      const cosmicrafts = await useCosmicraftsStore();
-      data.value = cosmicrafts.player;
+
+      // Load the store in the background
+      cosmicrafts.loadStore().then(() => {
+
+        // Update data if it has changed
+        if (data.value !== cosmicrafts.module.player) {
+          data.value = cosmicrafts.module.player;
+        }
+      });
+
+
     });
 
+    // Watch for changes and update data
+    watch(
+      () => cosmicrafts.module.player,
+      (newValue) => {      
+          data.value = newValue;
+      }
+    );
+
     const isObject = (value) => {
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
+      return typeof value === 'object' && 
+      value !== null && !Array.isArray(value);
     };
 
     const isArray = (value) => {

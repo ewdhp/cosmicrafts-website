@@ -1883,6 +1883,48 @@ Self {
       };
     };
   };
+  public shared func updateUsernameByID(username : Username, caller : Principal) : async (Bool, PlayerId, Text) {
+    let playerId = caller;
+    let currentTime = Nat64.fromIntWrap(Time.now());
+
+    switch (players.get(playerId)) {
+      case (null) {
+        return (false, playerId, "User record does not exist");
+      };
+      case (?player) {
+        if (player.username == username) {
+          return (false, playerId, "New username cannot be the same as the current username");
+        };
+
+        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
+        let usernameTimestamp = timestamps.username;
+
+        if (Nat64.sub(currentTime, usernameTimestamp) < ONE_MINUTE) {
+          return (false, playerId, "You can only update your username once every minute");
+        };
+
+        let updatedPlayer : Player = {
+          id = player.id;
+          username = username;
+          avatar = player.avatar;
+          description = player.description;
+          registrationDate = player.registrationDate;
+          level = player.level;
+          elo = player.elo;
+          friends = player.friends;
+          title = player.title;
+        };
+        players.put(playerId, updatedPlayer);
+
+        let updatedTimestamps = {
+          timestamps with username = currentTime
+        };
+        updateTimestamps.put(playerId, updatedTimestamps);
+
+        return (true, playerId, "Username updated successfully");
+      };
+    };
+  };
 
   public shared ({ caller : PlayerId }) func updateDescription(description : Description) : async (Bool, PlayerId, Text) {
     let playerId = caller;
@@ -8280,10 +8322,9 @@ Self {
     (categories, lines, individuals);
   };
 
-  public shared ({ caller}) func get_player() 
-    : async (
-    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],
-    [MissionsUser],[MissionsUser],[Tournament],?[TypesICRC7.TokenId],Nat,Float,
+  public shared ({ caller}) func get_player() : async (
+    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],[MissionsUser],
+    [MissionsUser],[Tournament],?[TypesICRC7.TokenId],Nat,Float,
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
     [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],

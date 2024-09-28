@@ -1,17 +1,20 @@
 <script>
-import { ref, computed, watchEffect } from 'vue';
+import { ref, computed, watchEffect, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import navItems from '@/config/navigation.js';
 import SLinkList from '@/components/navs/SLinkList.vue';
 import AccountNav from '@/components/account/AccountMenu.vue';
 import AccountSearch from '@/components/account/AccountSearch.vue';
+import { useCosmicraftsStore } from '@/stores/cosmicrafts.js';
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
+
 
 export default {
   name: 'MainLayout',
   components: {
     SLinkList,
     AccountNav,
-    AccountSearch
+    AccountSearch,
   },
   setup() {
 
@@ -19,6 +22,15 @@ export default {
     const routes = navItems[2].children;
     const currentSection = ref(null);
     const childNavItems = ref([]);
+
+    const cosmicrafts = ref({
+      loading: true, // Initialize with a default loading state
+    });
+    onMounted(async () => {
+      //const store = await useCosmicraftsStore();
+      //cosmicrafts.value = store;
+    });
+
 
     const mainNavItems = computed(() =>
       routes.filter(
@@ -48,6 +60,7 @@ export default {
 </script>
 
 <template>
+
   <div id="app" class="app-container">
 
     <header class="header">

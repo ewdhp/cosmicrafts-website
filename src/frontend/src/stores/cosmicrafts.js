@@ -1,11 +1,11 @@
 import md5 from 'md5';
 import { defineStore } from 'pinia';
 import { useCanisterStore } from '@/stores/canister';
+import { Principal } from '@dfinity/principal';
 
-let actorViewFunctions = {
-  get_tops: null,
+let functions = {
   get_player: null,
-  get_ach: null
+  get_tops: null,
 };
 
 const playerData = {
@@ -29,94 +29,120 @@ const playerData = {
   privacySettings: null,
 };
 
-const cosmicraftsStore = 
-defineStore(
+const parseBigIntAndPrincipal = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map(parseBigIntAndPrincipal);
+  } else if (typeof obj === 'object' && obj !== null) {
+    return Object.fromEntries(
+      Object.entries(obj).map(
+        ([k, v]) => [
+          k, typeof v === 'bigint' ? v.toString() : 
+          (
+            v && v._isPrincipal ? principalToString(v) : 
+            parseBigIntAndPrincipal(v)
+          )
+        ]
+      )
+    );
+  }
+  return obj;
+};
+
+const principalToString = (principal) => {
+  return Principal.from(principal).toText();
+};
+
+export const useCosmicraftsStore = defineStore 
+(
   'Cosmicrafts', {
     
   state: () => ({
-    loadded: false,
-    loading: false,
+    loading: true,
     actor: null,
     module: {},
     hashes: {},
   }),
 
   actions: {
-    async load() {
-      try {
-        if (!this.actor) {
-          this.loading = true;
-          const canister = useCanisterStore();
-          this.actor = await canister.get("cosmicrafts");
-        }
-        if (Object.keys(this.module).length === 0) {
-          await this.call(
-            Object.keys(actorViewFunctions)
-          );
-        }
-      } catch (error) {
-        console.error(error);
-        this.loading = false;
-      }
+
+    async loadStore() {
+      console.log("Loading cosmicrafts store..."); 
+      this.loading = true;
+      this.loadState(); // Load state from localStorage
+      await this.call(Object.keys(functions));
       this.loading = false;
-      this.loadded = true;
-      console.log("Cosmicrafts loaded");
+      console.log("Cosmicrafts store loaded");        
     },
-    async call(functions = []) {
-      if (!this.loadded) {
-        for (const func of functions) {
-          const data = await this.actor[func]();
-          const dataString = JSON.stringify(
-            data,
-            (key, value) => (
-              typeof value === 'bigint' 
-              ? value.toString() : value)
-          );         
-          const newHash = md5(dataString);
-          const funcName = func.replace(/^get_/, ''); 
-          if (this.hashes[funcName] !== newHash) { 
-            console.log(`Updating ${funcName}...`);         
-            this.module[funcName] = data;
-            this.hashes[funcName] = newHash;
+  
+    async call(functions = {}) {
+      const canister = useCanisterStore();
+      this.actor = await canister.get('cosmicrafts');
+      for (const func of functions) {
+        const data = await this.actor[func]();
+        const funcName = func.replace(/^get_/, ''); 
+    
+        if (funcName === 'player') {
+          let i = 0;
+          for (const key in playerData) {
+            playerData[key] = data[i];
+            i++;
           }
+          this.module[funcName] = parseBigIntAndPrincipal(playerData);
+        } else {
+          this.module[funcName] = parseBigIntAndPrincipal(data);
         }
-        this.updateHashes(this.module);
-        this.loadded = true;
-        this.loading = false;
+        
+        const dataString = JSON.stringify(this.module[funcName], (key, value) => (
+          typeof value === 'bigint' ? value.toString() : value
+        ));         
+        const newHash = md5(dataString);
+    
+        if (this.hashes[funcName] !== newHash) {
+          console.log(`Hash mismatch for ${funcName}: ${this.hashes[funcName]} !== ${newHash}`);
+          this.hashes[funcName] = newHash;
+        } else {
+          console.log(`Data not changed for ${funcName}: ${this.hashes[funcName]} === ${newHash}`);
+        }    
       }
+      this.updateHashes(this.module);
+      this.saveState(); // Save state after updating hashes
     },
+  
     updateHashes(module) {
       const dataTypes = Object.keys(module);
       dataTypes.forEach(type => {
-        const str = JSON.stringify(
-          module[type],
-          (key, value) => (
-            typeof value === 'bigint' 
-            ? value.toString() : value)
-        );
+        const str = JSON.stringify(module[type], (key, value) => (
+          typeof value === 'bigint' ? value.toString() : value
+        ));
         this.hashes[type] = md5(str);
       });
     },
+  
+    saveState() {
+      const state = {
+        module: this.module,
+        actor: this.actor,
+        hashes: this.hashes,
+        loading: this.loading,
+      };
+      const stateString = JSON.stringify(state, (key, value) => (
+        typeof value === 'bigint' ? value.toString() : value
+      ));
+      localStorage.setItem('cosmicraftsState', stateString);
+    },
+  
+    loadState() {
+      const stateString = localStorage.getItem('cosmicraftsState');
+      if (stateString) {
+        const state = JSON.parse(stateString, (key, value) => (
+          typeof value === 'string' && /^\d+n$/.test(value) ? BigInt(value.slice(0, -1)) : value
+        ));
+        console.log("Loaded state from localStorage:", state);
+        this.module = state.module;
+        this.actor = state.actor;
+        this.hashes = state.hashes;
+        this.loading = state.loading;
+      }
+    },
   },
 });
-
-export async function useCosmicraftsStore() {
-
-  const store = cosmicraftsStore();
-  await store.load();
- 
-  let i=0;
-  for(const func in playerData) {
-    playerData[func] = store.module.player[i];
-    i++;
-  }
-  store.module.player = playerData;
-  let cosmicrafts = {
-    player: playerData,
-    module: store.module,
-    actor: store.actor,
-    reloadView: store.call,
-  };
-
-  return cosmicrafts;
-}
