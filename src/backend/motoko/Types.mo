@@ -17,7 +17,7 @@ module Types {
   public type MatchMap = Text;
   public type PlayerFaction = Text;
 
-  // Player and Friend Details
+
   public type Player = {
     id : PlayerId;
     username : Username;
@@ -59,7 +59,7 @@ module Types {
     description : Nat64;
     username : Nat64;
   };
-  // Social APIs
+
   public type SocialConnection = {
     platform : PlatformType;
     username : Text;
@@ -76,14 +76,59 @@ module Types {
   };
 
   public type UserProfile = {
-    id : PlayerId;
-    title : Title;
-    username : Username;
-    avatar : AvatarID;
-    level : Level;
-    description : Description;
+    id : Principal;
+    username: Text;
+    verificationBadge: Bool;
+    title: ?Text;
+    description: ?Text;
+    country: Text;
+    avatar : Nat;
+    level : Nat;
+    elo : Float;
+    backgroundImage: ?Nat;
+    connections : ?[SocialConnection];
+    referrals : ?ReferralInfo;
+    stats : ?PlayerGamesStats;
+    friends : ?[FriendDetails];
+    friendRequests : ?[FriendRequest];
+    notifications : ?[Notification];
+    posts : ?[Post];
+    following : ?[PlayerId];
+    folowers : ?[PlayerId];
+    privacy: ?PrivacySetting;
     registrationDate : RegistrationDate;
-    connections : [SocialConnection];
+};
+
+  public type Post = {
+    id: Nat;
+    playerId: PlayerId;
+    username: Text;
+    images: [Nat];
+    content: Text;
+    timestamp: Time.Time;
+    likes: [Like];
+    comments: [Comment]; 
+  };
+
+  public type Comment = {
+    id: Nat;
+    fromPlayerId: PlayerId;
+    fromUsername: Text;
+    content: Text;
+    likes: [Like];
+    timestamp: Time.Time;    
+  };
+
+  public type Like = {
+    id: Nat;
+    fromPlayerId: PlayerId;
+    likeVariant: LikeVariant;
+    timestamp: Time.Time;
+  };
+  
+  public type LikeVariant = {
+    #Post;
+    #Comment;
   };
 
   public type ShortProfile = {
