@@ -1,4 +1,5 @@
 <template>
+   <LoadingSpinner :isLoading="cosmicrafts.loading" />
   <div>
     <h2>Motoko backend preview</h2>
     <div v-if="data">
@@ -13,26 +14,26 @@
 <script>
 import { ref, onMounted, watch } from 'vue';
 import { useCosmicraftsStore } from '@/stores/cosmicrafts.js';
-
+import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
 export default {
   name: 'BackendView',
-  components: {},
+  components: {
+    LoadingSpinner,
+  },
   setup() {
     const data = ref(null);
     const cosmicrafts = useCosmicraftsStore();
 
+    
+    
     onMounted(async () => {
-
       // Load the store in the background
       cosmicrafts.loadStore().then(() => {
-
         // Update data if it has changed
         if (data.value !== cosmicrafts.module.player) {
           data.value = cosmicrafts.module.player;
         }
       });
-
-
     });
 
     // Watch for changes and update data
@@ -42,6 +43,12 @@ export default {
           data.value = newValue;
       }
     );
+
+    // Watch for changes in the store's loading state
+    watch(() => cosmicrafts.loading, (newVal) => {
+      console.log("Loading state changed: ", newVal);
+    });
+
 
     const isObject = (value) => {
       return typeof value === 'object' && 
@@ -67,7 +74,8 @@ export default {
 
     return {
       data,
-      formatValue
+      formatValue,
+      cosmicrafts,
     };
   }
 };

@@ -29,9 +29,13 @@ const playerData = {
   privacySettings: null,
 };
 
-const parseBigIntAndPrincipal = (obj) => {
+const principalToString = (principal) => {
+  return Principal.from(principal).toText();
+};
+
+const BigAndID = (obj) => {
   if (Array.isArray(obj)) {
-    return obj.map(parseBigIntAndPrincipal);
+    return obj.map(BigAndID);
   } else if (typeof obj === 'object' && obj !== null) {
     return Object.fromEntries(
       Object.entries(obj).map(
@@ -39,7 +43,7 @@ const parseBigIntAndPrincipal = (obj) => {
           k, typeof v === 'bigint' ? v.toString() : 
           (
             v && v._isPrincipal ? principalToString(v) : 
-            parseBigIntAndPrincipal(v)
+            BigAndID(v)
           )
         ]
       )
@@ -48,15 +52,12 @@ const parseBigIntAndPrincipal = (obj) => {
   return obj;
 };
 
-const principalToString = (principal) => {
-  return Principal.from(principal).toText();
-};
-
 export const useCosmicraftsStore = defineStore 
 (
   'Cosmicrafts', {
     
   state: () => ({
+    loadded: false,
     loading: true,
     actor: null,
     module: {},
@@ -66,12 +67,29 @@ export const useCosmicraftsStore = defineStore
   actions: {
 
     async loadStore() {
-      console.log("Loading cosmicrafts store..."); 
-      this.loading = true;
-      this.loadState(); // Load state from localStorage
-      await this.call(Object.keys(functions));
-      this.loading = false;
-      console.log("Cosmicrafts store loaded");        
+      if(this.loadded == false){
+        console.log("Loading store..."); 
+        this.loading = true;
+        this.loadState();
+        await this.call(
+          Object.keys(functions)
+        );
+        this.loadded = true;
+        this.loading = false;
+        this.saveState();
+        console.log("Store loaded");  
+      }else{
+        console.log("Reloading in background store...");
+        this.loadState();
+        await this.call(
+          Object.keys(
+            functions
+          )
+        );
+        this.saveState();
+        console.log("Store updated");
+      }
+            
     },
   
     async call(functions = {}) {
@@ -79,40 +97,50 @@ export const useCosmicraftsStore = defineStore
       this.actor = await canister.get('cosmicrafts');
       for (const func of functions) {
         const data = await this.actor[func]();
-        const funcName = func.replace(/^get_/, ''); 
-    
+        const funcName = func.replace(/^get_/, '');    
         if (funcName === 'player') {
           let i = 0;
           for (const key in playerData) {
             playerData[key] = data[i];
             i++;
           }
-          this.module[funcName] = parseBigIntAndPrincipal(playerData);
+          this.module[funcName] = 
+          BigAndID(playerData);
         } else {
-          this.module[funcName] = parseBigIntAndPrincipal(data);
-        }
-        
-        const dataString = JSON.stringify(this.module[funcName], (key, value) => (
-          typeof value === 'bigint' ? value.toString() : value
+          this.module[funcName] = 
+          BigAndID(data);
+        }        
+        const dataString = JSON.stringify(
+          this.module[funcName], (key, value) => (
+          typeof value === 'bigint' 
+          ? value.toString() : value
         ));         
-        const newHash = md5(dataString);
-    
+        const newHash = md5(dataString);    
         if (this.hashes[funcName] !== newHash) {
-          console.log(`Hash mismatch for ${funcName}: ${this.hashes[funcName]} !== ${newHash}`);
+          console.log(`
+            Hash mismatch for 
+            ${funcName}: 
+            ${this.hashes[funcName]} !== ${newHash}`
+          );
           this.hashes[funcName] = newHash;
         } else {
-          console.log(`Data not changed for ${funcName}: ${this.hashes[funcName]} === ${newHash}`);
+          console.log(
+            `Data not changed for 
+            ${funcName}: 
+            ${this.hashes[funcName]} === ${newHash}`
+          );
         }    
       }
       this.updateHashes(this.module);
-      this.saveState(); // Save state after updating hashes
     },
   
     updateHashes(module) {
       const dataTypes = Object.keys(module);
       dataTypes.forEach(type => {
-        const str = JSON.stringify(module[type], (key, value) => (
-          typeof value === 'bigint' ? value.toString() : value
+        const str = JSON.stringify(
+          module[type], (key, value) => (
+          typeof value === 'bigint' ? 
+          value.toString() : value
         ));
         this.hashes[type] = md5(str);
       });
@@ -124,24 +152,38 @@ export const useCosmicraftsStore = defineStore
         actor: this.actor,
         hashes: this.hashes,
         loading: this.loading,
+        loadded: this.loadded,
       };
-      const stateString = JSON.stringify(state, (key, value) => (
-        typeof value === 'bigint' ? value.toString() : value
+      const stateString = JSON.stringify(
+        state, (key, value) => (
+        typeof value === 'bigint' ? 
+        value.toString() : value
       ));
-      localStorage.setItem('cosmicraftsState', stateString);
+      localStorage.setItem(
+        'cosmicraftsState', 
+        stateString
+      );
     },
   
     loadState() {
-      const stateString = localStorage.getItem('cosmicraftsState');
+      const stateString = 
+      localStorage.getItem('cosmicraftsState');
       if (stateString) {
-        const state = JSON.parse(stateString, (key, value) => (
-          typeof value === 'string' && /^\d+n$/.test(value) ? BigInt(value.slice(0, -1)) : value
+        const state = JSON.parse(stateString, 
+          (key, value) => (
+          typeof value === 'string' && 
+          /^\d+n$/.test(value) ? 
+          BigInt(value.slice(0, -1)) : value
         ));
-        console.log("Loaded state from localStorage:", state);
+        console.log(
+          "Loaded state from localStorage:", 
+          state
+        );
         this.module = state.module;
         this.actor = state.actor;
         this.hashes = state.hashes;
         this.loading = state.loading;
+        this.loadded = state.loadded;
       }
     },
   },
