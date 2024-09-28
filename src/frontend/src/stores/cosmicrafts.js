@@ -87,7 +87,7 @@ export const useCosmicraftsStore = defineStore
           )
         );
         this.saveState();
-        console.log("Store updated");
+        console.log("Store reloaded");
       }
             
     },

@@ -15,24 +15,25 @@
 import { ref, onMounted, watch } from 'vue';
 import { useCosmicraftsStore } from '@/stores/cosmicrafts.js';
 import LoadingSpinner from '@/components/loading/LoadingSpinner.vue';
+
 export default {
+
   name: 'BackendView',
+
   components: {
     LoadingSpinner,
   },
+
   setup() {
+
+    // Initialize the data and store
     const data = ref(null);
     const cosmicrafts = useCosmicraftsStore();
 
-    
-    
+    // Load the store in background at mount
     onMounted(async () => {
-      // Load the store in the background
       cosmicrafts.loadStore().then(() => {
-        // Update data if it has changed
-        if (data.value !== cosmicrafts.module.player) {
           data.value = cosmicrafts.module.player;
-        }
       });
     });
 
@@ -43,22 +44,15 @@ export default {
           data.value = newValue;
       }
     );
-
-    // Watch for changes in the store's loading state
-    watch(() => cosmicrafts.loading, (newVal) => {
-      console.log("Loading state changed: ", newVal);
-    });
-
-
+    
+    // Helper functions
     const isObject = (value) => {
       return typeof value === 'object' && 
       value !== null && !Array.isArray(value);
     };
-
     const isArray = (value) => {
       return Array.isArray(value);
     };
-
     const formatValue = (value) => {
       if (typeof value === 'bigint') {
         return value.toString();
