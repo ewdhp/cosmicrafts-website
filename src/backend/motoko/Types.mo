@@ -2,7 +2,7 @@ import Time "mo:base/Time";
 import TypesICRC7 "/icrc7/types";
 
 module Types {
-  // General Types
+
   public type PlayerId = Principal;
   public type Username = Text;
   public type AvatarID = Nat;
@@ -17,7 +17,6 @@ module Types {
   public type MatchMap = Text;
   public type PlayerFaction = Text;
 
-
   public type Player = {
     id : PlayerId;
     username : Username;
@@ -29,115 +28,174 @@ module Types {
     elo : Float;
     friends : [FriendDetails];
   };
-  public type FriendDetails = {
-    playerId : PlayerId;
-    username : Username;
-    avatar : AvatarID;
+
+  public type UserID = Principal;
+
+  ///////////////////////////////////////
+  //Missing  the types for each setting
+  public type Settings = {
+    #ai;
+    #account;
+    #audio;
+    #video;
+    #controls;
+    #gameplay;
+    #notifications;
   };
+  ///////////////////////////////////////
+
+  public type UserProfile = {
+    aiFeatures : ?AIFeatures;
+    basicInfo : BasicUserInfo;
+    referrals : ?ReferralInfo;
+    stats : ?PlayerGamesStats;
+  };
+
+  public type BasicUserInfo = {
+    id : Principal;
+    username : Text;
+    avatarId : Nat;
+    verificationBadge : Bool;
+    title : ?Text;
+    description : ?Text;
+    country : ?Text;
+    registrationDate : RegistrationDate;
+  };
+
+  public type UserNetwork = {
+    connections : ?[SocialConnection];
+    notifications : ?[Notification];
+    friends : ?[FriendDetails];
+    friendRequests : ?[FriendRequest];
+    blockedUsers : ?[UserID];
+    following : ?[UserID];
+    followers : ?[UserID];
+    posts : ?[Post];
+    comments : ?[Comment];
+    likes : ?[Like];
+  };
+
+  public type SocialConnection = {
+    platform : Platform;
+    username : Text;
+    profileLink : Text;
+    memberSince : RegistrationDate;
+  };
+
+  public type FriendDetails = {
+    id : UserID;
+    username : Text;
+    avatar : Nat;
+    friendProfile : ?UserProfile;
+  };
+
   public type FriendRequest = {
-    from : PlayerId;
-    to : PlayerId;
+    from : UserID;
+    to : UserID;
     timestamp : Int;
   };
+
   public type MutualFriendship = {
-    friend1 : PlayerId;
-    friend2 : PlayerId;
+    friend1 : UserID;
+    friend2 : UserID;
     friendsSince : Int;
   };
-  public type PrivacySetting = {
-    #acceptAll;
-    #blockAll;
-    #friendsOfFriends;
+
+  public type Policy = {
+    #acceptAll_interaction : ProfilePrivacy;
+    #blockAll_interaction : ProfilePrivacy;
+    #friendsOfFriends_interaction : ProfilePrivacy;
+    #restrict_profileLookUp : AIFeaturesPrivacy;
+    #allow_profileLookUp : AIFeaturesPrivacy;
   };
+
+  public type ProfilePrivacy = {
+    interaction : Policy;
+  };
+  public type AIFeaturesPrivacy = {
+    profileLookUp : Policy;
+  };
+  public type PrivacySettings = {
+    profile : ProfilePrivacy;
+    aifeatures : AIFeaturesPrivacy;
+  };
+
   public type Notification = {
-    from : PlayerId;
-    message : Text;
+    from : NotificationIdentity;
+    timestamp : Time.Time;
+    body : Text;
+  };
+
+  public type WouID = Text;
+  public type MarketingID = Text;
+  public type UpdateID = Text;
+  public type NotificationIdentity = {
+    #FriendRequest : UserID;
+    #WorldOfUnreal : WouID;
+    #Marketing : MarketingID;
+    #Update : UpdateID;
+  };
+
+  public type Platform = {
+    #Twitter;
+    #WhatsApp;
+    #Discord;
+    #Facebook;
+    #Instagram;
+    #DSCVR;
+    #Cosmicrafts;
+  };
+
+  public type AIFeatures = {
+    aiAvatar : Nat;
+    aiBackground : ?Nat;
+  };
+
+  public type UserActivity = {
+
+  };
+
+  public type Post = {
+    id : Nat;
+    userId : UserID;
+    username : Text;
+    images : ?[Nat];
+    content : Text;
+    timestamp : Time.Time;
+    likes : ?[Like];
+    comments : ?[Comment];
+  };
+
+  //review the comments functions....
+  //because was missing postId
+  public type Comment = {
+    id : Nat;
+    postId : Nat;
+    fromUserID : UserID;
+    fromUsername : Text;
+    content : Text;
+    likes : ?[Like];
     timestamp : Time.Time;
   };
+
+  public type Like = {
+    id : Nat;
+    fromUserID : UserID;
+    likeVariant : LikeVariant;
+    timestamp : Time.Time;
+  };
+
+  public type LikeVariant = {
+    #Post;
+    #Comment;
+  };
+
   public type UpdateTimestamps = {
     avatar : Nat64;
     description : Nat64;
     username : Nat64;
   };
 
-  public type SocialConnection = {
-    platform : PlatformType;
-    username : Text;
-    memberSince : Text;
-    profileLink : Text;
-  };
-
-  public type PlatformType = {
-    #Twitter;
-    #Discord;
-    #Facebook;
-    #Instagram;
-    #DSCVR;
-  };
-
-  public type UserProfile = {
-    id : Principal;
-    username: Text;
-    verificationBadge: Bool;
-    title: ?Text;
-    description: ?Text;
-    country: Text;
-    avatar : Nat;
-    level : Nat;
-    elo : Float;
-    backgroundImage: ?Nat;
-    connections : ?[SocialConnection];
-    referrals : ?ReferralInfo;
-    stats : ?PlayerGamesStats;
-    friends : ?[FriendDetails];
-    friendRequests : ?[FriendRequest];
-    notifications : ?[Notification];
-    posts : ?[Post];
-    following : ?[PlayerId];
-    folowers : ?[PlayerId];
-    privacy: ?PrivacySetting;
-    registrationDate : RegistrationDate;
-};
-
-  public type Post = {
-    id: Nat;
-    playerId: PlayerId;
-    username: Text;
-    images: [Nat];
-    content: Text;
-    timestamp: Time.Time;
-    likes: [Like];
-    comments: [Comment]; 
-  };
-
-  public type Comment = {
-    id: Nat;
-    fromPlayerId: PlayerId;
-    fromUsername: Text;
-    content: Text;
-    likes: [Like];
-    timestamp: Time.Time;    
-  };
-
-  public type Like = {
-    id: Nat;
-    fromPlayerId: PlayerId;
-    likeVariant: LikeVariant;
-    timestamp: Time.Time;
-  };
-  
-  public type LikeVariant = {
-    #Post;
-    #Comment;
-  };
-
-  public type ShortProfile = {
-    id : PlayerId;
-    username : Username;
-    avatar : AvatarID;
-    level : Level;
-    registrationDate : RegistrationDate;
-  };
   //Referals
   public type ReferralCode = Nat;
 

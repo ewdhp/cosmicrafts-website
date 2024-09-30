@@ -34,11 +34,9 @@ import MissionOptions "MissionOptions";
 import AchievementData "AchievementData";
 import Set "Set";
 
-shared actor 
-class Cosmicrafts() = 
-Self {
+shared actor class Cosmicrafts() = Self {
 
-//#region |Admin Functions|
+  //#region |Admin Functions|
   public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
     if (caller == ADMIN_PRINCIPAL) {
       Debug.print("Admin function called by admin.");
@@ -73,10 +71,10 @@ Self {
       return (false, "Access denied: Only admin can call this function.");
     };
   };
-// #endregion 
+  // #endregion
 
-// #region |Types| 
-
+  // #region |Types|
+  public type UserID = Types.UserID;
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
   public type Username = Types.Username;
@@ -86,11 +84,7 @@ Self {
   public type Level = Types.Level;
   public type Player = Types.Player;
 
-  public type FriendRequest = Types.FriendRequest;
   public type MutualFriendship = Types.MutualFriendship;
-  public type FriendDetails = Types.FriendDetails;
-  public type PrivacySetting = Types.PrivacySetting;
-  public type Notification = Types.Notification;
   public type UpdateTimestamps = Types.UpdateTimestamps;
 
   public type GamesWithFaction = Types.GamesWithFaction;
@@ -167,9 +161,9 @@ Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
-// #endregion
+  // #endregion
 
-// #region |Missions|
+  // #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -334,9 +328,9 @@ Self {
       },
     );
   };
-// #endregion
+  // #endregion
 
-// #region |General Missions|
+  // #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -683,9 +677,9 @@ Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |User-Specific Missions|
+  // #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -818,7 +812,9 @@ Self {
   };
 
   // Function to update progress for user-specific missions
-  func updateUserMissionsProgress(user : Principal, playerStats : {
+  func updateUserMissionsProgress(
+    user : Principal,
+    playerStats : {
       secRemaining : Nat;
       energyGenerated : Nat;
       damageDealt : Nat;
@@ -830,7 +826,8 @@ Self {
       xpEarned : Nat;
       kills : Nat;
       wonGame : Bool;
-    }) : async (Bool, Text) {
+    },
+  ) : async (Bool, Text) {
 
     //Debug.print("[updateUserMissions] Updating user-specific mission progress for user: " # Principal.toText(user));
     //Debug.print("[updateUserMissions] Player stats: " # debug_show(playerStats));
@@ -1161,9 +1158,9 @@ Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Progress Manager|
+  // #region |Progress Manager|
 
   // Function to update achievement progress manager (cleaned version)
   func updateAchievementProgressManager(
@@ -1680,15 +1677,1023 @@ Self {
       case (null) {};
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Players|
+  // #region |Users|
+
+  public type BasicUserInfo = Types.BasicUserInfo;
+  public type UserNameBasicInfo = Text;
+  public type AvatarIDBasicInfo = Nat;
+  public type VerificationBadgeBasicInfo = Bool;
+  public type TitleBasicInfo = Text;
+  public type DescriptionBasicInfo = Text;
+  public type CountryBasicInfo = Text;
+
+  public type FriendRequest = Types.FriendRequest;
+  public type Notification = Types.Notification;
+  public type UserActivity = Types.UserActivity;
+  public type UserProfile = Types.UserProfile;
+  public type UserNetwork = Types.UserNetwork;
+  public type AIFeatures = Types.AIFeatures;
+  public type FriendDetails = Types.FriendDetails;
+  public type Comment = Types.Comment;
+  public type Post = Types.Post;
+  public type Like = Types.Like;
+
+  //provisional variables , to be replaced....
+  stable var postCount : Nat = 0;
+  stable var commentCount : Nat = 0;
+  /////////////////////////////////////
+
+  // Stable Variables
+  stable var _userProfile : [(UserID, UserProfile)] = [];
+  var userProfile : HashMap.HashMap<UserID, UserProfile> = HashMap.fromIter(
+    _userProfile.vals(),
+    0,
+    Principal.equal,
+    Principal.hash,
+  );
+  stable var _userBasicInfo : [(UserID, BasicUserInfo)] = [];
+  var userBasicInfo : HashMap.HashMap<UserID, BasicUserInfo> = HashMap.fromIter(
+    _userBasicInfo.vals(),
+    0,
+    Principal.equal,
+    Principal.hash,
+  );
+  stable var _userNetwork : [(UserID, UserNetwork)] = [];
+  var userNetwork : HashMap.HashMap<UserID, UserNetwork> = HashMap.fromIter(
+    _userNetwork.vals(),
+    0,
+    Principal.equal,
+    Principal.hash,
+  );
+
+  // Registers a new player
+  public shared ({ caller : UserID }) func registerPlayer(
+    username : Text,
+    avatarId : Nat,
+    referralCode : ReferralCode,
+  ) : async (Bool, Text) {
+
+    switch (userBasicInfo.get(caller)) {
+      case (?existingPlayer) {
+        return (false, "User is already registered");
+      };
+      case (null) {
+        let codeAssigned = await assignUnassignedReferralCode(
+          caller,
+          referralCode,
+        );
+        var finalCode = referralCode;
+        switch (codeAssigned) {
+          case (#ok(true)) {
+            finalCode := referralCode;
+          };
+          case (#err(errMsg)) {
+            return (false, errMsg);
+          };
+          case (#ok(false)) {
+            switch (referralCodes.get(referralCode)) {
+              case (null) return (false, "Invalid referral code");
+              case (?referrerId) {
+                trackReferrer(referrerId, caller);
+              };
+            };
+          };
+        };
+        if (codeAssigned != #ok(true)) {
+          let (assignedCode, _assignedReferrerId) = await assignReferralCode(
+            caller,
+            null,
+          );
+          finalCode := assignedCode;
+        };
+        let registrationDate = Time.now();
+        let newPlayer : BasicUserInfo = {
+          id = caller;
+          username = username;
+          avatarId = avatarId;
+          verificationBadge = false;
+          title = null;
+          description = null;
+          country = null;
+          registrationDate = registrationDate;
+        };
+        let newUserNetwork : UserNetwork = {
+          connection = {
+            platform = #cosmicrafts;
+            username = username;
+            profileLink = "/profile/username-uuid";
+            memberSince = registrationDate;
+          };
+          notifications = ?[];
+          connections = ?[];
+          friends = ?[];
+          friendRequests = ?[];
+          mutualFriends = ?[];
+          blockedUsers = ?[];
+          following = ?[];
+          followers = ?[];
+          posts = ?[];
+          comments = ?[];
+          likes = ?[];
+        };
+        userNetwork.put(caller, newUserNetwork);
+        userBasicInfo.put(caller, newPlayer);
+
+        return (true, "User registered successfully");
+      };
+    };
+  };
+  // Update the user in userBasicInfo information
+  public shared ({ caller }) func updUserBasicInfo(
+    newUsername : ?UserNameBasicInfo,
+    newAvatarId : ?AvatarIDBasicInfo,
+    newVerificationBadge : ?VerificationBadgeBasicInfo,
+    newTitle : ?TitleBasicInfo,
+    newDescription : ?DescriptionBasicInfo,
+    newCountry : ?CountryBasicInfo,
+  ) : async (Bool, Text) {
+
+    switch (userBasicInfo.get(caller)) {
+      case (?info) {
+        let updatedInfo = {
+          id = info.id;
+          registrationDate = info.registrationDate;
+          username = switch (newUsername) {
+            case (?value) value;
+            case (null) info.username;
+          };
+          avatarId = switch (newAvatarId) {
+            case (?value) value;
+            case (null) info.avatarId;
+          };
+          verificationBadge = switch (newVerificationBadge) {
+            case (?value) value;
+            case (null) info.verificationBadge;
+          };
+          title = switch (newTitle) {
+            case (?value) ?value;
+            case (null) info.title;
+          };
+          description = switch (newDescription) {
+            case (?value) ?value;
+            case (null) info.description;
+          };
+          country = switch (newCountry) {
+            case (?value) ?value;
+            case (null) info.country;
+          };
+        };
+        userBasicInfo.put(caller, updatedInfo);
+        return (true, "User updated successfully");
+      };
+      case (null) {
+        return (false, "User not found");
+      };
+    };
+  };
+  // Function to accept a friend request
+  public shared ({ caller }) func acceptFriendRequest(
+    fromUserID : UserID,
+    fromUsername : Text,
+    avatarId : Nat,
+  ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.friendRequests) {
+          case (null) return false;
+          case (?friendRequests) {
+            let requestOpt = Array.find<FriendRequest>(
+              friendRequests,
+              func(request) {
+                request.from == fromUserID;
+              },
+            );
+            switch (requestOpt) {
+              case (null) return false;
+              case (?request) {
+                let indexOpt = Array.indexOf<FriendRequest>(
+                  request,
+                  friendRequests,
+                  func(a : FriendRequest, b : FriendRequest) : Bool {
+                    a.from == b.from and a.to == b.to and a.timestamp == b.timestamp
+                  },
+                );
+                switch (indexOpt) {
+                  case (null) return false;
+                  case (?index) {
+                    let updatedFriendRequests = Array.filter<FriendRequest>(
+                      friendRequests,
+                      func(request) {
+                        request != friendRequests[index];
+                      },
+                    );
+                    let newFriend : FriendDetails = {
+                      id = fromUserID;
+                      username = fromUsername;
+                      avatar = avatarId;
+                      friendProfile = null;
+                    };
+                    let updatedFriends = switch (network.friends) {
+                      case (null) [newFriend];
+                      case (?friends) Array.append<FriendDetails>(
+                        friends,
+                        [newFriend],
+                      );
+                    };
+                    let newNotification : Notification = {
+                      from = #FriendRequest(fromUserID);
+                      body = "Friend Request accepted";
+                      timestamp = Time.now();
+                    };
+                    let fromUserNetworkOpt = userNetwork.get(fromUserID);
+                    switch (fromUserNetworkOpt) {
+                      case (null) return false;
+                      case (?fromUserNetwork) {
+                        let updatedNotifications = switch (
+                          fromUserNetwork.notifications
+                        ) {
+                          case (null) [newNotification];
+                          case (?notifications) Array.append<Notification>(
+                            notifications,
+                            [newNotification],
+                          );
+                        };
+                        let updatedFromUserNetwork = {
+                          fromUserNetwork with
+                          notifications = ?updatedNotifications
+                        };
+                        userNetwork.put(
+                          fromUserID,
+                          updatedFromUserNetwork,
+                        );
+                      };
+                    };
+                    let updatedUserNetwork = {
+                      network with
+                      friends = ?updatedFriends;
+                      friendRequests = ?updatedFriendRequests;
+                    };
+                    userNetwork.put(caller, updatedUserNetwork);
+                    return true;
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  // Function to create a post
+  public shared ({ caller }) func createPost(
+    userID : UserID,
+    username : Text,
+    images : ?[Nat],
+    content : Text,
+  ) : async Bool {
+
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            postCount += 1;
+            let newPost : Post = {
+              id = postCount;
+              userId = userID;
+              username = username;
+              images = switch (images) {
+                case (?images) ?images;
+                case (null) ?[];
+              };
+              content = content;
+              timestamp = Time.now();
+              likes = ?[];
+              comments = ?[];
+            };
+            let updatedPosts = Array.append<Post>(
+              posts,
+              [newPost],
+            );
+            let updatedUserNetwork = {
+              network with
+              posts = ?updatedPosts
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to add a comment to a post
+  public shared ({ caller }) func addComment(
+    postId : Nat,
+    fromUserID : UserID,
+    fromUsername : Text,
+    content : Text,
+  ) : async Bool {
+
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            switch (postOpt) {
+              case (null) return false;
+              case (?post) {
+                commentCount += 1;
+                let newComment : Comment = {
+                  id = commentCount;
+                  postId = postId;
+                  fromUserID = fromUserID;
+                  fromUsername = fromUsername;
+                  content = content;
+                  timestamp = Time.now();
+                  likes = ?[];
+                };
+                let updatedComments = switch (post.comments) {
+                  case (null) [newComment];
+                  case (?comments) Array.append<Comment>(
+                    comments,
+                    [newComment],
+                  );
+                };
+                let updatedPost = {
+                  post with
+                  comments = ?updatedComments
+                };
+                let updatedPosts = Array.map<Post, Post>(
+                  posts,
+                  func(p : Post) : Post {
+                    if (p.id == postId) updatedPost else p;
+                  },
+                );
+                let updatedUserNetwork = {
+                  network with
+                  posts = ?updatedPosts
+                };
+                userNetwork.put(caller, updatedUserNetwork);
+                return true;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  // Function to like a post
+  public shared ({ caller }) func givelikePost(
+    postId : Nat,
+    likeId : Nat,
+    fromUserID : UserID,
+    fromUsername : Text,
+    timestamp : Time.Time,
+  ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            switch (postOpt) {
+              case (null) return false;
+              case (?post) {
+                let newLike : Like = {
+                  id = likeId;
+                  fromUserID = fromUserID;
+                  likeVariant = #Post;
+                  fromUsername = fromUsername;
+                  timestamp = timestamp;
+                };
+                let updatedLikes = switch (post.likes) {
+                  case (null) [newLike];
+                  case (?likes) Array.append<Like>(likes, [newLike]);
+                };
+                let updatedPost = {
+                  post with
+                  likes = ?updatedLikes
+                };
+                let updatedPosts = Array.map<Post, Post>(
+                  posts,
+                  func(p : Post) : Post {
+                    if (p.id == postId) updatedPost else p;
+                  },
+                );
+                let updatedUserNetwork = {
+                  network with
+                  posts = ?updatedPosts
+                };
+                userNetwork.put(caller, updatedUserNetwork);
+                return true;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  // Function to like a comment
+  public shared ({ caller }) func givelikeComment(
+    postId : Nat,
+    commentId : Nat,
+    likeId : Nat,
+    fromUserID : UserID,
+    fromUsername : Text,
+    timestamp : Time.Time,
+  ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            switch (postOpt) {
+              case (null) return false;
+              case (?post) {
+                let commentOpt = switch (post.comments) {
+                  case (null) null;
+                  case (?comments) Array.find<Comment>(
+                    comments,
+                    func(comment) {
+                      comment.id == commentId;
+                    },
+                  );
+                };
+                switch (commentOpt) {
+                  case (null) return false;
+                  case (?comment) {
+                    let newLike : Like = {
+                      id = likeId;
+                      fromUserID = fromUserID;
+                      likeVariant = #Comment;
+                      fromUsername = fromUsername;
+                      timestamp = timestamp;
+                    };
+                    let updatedLikes = switch (comment.likes) {
+                      case (null) [newLike];
+                      case (?likes) Array.append<Like>(likes, [newLike]);
+                    };
+                    let updatedComment = {
+                      comment with
+                      likes = ?updatedLikes
+                    };
+                    switch (post.comments) {
+                      case (null) return false;
+                      case (?comments) {
+                        let updatedComments = Array.map<Comment, Comment>(
+                          comments,
+                          func(c : Comment) : Comment {
+                            if (c.id == commentId) updatedComment else c;
+                          },
+                        );
+                        let updatedPost = {
+                          post with
+                          comments = ?updatedComments
+                        };
+                        let updatedPosts = Array.map<Post, Post>(
+                          posts,
+                          func(p : Post) : Post {
+                            if (p.id == postId) updatedPost else p;
+                          },
+                        );
+                        let updatedUserNetwork = {
+                          network with
+                          posts = ?updatedPosts
+                        };
+                        userNetwork.put(caller, updatedUserNetwork);
+                        return true;
+                      };
+                    };
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+  // Retrieves the user profile by caller
+  public query ({ caller }) func getUserProfile() : async ?UserProfile {
+    return userProfile.get(caller);
+  };
+  // Retrieves the user profile by id
+  public query func getUserProfileByID(id : UserID) : async ?UserProfile {
+    return userProfile.get(id);
+  };
+  // Retrieves the basic user information caller
+  public query ({ caller }) func getUserBasicInfo() : async ?BasicUserInfo {
+    return userBasicInfo.get(caller);
+  };
+  // Retrieves the basic user information by id
+  public query func getUserBasicInfoByID(id : UserID) : async ?BasicUserInfo {
+    return userBasicInfo.get(id);
+  };
+  // Retrieves the basic user information by id
+  public query func getAllUsersBasicInfo() : async [BasicUserInfo] {
+    return Iter.toArray(userBasicInfo.vals());
+  };
+  // Retrieves the user network information
+  public func getUserNetwork(id : UserID) : async ?UserNetwork {
+    return userNetwork.get(id);
+  };
+  // Retrieves the friend details with pagination
+  public query ({ caller }) func getFriends(page : Nat) : async ?[FriendDetails] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?userNetwork) {
+        switch (userNetwork.friends) {
+          case (null) return null;
+          case (?friends) {
+            let start = page * 10;
+            let end = if (
+              (page + 1) * 10 < friends.size()
+            ) (page + 1) * 10 else friends.size();
+            if (start >= friends.size()) (return null);
+            ?Iter.toArray(
+              Array.slice<FriendDetails>(
+                friends,
+                start,
+                end,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Helper function to get all friends from the user's profile
+  public query ({ caller }) func getAllFriends() : async [FriendDetails] {
+    switch (userNetwork.get(caller)) {
+      case null { return [] };
+      case (?userNetwork) {
+        switch (userNetwork.friends) {
+          case null return [];
+          case (?friends) {
+            return friends;
+          };
+        };
+      };
+    };
+  };
+  // Function to add a new friend
+  public shared ({ caller }) func addFriend(friendId : UserID) : async (Bool, Text) {
+    let friend = switch (userBasicInfo.get(friendId)) {
+      case null { return (false, "Friend ID not found") };
+      case (?friend) {
+        friend;
+      };
+    };
+    let newFriend : FriendDetails = {
+      id = friendId;
+      username = friend.username;
+      avatar = friend.avatarId;
+      friendProfile = null;
+    };
+    switch (userNetwork.get(caller)) {
+      case (null) return (false, "userNetwork not found");
+      case (?network) {
+        switch (network.friends) {
+          case (null) return (false, "network.friends null");
+          case (?friends) {
+            let updatedFriends = Array.append<FriendDetails>(
+              friends,
+              [newFriend],
+            );
+            let updatedUserNetwork = {
+              network with
+              friends = ?updatedFriends
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return (true, "Friend added successfully");
+          };
+        };
+      };
+    };
+  };
+  // Function to delete a friend
+  public func deleteFriend(caller : Principal, deleteId : UserID) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.friends) {
+          case (null) return false;
+          case (?networkFriends) {
+            let updatedFriends = Array.filter<FriendDetails>(
+              networkFriends,
+              func(friend) {
+                friend.id != deleteId;
+              },
+            );
+            let updatedUserNetwork = {
+              network with
+              friends = ?updatedFriends
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Retrieves the friend requests with pagination
+  public query ({ caller }) func getFriendRequests(page : Nat) : async ?[FriendRequest] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.friendRequests) {
+          case (null) return null;
+          case (?friendRequests) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < friendRequests.size()
+            ) (page + 1) * 10 else friendRequests.size();
+            if (startIndex >= friendRequests.size()) (return null);
+            ?Iter.toArray(
+              Array.slice<FriendRequest>(
+                friendRequests,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Function to send a friend request
+  public func sendFriendRequest(recipient : Principal, request : FriendRequest) : async Bool {
+    switch (userNetwork.get(recipient)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.friendRequests) {
+          case (null) return false;
+          case (?friendRequests) {
+            let updatedRequests = Array.append<FriendRequest>(
+              friendRequests,
+              [request],
+            );
+            let updatedUserNetwork = {
+              network with
+              friendRequests = ?updatedRequests
+            };
+            userNetwork.put(recipient, updatedUserNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to delete a friend request
+  public shared ({ caller }) func deleteFriendRequest(requestId : UserID) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.friendRequests) {
+          case (null) return false;
+          case (?friendRequests) {
+            let updatedRequests = Array.filter<FriendRequest>(
+              friendRequests,
+              func(request) {
+                request.from != requestId;
+              },
+            );
+            let updatedUserNetwork = {
+              network with
+              friendRequests = ?updatedRequests
+            };
+            userNetwork.put(caller, updatedUserNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to unblock a user
+  public func unblockUser(caller : Principal, userIdToUnblock : UserID) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.blockedUsers) {
+          case (null) return false;
+          case (?blockedUsers) {
+            let updatedBlockedUsers = Array.filter<UserID>(
+              blockedUsers,
+              func(userId) {
+                userId != userIdToUnblock;
+              },
+            );
+            let updatedUserNetwork = {
+              network with
+              blockedUsers = ?updatedBlockedUsers
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Retrieves the blocked users with pagination
+  public query ({ caller }) func getBlockedUsers(page : Nat) : async ?[UserID] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.blockedUsers) {
+          case (null) return null;
+          case (?blockedUsers) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < blockedUsers.size()
+            ) (page + 1) * 10 else blockedUsers.size();
+            if (startIndex >= blockedUsers.size()) return null;
+            ?Iter.toArray(
+              Array.slice<UserID>(
+                blockedUsers,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Function to get notifications by caller
+  public query ({ caller }) func getNotifications(page : Nat) : async ?[Notification] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.notifications) {
+          case (null) return null;
+          case (?notifications) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < notifications.size()
+            ) (page + 1) * 10 else notifications.size();
+            if (startIndex >= notifications.size()) {
+              return null;
+            };
+            ?Iter.toArray(
+              Array.slice<Notification>(
+                notifications,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Function to follow a user
+  public shared ({ caller }) func followUser(followId : UserID) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.following) {
+          case (null) return false;
+          case (?following) {
+            let updatedFollowing = Array.append<UserID>(
+              following,
+              [followId],
+            );
+            let updatedUserNetwork = {
+              network with
+              following = ?updatedFollowing
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Retrieves the list of users that the given user is following with pagination
+  public query ({ caller }) func getFollowing(page : Nat) : async ?[UserID] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.following) {
+          case (null) return null;
+          case (?following) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < following.size()
+            ) (page + 1) * 10 else following.size();
+            if (startIndex >= following.size()) {
+              return null;
+            };
+            ?Iter.toArray(
+              Array.slice<UserID>(
+                following,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Retrieves the list of users that are following the given user with pagination
+  public query ({ caller }) func getFollowers(page : Nat) : async ?[UserID] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.followers) {
+          case (null) return null;
+          case (?followers) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < followers.size()
+            ) (page + 1) * 10 else followers.size();
+            if (startIndex >= followers.size()) {
+              return null;
+            };
+            ?Iter.toArray(
+              Array.slice<UserID>(
+                followers,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Function to get a post by caller and postId
+  public query ({ caller }) func getPost(postId : Nat) : async ?Post {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return null;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            return postOpt;
+          };
+        };
+      };
+    };
+  };
+  // Function to get a comment by fromUserID and commentId
+  public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
+    let userNetworkOpt = userNetwork.get(fromUserID);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.comments) {
+          case (null) return null;
+          case (?comments) {
+            let commentOpt = Array.find<Comment>(
+              comments,
+              func(comment) {
+                comment.id == commentId;
+              },
+            );
+            return commentOpt;
+          };
+        };
+      };
+    };
+  };
+  // Function to get a like by fromUserID and likeId
+  public query func getLike(fromUserID : UserID, likeId : Nat) : async ?Like {
+    let userNetworkOpt = userNetwork.get(fromUserID);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.likes) {
+          case (null) return null;
+          case (?likes) {
+            let likeOpt = Array.find<Like>(
+              likes,
+              func(like) {
+                like.id == likeId;
+              },
+            );
+            return likeOpt;
+          };
+        };
+      };
+    };
+  };
+  // Example usage in deletePost function
+  public shared ({ caller }) func deletePost(postId : Nat) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            let updatedPosts = Array.filter<Post>(
+              posts,
+              func(post : Post) : Bool {
+                post.id != postId;
+              },
+            );
+            let updatedNetwork = {
+              network with
+              posts = ?updatedPosts;
+            };
+            userNetwork.put(caller, updatedNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to update a post
+  public shared ({ caller }) func updatePost(postId : Nat, newContent : Text) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            if (postId >= posts.size() or posts[postId].userId != caller) {
+              return false; // Invalid index or not the author
+            };
+            let updatedPost = {
+              posts[postId] with
+              content = newContent;
+              timestamp = Time.now(); // Update the timestamp to the current time
+            };
+            let filteredPosts = Array.filter<Post>(
+              posts,
+              func(post : Post) : Bool {
+                post.id != postId;
+              },
+            );
+            let updatedPosts = Array.append(filteredPosts, [updatedPost]);
+            let updatedNetwork = {
+              network with
+              posts = ?updatedPosts;
+            };
+            userNetwork.put(caller, updatedNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+
+  // #endregion
+
+  // #region |Players|
 
   var ONE_SECOND : Nat64 = 1_000_000_000;
   var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
   stable var _players : [(PlayerId, Player)] = [];
   stable var _friendRequests : [(PlayerId, [FriendRequest])] = [];
-  stable var _privacySettings : [(PlayerId, PrivacySetting)] = [];
   stable var _blockedUsers : [(PlayerId, [PlayerId])] = [];
   stable var _mutualFriendships : [((PlayerId, PlayerId), MutualFriendship)] = [];
   stable var _notifications : [(PlayerId, [Notification])] = [];
@@ -1698,13 +2703,12 @@ Self {
   var players : HashMap.HashMap<PlayerId, Player> = HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
 
   var friendRequests : HashMap.HashMap<PlayerId, [FriendRequest]> = HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
-  var privacySettings : HashMap.HashMap<PlayerId, PrivacySetting> = HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
   var blockedUsers : HashMap.HashMap<PlayerId, [PlayerId]> = HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
   var mutualFriendships : HashMap.HashMap<(PlayerId, PlayerId), MutualFriendship> = HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
   var notifications : HashMap.HashMap<PlayerId, [Notification]> = HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
   var updateTimestamps : HashMap.HashMap<PlayerId, UpdateTimestamps> = HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
 
-  public shared ({ caller : PlayerId }) func registerPlayer(username : Username,avatar : AvatarID,referralCode : ReferralCode) : async (Bool, ?Player, Text) {
+  public shared ({ caller : PlayerId }) func registerPlayerOld(username : Username, avatar : AvatarID, referralCode : ReferralCode) : async (Bool, ?Player, Text) {
     if (username.size() > 12) {
       return (false, null, "Username must be 12 characters or less");
     };
@@ -1775,13 +2779,11 @@ Self {
           finalCode := assignedCode;
         };
 
-        
         let _ = await assignAchievementsToUser(caller);
 
         let (_, tDeck, _) = await mintDeck();
         let (_, _) = await mintChest(caller, 1);
 
-        
         return (true, ?newPlayer, "User registered successfully with referral code " # finalCode # " Deck: " # tDeck);
       };
     };
@@ -1818,70 +2820,6 @@ Self {
       },
     );
     notifications.put(playerId, userNotifications);
-  };
-
-  private func sendNotification(to : PlayerId, message : Text) {
-    let notification : Notification = {
-      from = to;
-      message = message;
-      timestamp = Time.now();
-    };
-
-    var userNotifications = Utils.nullishCoalescing<[Notification]>(notifications.get(to), []);
-    if (
-      Array.find(
-        userNotifications,
-        func(n : Notification) : Bool {
-          n.message == message and Nat64.fromIntWrap(Time.now() - n.timestamp) < ONE_MINUTE;
-        },
-      ) == null
-    ) {
-      addNotification(to, notification);
-    };
-    cleanOldNotifications(to); // Clean old notifications after adding a new one
-  };
-
-  public shared ({ caller : PlayerId }) func updateUsername(username : Username) : async (Bool, PlayerId, Text) {
-    let playerId = caller;
-    let currentTime = Nat64.fromIntWrap(Time.now());
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, playerId, "User record does not exist");
-      };
-      case (?player) {
-        if (player.username == username) {
-          return (false, playerId, "New username cannot be the same as the current username");
-        };
-
-        let timestamps = Utils.nullishCoalescing<UpdateTimestamps>(updateTimestamps.get(playerId), getDefaultTimestamps());
-        let usernameTimestamp = timestamps.username;
-
-        if (Nat64.sub(currentTime, usernameTimestamp) < ONE_MINUTE) {
-          return (false, playerId, "You can only update your username once every minute");
-        };
-
-        let updatedPlayer : Player = {
-          id = player.id;
-          username = username;
-          avatar = player.avatar;
-          description = player.description;
-          registrationDate = player.registrationDate;
-          level = player.level;
-          elo = player.elo;
-          friends = player.friends;
-          title = player.title;
-        };
-        players.put(playerId, updatedPlayer);
-
-        let updatedTimestamps = {
-          timestamps with username = currentTime
-        };
-        updateTimestamps.put(playerId, updatedTimestamps);
-
-        return (true, playerId, "Username updated successfully");
-      };
-    };
   };
 
   public shared ({ caller : PlayerId }) func updateDescription(description : Description) : async (Bool, PlayerId, Text) {
@@ -1927,112 +2865,6 @@ Self {
         updateTimestamps.put(playerId, updatedTimestamps);
 
         return (true, playerId, "Description updated successfully");
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func sendFriendRequest(friendId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-
-    // Prevent sending friend request to self
-    if (playerId == friendId) {
-      return (false, "Cannot send friend request to yourself");
-    };
-
-    // Check if the player is blocked by the recipient
-    if (isBlockedBy(friendId, playerId)) {
-      return (false, "You are blocked by this user");
-    };
-
-    // Check if the players are already friends
-    if (areFriends(playerId, friendId)) {
-      return (false, "You are already friends with this user");
-    };
-
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?player) {
-        switch (players.get(friendId)) {
-          case (null) {
-            return (false, "Friend principal not registered");
-          };
-          case (?_) {
-            if (not canSendRequestToNonFriend(playerId, friendId)) {
-              return (false, "Cannot send friend request to this user");
-            };
-
-            var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(friendId), []);
-            if (findFriendRequestIndex(requests, playerId) != null) {
-              return (false, "Friend request already sent");
-            };
-
-            let newRequest : FriendRequest = {
-              from = playerId;
-              to = friendId;
-              timestamp = Time.now();
-            };
-
-            let requestBuffer = Buffer.Buffer<FriendRequest>(requests.size() + 1);
-            for (req in requests.vals()) {
-              requestBuffer.add(req);
-            };
-            requestBuffer.add(newRequest);
-
-            friendRequests.put(friendId, Buffer.toArray(requestBuffer));
-
-            sendNotification(friendId, "You have a new friend request from " # player.username);
-
-            return (true, "Friend request sent successfully");
-          };
-        };
-      };
-    };
-  };
-
-  public shared ({ caller : PlayerId }) func acceptFriendRequest(fromId : PlayerId) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        var requests = Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(playerId), []);
-        let requestIndex = findFriendRequestIndex(requests, fromId);
-        switch (requestIndex) {
-          case (null) {
-            return (false, "Friend request not found");
-          };
-          case (?_index) {
-            // Remove the request from the list
-            requests := Array.filter<FriendRequest>(requests, func(req : FriendRequest) : Bool { req.from != fromId });
-            friendRequests.put(playerId, requests);
-
-            // Add friend to both users' friends list
-            addFriendToUser(playerId, fromId);
-            addFriendToUser(fromId, playerId);
-
-            // Record the mutual friendship with timestamp
-            let friendship : MutualFriendship = {
-              friend1 = playerId;
-              friend2 = fromId;
-              friendsSince = Time.now();
-            };
-            mutualFriendships.put((playerId, fromId), friendship);
-            mutualFriendships.put((fromId, playerId), friendship);
-
-            // Update achievement progress for both players
-            let updateResult1 = await updateAddFriendAchievement(playerId);
-            let updateResult2 = await updateAddFriendAchievement(fromId);
-
-            if (updateResult1.0 and updateResult2.0) {
-              return (true, "Friend request accepted and achievements updated");
-            } else {
-              return (true, "Friend request accepted but achievements update failed");
-            };
-          };
-        };
       };
     };
   };
@@ -2103,7 +2935,7 @@ Self {
     };
   };
 
-  public shared ({ caller : PlayerId }) func unblockUser(blockedId : PlayerId) : async (Bool, Text) {
+  public shared ({ caller : PlayerId }) func unblockUserOld(blockedId : PlayerId) : async (Bool, Text) {
     let playerId = caller;
     switch (players.get(playerId)) {
       case (null) {
@@ -2118,80 +2950,14 @@ Self {
     };
   };
 
-  public shared ({ caller : PlayerId }) func setPrivacySetting(setting : PrivacySetting) : async (Bool, Text) {
-    let playerId = caller;
-    switch (players.get(playerId)) {
-      case (null) {
-        return (false, "User record does not exist");
-      };
-      case (?_player) {
-        let currentSetting = Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
-        if (currentSetting != setting) {
-          privacySettings.put(playerId, setting);
-          sendNotification(playerId, "Your privacy settings have been updated.");
-        };
-        return (true, "Privacy settings updated successfully");
-      };
-    };
-  };
-
-  public query ({ caller : PlayerId }) func getBlockedUsers() : async [PlayerId] {
+  public query ({ caller : PlayerId }) func getBlockedUsersOld() : async [PlayerId] {
     return Utils.nullishCoalescing<[PlayerId]>(blockedUsers.get(caller), []);
-  };
-
-  private func addFriendToUser(userId : PlayerId, friendId : PlayerId) {
-    switch (players.get(userId)) {
-      case (null) {};
-      case (?user) {
-        switch (players.get(friendId)) {
-          case (null) {};
-          case (?friend) {
-            // Ensure friend is not already in user's friends list
-            if (Array.find(user.friends, func(f : FriendDetails) : Bool { f.playerId == friendId }) == null) {
-              let userFriendsBuffer = Buffer.Buffer<FriendDetails>(user.friends.size() + 1);
-              for (f in user.friends.vals()) {
-                userFriendsBuffer.add(f);
-              };
-              userFriendsBuffer.add({
-                playerId = friendId;
-                username = friend.username;
-                avatar = friend.avatar;
-              });
-              players.put(userId, { user with friends = Buffer.toArray(userFriendsBuffer) });
-            };
-
-            // Ensure user is not already in friend's friends list
-            if (Array.find(friend.friends, func(f : FriendDetails) : Bool { f.playerId == userId }) == null) {
-              let friendFriendsBuffer = Buffer.Buffer<FriendDetails>(friend.friends.size() + 1);
-              for (f in friend.friends.vals()) {
-                friendFriendsBuffer.add(f);
-              };
-              friendFriendsBuffer.add({
-                playerId = userId;
-                username = user.username;
-                avatar = user.avatar;
-              });
-              players.put(friendId, { friend with friends = Buffer.toArray(friendFriendsBuffer) });
-            };
-          };
-        };
-      };
-    };
   };
 
   private func areFriends(playerId1 : PlayerId, playerId2 : PlayerId) : Bool {
     switch (mutualFriendships.get((playerId1, playerId2))) {
       case (null) false;
       case (?_) true;
-    };
-  };
-
-  private func canSendRequestToNonFriend(senderId : PlayerId, recipientId : PlayerId) : Bool {
-    let privacySetting = getPrivacySettings(recipientId);
-    switch (privacySetting) {
-      case (#acceptAll) true;
-      case (#blockAll) false;
-      case (#friendsOfFriends) areFriends(senderId, recipientId);
     };
   };
 
@@ -2215,20 +2981,12 @@ Self {
     };
   };
 
-  private func getPrivacySettings(playerId : PlayerId) : PrivacySetting {
-    Utils.nullishCoalescing<PrivacySetting>(privacySettings.get(playerId), #acceptAll);
-  };
-
-  public query ({ caller : PlayerId }) func getNotifications() : async [Notification] {
+  public query ({ caller : PlayerId }) func getNotificationsOld() : async [Notification] {
     return Utils.nullishCoalescing<[Notification]>(notifications.get(caller), []);
   };
 
-  public query ({ caller : PlayerId }) func getFriendRequests() : async [FriendRequest] {
+  public query ({ caller : PlayerId }) func getFriendRequestsOld() : async [FriendRequest] {
     return Utils.nullishCoalescing<[FriendRequest]>(friendRequests.get(caller), []);
-  };
-
-  public query ({ caller : PlayerId }) func getMyPrivacySettings() : async PrivacySetting {
-    return getPrivacySettings(caller);
   };
 
   public query func getPlayer(id : Principal) : async (Bool, ?Player) {
@@ -2314,29 +3072,12 @@ Self {
     return Buffer.toArray(result);
   };
 
-  public query ({ caller : PlayerId }) func getFriendsList() : async ?[PlayerId] {
-    switch (players.get(caller)) {
-      case (null) {
-        return null; // User record does not exist
-      };
-      case (?player) {
-        let friendIds = Array.map<FriendDetails, PlayerId>(
-          player.friends,
-          func(friend : FriendDetails) : PlayerId {
-            return friend.playerId;
-          },
-        );
-        return ?friendIds;
-      };
-    };
-  };
-
   public query func getAllPlayers() : async [Player] {
     return Iter.toArray(players.vals());
   };
-// #endregion
+  // #endregion
 
-//#region |MatchMaking|
+  //#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * ONE_SECOND;
 
@@ -2926,8 +3667,13 @@ Self {
   public query func getCosmicraftsStats() : async OverallStats {
     return overallStats;
   };
-  
-  public query func test(playerId : PlayerId) : async ?{username : Username;level : Level;elo : Float;xp : Nat;gamesWon : Nat;
+
+  public query func test(playerId : PlayerId) : async ?{
+    username : Username;
+    level : Level;
+    elo : Float;
+    xp : Nat;
+    gamesWon : Nat;
     gamesLost : Nat;
   } {
     // Retrieve player details
@@ -2958,9 +3704,9 @@ Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Statistics|
+  // #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -3118,9 +3864,9 @@ Self {
     };
   };
 
-// #endregion
+  // #endregion
 
-//#region |Tournaments Matchmaking|
+  //#region |Tournaments Matchmaking|
 
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
@@ -3158,7 +3904,7 @@ Self {
     nextMatchId : ?Nat; // Track the next match
   };
 
-  public shared  func createTournament(name : Text, startDate : Time.Time, prizePool : Text, expirationDate : Time.Time) : async Nat {
+  public shared func createTournament(name : Text, startDate : Time.Time, prizePool : Text, expirationDate : Time.Time) : async Nat {
 
     let id = tournaments.size();
     let buffer = Buffer.Buffer<Tournament>(tournaments.size() + 1);
@@ -3309,7 +4055,7 @@ Self {
     return true;
   };
 
-  public shared  func adminUpdateMatch(tournamentId : Nat, matchId : Nat, winnerIndex : Nat, score : Text) : async Bool {
+  public shared func adminUpdateMatch(tournamentId : Nat, matchId : Nat, winnerIndex : Nat, score : Text) : async Bool {
     let matchOpt = Array.find<Match>(matches, func(m : Match) : Bool { m.id == matchId and m.tournamentId == tournamentId });
     switch (matchOpt) {
       case (?match) {
@@ -3680,9 +4426,9 @@ Self {
     matches := [];
     return true;
   };
-// #endregion
+  // #endregion
 
-//#region |ICRC7|
+  //#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -4490,11 +5236,8 @@ Self {
   // Queries
   public query func getNFTs(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     let entries = Iter.toArray(Trie.iter(tokens));
-    var resultBuffer = Buffer.Buffer<(
-      TypesICRC7.TokenId, 
-      TypesICRC7.TokenMetadata
-      )>(0);
-      
+    var resultBuffer = Buffer.Buffer<(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)>(0);
+
     for (entry in entries.vals()) {
       let key = entry.0;
       let value = entry.1;
@@ -4570,9 +5313,9 @@ Self {
 
     return Buffer.toArray(resultBuffer);
   };
-// #endregion
+  // #endregion
 
-//#region |GameNFTs|
+  //#region |GameNFTs|
   public shared (msg) func upgradeNFT(nftID : TokenID) : async (Bool, Text) {
     // Perform ownership check
     let ownerof : TypesICRC7.OwnerResult = await icrc7_owner_of(nftID);
@@ -4955,9 +5698,9 @@ Self {
     },
     // Add more templates as needed
   ];
-// #endregion
+  // #endregion
 
-//#region |Chests|
+  //#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5056,9 +5799,9 @@ Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |ICRC1|
+  //#region |ICRC1|
 
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
@@ -5159,9 +5902,9 @@ Self {
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
-// #endregion
+  // #endregion
 
-//#region |Logging|
+  //#region |Logging|
 
   public type MintedStardust = {
     quantity : Nat;
@@ -5313,7 +6056,8 @@ Self {
   public query func getMintedInfo(user : Principal) : async {
     stardust : Nat;
     chests : { quantity : Nat; tokenIDs : [TokenID] };
-    gameNFTs : { quantity : Nat; tokenIDs : [TokenID] };} {
+    gameNFTs : { quantity : Nat; tokenIDs : [TokenID] };
+  } {
     let stardust = switch (mintedStardustMap.get(user)) {
       case (null) 0;
       case (?stardustData) stardustData.quantity;
@@ -5335,13 +6079,13 @@ Self {
       gameNFTs = gameNFTs;
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Migrations|
+  //#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
-     savedPlayerDecks := playerDecks;
+    savedPlayerDecks := playerDecks;
 
     _generalUserProgress := Iter.toArray(generalUserProgress.entries());
     _missions := Iter.toArray(missions.entries());
@@ -5353,7 +6097,6 @@ Self {
 
     _players := Iter.toArray(players.entries());
     _friendRequests := Iter.toArray(friendRequests.entries());
-    _privacySettings := Iter.toArray(privacySettings.entries());
     _blockedUsers := Iter.toArray(blockedUsers.entries());
     _mutualFriendships := Iter.toArray(mutualFriendships.entries());
     _notifications := Iter.toArray(notifications.entries());
@@ -5387,58 +6130,56 @@ Self {
   };
 
   system func postupgrade() {
-      // Restore the state of the stable variables
-      playerDecks := savedPlayerDecks;
+    // Restore the state of the stable variables
+    playerDecks := savedPlayerDecks;
 
-      generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
-      missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
-      activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
-      claimedRewards := HashMap.fromIter(_claimedRewards.vals(), 0, Principal.equal, Principal.hash);
+    generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
+    missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
+    activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
+    claimedRewards := HashMap.fromIter(_claimedRewards.vals(), 0, Principal.equal, Principal.hash);
 
-      individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
-      achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
+    individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
+    achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
 
-      players := HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
-      friendRequests := HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
-      privacySettings := HashMap.fromIter(_privacySettings.vals(), 0, Principal.equal, Principal.hash);
-      blockedUsers := HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
-      mutualFriendships := HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
-      notifications := HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
-      updateTimestamps := HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
+    players := HashMap.fromIter(_players.vals(), 0, Principal.equal, Principal.hash);
+    friendRequests := HashMap.fromIter(_friendRequests.vals(), 0, Principal.equal, Principal.hash);
+    blockedUsers := HashMap.fromIter(_blockedUsers.vals(), 0, Principal.equal, Principal.hash);
+    mutualFriendships := HashMap.fromIter(_mutualFriendships.vals(), 0, Utils.tupleEqual, Utils.tupleHash);
+    notifications := HashMap.fromIter(_notifications.vals(), 0, Principal.equal, Principal.hash);
+    updateTimestamps := HashMap.fromIter(_updateTimestamps.vals(), 0, Principal.equal, Principal.hash);
 
-      userMissionProgress := HashMap.fromIter(_userMissionProgress.vals(), 0, Principal.equal, Principal.hash);
-      userMissions := HashMap.fromIter(_userMissions.vals(), 0, Principal.equal, Principal.hash);
-      userMissionCounters := HashMap.fromIter(_userMissionCounters.vals(), 0, Principal.equal, Principal.hash);
-      userClaimedRewards := HashMap.fromIter(_userClaimedRewards.vals(), 0, Principal.equal, Principal.hash);
+    userMissionProgress := HashMap.fromIter(_userMissionProgress.vals(), 0, Principal.equal, Principal.hash);
+    userMissions := HashMap.fromIter(_userMissions.vals(), 0, Principal.equal, Principal.hash);
+    userMissionCounters := HashMap.fromIter(_userMissionCounters.vals(), 0, Principal.equal, Principal.hash);
+    userClaimedRewards := HashMap.fromIter(_userClaimedRewards.vals(), 0, Principal.equal, Principal.hash);
 
-      basicStats := HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
-      playerGamesStats := HashMap.fromIter(_playerGamesStats.vals(), 0, Principal.equal, Principal.hash);
-      onValidation := HashMap.fromIter(_onValidation.vals(), 0, Utils._natEqual, Utils._natHash);
-      countedMatches := HashMap.fromIter(_countedMatches.vals(), 0, Utils._natEqual, Utils._natHash);
+    basicStats := HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
+    playerGamesStats := HashMap.fromIter(_playerGamesStats.vals(), 0, Principal.equal, Principal.hash);
+    onValidation := HashMap.fromIter(_onValidation.vals(), 0, Utils._natEqual, Utils._natHash);
+    countedMatches := HashMap.fromIter(_countedMatches.vals(), 0, Utils._natEqual, Utils._natHash);
 
-      searching := HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
-      playerStatus := HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
-      inProgress := HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
-      finishedGames := HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
+    searching := HashMap.fromIter(_searching.vals(), 0, Utils._natEqual, Utils._natHash);
+    playerStatus := HashMap.fromIter(_playerStatus.vals(), 0, Principal.equal, Principal.hash);
+    inProgress := HashMap.fromIter(_inProgress.vals(), 0, Utils._natEqual, Utils._natHash);
+    finishedGames := HashMap.fromIter(_finishedGames.vals(), 0, Utils._natEqual, Utils._natHash);
 
-      // Restore the state of the achievement-related stable variables
-      achievementCategories := HashMap.fromIter(_achievementCategories.vals(), 0, Utils._natEqual, Utils._natHash);
-      achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
-      individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
+    // Restore the state of the achievement-related stable variables
+    achievementCategories := HashMap.fromIter(_achievementCategories.vals(), 0, Utils._natEqual, Utils._natHash);
+    achievements := HashMap.fromIter(_achievements.vals(), 0, Utils._natEqual, Utils._natHash);
+    individualAchievements := HashMap.fromIter(_individualAchievements.vals(), 0, Utils._natEqual, Utils._natHash);
 
-      userProgress := HashMap.fromIter(_userProgress.vals(), 0, Principal.equal, Principal.hash);
+    userProgress := HashMap.fromIter(_userProgress.vals(), 0, Principal.equal, Principal.hash);
 
-      claimedIndividualAchievementRewards := HashMap.fromIter(_claimedIndividualAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
-      claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
-      claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
+    claimedIndividualAchievementRewards := HashMap.fromIter(_claimedIndividualAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
+    claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
+    claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
   };
-// #endregion
+  // #endregion
 
-//#region |Soul NFT|
+  //#region |Soul NFT|
 
   stable var savedPlayerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
   stable var playerDecks : Trie<Principal, PlayerGameData> = savedPlayerDecks;
-  
 
   private func _keyFromPrincipal(p : Principal) : Key<Principal> {
     { hash = Principal.hash p; key = p };
@@ -5767,9 +6508,9 @@ Self {
     #Ok;
     #Err : Text;
   };
-// #endregion
+  // #endregion
 
-//#region |Avatars and Titles|
+  //#region |Avatars and Titles|
 
   // Types for Avatars and Titles
   public type Avatar = {
@@ -6072,9 +6813,9 @@ Self {
 
     return titleDetails;
   };
-// #endregion
+  // #endregion
 
-//#region |Referrals|
+  //#region |Referrals|
 
   public type ReferralCode = Text;
 
@@ -6757,7 +7498,7 @@ Self {
   public func getTotalReferrals(player : PlayerId) : async Nat {
     switch (referralsByPlayer.get(player)) {
       case (?referralInfo) {
-        return referralInfo.directReferrals + 
+        return referralInfo.directReferrals +
         referralInfo.indirectReferrals +
         referralInfo.beyondReferrals;
       };
@@ -6773,9 +7514,9 @@ Self {
       case (?multiplier) { return multiplier };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Tops|
+  //#region |Tops|
   public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
     for ((playerId, multiplier) in multiplierByPlayer.entries()) {
@@ -6832,7 +7573,7 @@ Self {
     // Return the paginated list
     return paginatedPlayers;
   };
- 
+
   public type ReferralsTop = {
     playerId : Principal;
     totalReferrals : Nat;
@@ -6842,9 +7583,8 @@ Self {
     referrer : ?Principal;
   };
   public shared func getTopReferrals(page : Nat) : async [ReferralsTop] {
-    let allReferrals : [(PlayerId, ReferralInfo)] = 
-    Iter.toArray(referralsByPlayer.entries());
-    
+    let allReferrals : [(PlayerId, ReferralInfo)] = Iter.toArray(referralsByPlayer.entries());
+
     let sortedReferrals : [(PlayerId, ReferralInfo)] = Array.sort(
       allReferrals,
       func(a : (PlayerId, ReferralInfo), b : (PlayerId, ReferralInfo)) : {
@@ -6854,7 +7594,7 @@ Self {
       } {
         let totalA = a.1.directReferrals + a.1.indirectReferrals + a.1.beyondReferrals;
         let totalB = b.1.directReferrals + b.1.indirectReferrals + b.1.beyondReferrals;
-        
+
         if (totalA > totalB) {
           #less;
         } else if (totalA < totalB) {
@@ -6912,59 +7652,63 @@ Self {
     username : Text;
     avatar : Nat;
   };
-  public query({caller}) func getTopELO(page : Nat) : async [ELOTop] {
+  public query ({ caller }) func getTopELO(page : Nat) : async [ELOTop] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(players.size());
     for ((playerId, player) in players.entries()) {
-        buffer.add((playerId, player.elo));
+      buffer.add((playerId, player.elo));
     };
 
     let allPlayersWithELO = Buffer.toArray(buffer);
     let sortedPlayers = Array.sort(
-        allPlayersWithELO,
-        func(a : (PlayerId, Float), b : (PlayerId, Float)) : { #less; #equal; #greater; } {
-            if (a.1 > b.1) {
-                #less;
-            } else if (a.1 < b.1) {
-                #greater;
-            } else {
-                #equal;
-            };
-        },
+      allPlayersWithELO,
+      func(a : (PlayerId, Float), b : (PlayerId, Float)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
     );
 
     let pageSize = 10;
     let start = page * pageSize;
     let end = if (start + pageSize > Array.size(sortedPlayers)) {
-        Array.size(sortedPlayers);
+      Array.size(sortedPlayers);
     } else {
-        start + pageSize;
+      start + pageSize;
     };
 
     let paginatedPlayers : [(PlayerId, Float)] = Iter.toArray(
-        Array.slice(sortedPlayers, start, end)
+      Array.slice(sortedPlayers, start, end)
     );
 
     var topELOPlayers : [ELOTop] = [];
     for (entry in paginatedPlayers.vals()) {
-        let playerId = entry.0;
-        let elo = entry.1;
-       let playerOpt = players.get(caller);
-        let username = switch (playerOpt) {
-            case (?player) { player.username };
-            case (null) { "Unknown" };
-        };
-        let avatar = switch (playerOpt) {
-            case (?player) { player.avatar };
-            case (null) { 0 };
-        };
+      let playerId = entry.0;
+      let elo = entry.1;
+      let playerOpt = players.get(caller);
+      let username = switch (playerOpt) {
+        case (?player) { player.username };
+        case (null) { "Unknown" };
+      };
+      let avatar = switch (playerOpt) {
+        case (?player) { player.avatar };
+        case (null) { 0 };
+      };
 
-        let p : ELOTop= {
-            playerId = playerId;
-            elo = elo;
-            username = username;
-            avatar = avatar;
-        };
-        topELOPlayers := Array.append(topELOPlayers, [p]);
+      let p : ELOTop = {
+        playerId = playerId;
+        elo = elo;
+        username = username;
+        avatar = avatar;
+      };
+      topELOPlayers := Array.append(topELOPlayers, [p]);
     };
     return topELOPlayers;
   };
@@ -6975,7 +7719,7 @@ Self {
     level : Nat;
     nftCount : Nat;
   };
-  public  func getTopNFT(page : Nat) : async [NFTTop] {
+  public func getTopNFT(page : Nat) : async [NFTTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
     for ((playerId, player) in players.entries()) {
       let nftCount = (await getNFTs(playerId)).size();
@@ -6984,7 +7728,11 @@ Self {
     let allPlayersWithNFTs = Buffer.toArray(buffer);
     let sortedPlayers = Array.sort(
       allPlayersWithNFTs,
-      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
         if (a.1 > b.1) {
           #less;
         } else if (a.1 < b.1) {
@@ -7041,8 +7789,8 @@ Self {
     level : Nat;
     username : Text;
     avatar : Nat;
-  }; 
-  public query({caller}) func getTopLevel(page : Nat) : async [LevelTop] {
+  };
+  public query ({ caller }) func getTopLevel(page : Nat) : async [LevelTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(players.size());
     for ((playerId, player) in players.entries()) {
       buffer.add((playerId, player.level));
@@ -7100,83 +7848,87 @@ Self {
     username : Text;
     avatar : Nat;
   };
-  public query({caller}) func getTopAchievements(page : Nat) : async [AchievementsTop] {
+  public query ({ caller }) func getTopAchievements(page : Nat) : async [AchievementsTop] {
     let buffer = Buffer.Buffer<(PlayerId, Nat)>(userProgress.size());
     for ((playerId, userCategoriesList) in userProgress.entries()) {
-        var totalAchievements : Nat = 0;
+      var totalAchievements : Nat = 0;
 
-        // Count category achievements based on progress
-        for (category in userCategoriesList.vals()) {
-            totalAchievements += category.progress;
+      // Count category achievements based on progress
+      for (category in userCategoriesList.vals()) {
+        totalAchievements += category.progress;
 
-            // Count line achievements based on progress
-            for (achievementLine in category.achievements.vals()) {
-                totalAchievements += achievementLine.progress;
+        // Count line achievements based on progress
+        for (achievementLine in category.achievements.vals()) {
+          totalAchievements += achievementLine.progress;
 
-                // Count individual achievements based on progress
-                for (individualAchievement in achievementLine.individualAchievements.vals()) {
-                    totalAchievements += individualAchievement.progress;
-                };
-            };
+          // Count individual achievements based on progress
+          for (individualAchievement in achievementLine.individualAchievements.vals()) {
+            totalAchievements += individualAchievement.progress;
+          };
         };
+      };
 
-        buffer.add((playerId, totalAchievements));
+      buffer.add((playerId, totalAchievements));
     };
 
     let allPlayersWithAchievements = Buffer.toArray(buffer);
     let sortedPlayers = Array.sort(
-        allPlayersWithAchievements,
-        func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : { #less; #equal; #greater; } {
-            if (a.1 > b.1) {
-                #less;
-            } else if (a.1 < b.1) {
-                #greater;
-            } else {
-                #equal;
-            };
-        },
+      allPlayersWithAchievements,
+      func(a : (PlayerId, Nat), b : (PlayerId, Nat)) : {
+        #less;
+        #equal;
+        #greater;
+      } {
+        if (a.1 > b.1) {
+          #less;
+        } else if (a.1 < b.1) {
+          #greater;
+        } else {
+          #equal;
+        };
+      },
     );
 
     let pageSize = 10;
     let start = page * pageSize;
     let end = if (start + pageSize > Array.size(sortedPlayers)) {
-        Array.size(sortedPlayers);
+      Array.size(sortedPlayers);
     } else {
-        start + pageSize;
+      start + pageSize;
     };
 
     let paginatedPlayers : [(PlayerId, Nat)] = Iter.toArray(
-        Array.slice(sortedPlayers, start, end)
+      Array.slice(sortedPlayers, start, end)
     );
 
     var topAchievementPlayers : [AchievementsTop] = [];
     for (entry in paginatedPlayers.vals()) {
-        let playerId = entry.0;
-        let totalAchievements = entry.1;
-       
-        let playerOpt = players.get(caller);
-        let username = switch (playerOpt) {
-            case (?player) { player.username };
-            case (null) { "Unknown" };
-        };
-        let avatar = switch (playerOpt) {
-            case (?player) { player.avatar };
-            case (null) { 0 };
-        };
+      let playerId = entry.0;
+      let totalAchievements = entry.1;
 
-        let p : AchievementsTop = {
-            playerId = playerId;
-            totalAchievements = totalAchievements;
-            username = username;
-            avatar = avatar;
-        };
-        topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
+      let playerOpt = players.get(caller);
+      let username = switch (playerOpt) {
+        case (?player) { player.username };
+        case (null) { "Unknown" };
+      };
+      let avatar = switch (playerOpt) {
+        case (?player) { player.avatar };
+        case (null) { 0 };
+      };
+
+      let p : AchievementsTop = {
+        playerId = playerId;
+        totalAchievements = totalAchievements;
+        username = username;
+        avatar = avatar;
+      };
+      topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
     };
     return topAchievementPlayers;
   };
-// #endregion
+  // #endregion
 
-//#region |Achievements|
+  //#region |Achievements|
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -7204,7 +7956,7 @@ Self {
   public func initAchievements() : async Bool {
 
     // Check if achievements are already initialized
-    if(achievementCategories.size() > 0) {return true;};
+    if (achievementCategories.size() > 0) { return true };
 
     // Get the pre-defined "Tiers" category from the AchievementData module
     let tiersCategory = AchievementData.getTiersCategory();
@@ -7344,7 +8096,7 @@ Self {
 
     return categories;
   };
-  
+
   private func findIndividualAchievement(userCategoriesList : [AchievementCategory], individualAchievementId : Nat) : (?AchievementCategory, ?AchievementLine, ?IndividualAchievement) {
 
     for (category in userCategoriesList.vals()) {
@@ -7389,7 +8141,7 @@ Self {
     Debug.print("[createAchievement] Achievement created with ID: " # Nat.toText(id));
     return (true, "Achievement created successfully", id);
   };
-  
+
   public func createIndividualAchievement(achievementId : Nat, name : Text, achievementType : AchievementType, requiredProgress : Nat, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = individualAchievementIDCounter;
     individualAchievementIDCounter += 1;
@@ -7651,481 +8403,481 @@ Self {
   public shared func claimIndACH(id : Principal, achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(id);
     switch (userProgressOpt) {
-        case (null) {
-            return (false, "User has no progress records.");
-        };
-        case (?userCategoriesList) {
-            let (categoryOpt, achievementLineOpt, individualAchievementOpt) = findIndividualAchievement(userCategoriesList, achievementId);
-            switch (individualAchievementOpt) {
-                case (null) {
-                    return (false, "Individual Achievement not found");
-                };
-                case (?individualAchievement) {
-                    if (not individualAchievement.completed) {
-                        return (false, "Individual Achievement not completed");
-                    };
-
-                    let claimedRewards = switch (claimedIndividualAchievementRewards.get(id)) {
-                        case (null) { [] };
-                        case (?rewards) { rewards };
-                    };
-
-                    if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
-                        return (false, "Individual Achievement reward already claimed");
-                    };
-
-                    // Mint the rewards and collect messages
-                    var rewardMessage : Text = "";
-                    for (reward in individualAchievement.reward.vals()) {
-                        let (success, message) = await mintAchievementRewards(reward, id);
-                        if (not success) {
-                            return (false, message);
-                        };
-                        rewardMessage := rewardMessage # "; " # message;
-                    };
-
-                    // Update claimed rewards
-                    let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
-                    for (reward in claimedRewards.vals()) {
-                        updatedClaimedRewardsBuffer.add(reward);
-                    };
-                    updatedClaimedRewardsBuffer.add(achievementId);
-                    claimedIndividualAchievementRewards.put(id, Buffer.toArray(updatedClaimedRewardsBuffer));
-
-                    // Safely unwrap the optionals using a switch
-                    switch (achievementLineOpt) {
-                        case (null) {
-                            return (false, "Achievement Line not found");
-                        };
-                        case (?achievementLine) {
-                            // Update the claimed status by creating a new object with claimed = true
-                            let updatedIndividualAchievement : IndividualAchievement = {
-                                id = individualAchievement.id;
-                                achievementId = individualAchievement.achievementId;
-                                name = individualAchievement.name;
-                                achievementType = individualAchievement.achievementType;
-                                requiredProgress = individualAchievement.requiredProgress;
-                                reward = individualAchievement.reward;
-                                progress = individualAchievement.progress;
-                                completed = individualAchievement.completed;
-                                claimed = true; // Set claimed to true
-                            };
-
-                            // Replace the old individual achievement with the updated one
-                            let updatedIndividualAchievements = Array.tabulate<IndividualAchievement>(
-                                Array.size(achievementLine.individualAchievements),
-                                func(i : Nat) : IndividualAchievement {
-                                    let indAch = achievementLine.individualAchievements[i];
-                                    if (indAch.id == updatedIndividualAchievement.id) {
-                                        updatedIndividualAchievement;
-                                    } else {
-                                        indAch;
-                                    };
-                                },
-                            );
-
-                            let updatedAchievementLine : AchievementLine = {
-                                id = achievementLine.id;
-                                name = achievementLine.name;
-                                individualAchievements = updatedIndividualAchievements;
-                                categoryId = achievementLine.categoryId;
-                                reward = achievementLine.reward;
-                                requiredProgress = achievementLine.requiredProgress;
-                                completed = achievementLine.completed;
-                                progress = achievementLine.progress;
-                                claimed = achievementLine.claimed;
-                            };
-
-                            switch (categoryOpt) {
-                                case (null) {
-                                    return (false, "Achievement Category not found");
-                                };
-                                case (?category) {
-                                    // Update the category with the new achievement line
-                                    let updatedLines = Array.tabulate<AchievementLine>(
-                                        Array.size(category.achievements),
-                                        func(i : Nat) : AchievementLine {
-                                            let line = category.achievements[i];
-                                            if (line.id == updatedAchievementLine.id) {
-                                                updatedAchievementLine;
-                                            } else {
-                                                line;
-                                            };
-                                        },
-                                    );
-
-                                    let updatedCategory : AchievementCategory = {
-                                        id = category.id;
-                                        name = category.name;
-                                        achievements = updatedLines;
-                                        reward = category.reward;
-                                        requiredProgress = category.requiredProgress;
-                                        completed = category.completed;
-                                        progress = category.progress;
-                                        claimed = category.claimed;
-                                    };
-
-                                    // Update the user's progress
-                                    let updatedCategories = Array.tabulate<AchievementCategory>(
-                                        Array.size(userCategoriesList),
-                                        func(i : Nat) : AchievementCategory {
-                                            let cat = userCategoriesList[i];
-                                            if (cat.id == updatedCategory.id) {
-                                                updatedCategory;
-                                            } else {
-                                                cat;
-                                            };
-                                        },
-                                    );
-
-                                    userProgress.put(id, updatedCategories);
-
-                                    // Update stable arrays
-                                    updateStableArrays();
-
-                                    return (true, "Individual Achievement rewards claimed successfully. " # rewardMessage);
-                                };
-                            };
-                        };
-                    };
-                };
+      case (null) {
+        return (false, "User has no progress records.");
+      };
+      case (?userCategoriesList) {
+        let (categoryOpt, achievementLineOpt, individualAchievementOpt) = findIndividualAchievement(userCategoriesList, achievementId);
+        switch (individualAchievementOpt) {
+          case (null) {
+            return (false, "Individual Achievement not found");
+          };
+          case (?individualAchievement) {
+            if (not individualAchievement.completed) {
+              return (false, "Individual Achievement not completed");
             };
+
+            let claimedRewards = switch (claimedIndividualAchievementRewards.get(id)) {
+              case (null) { [] };
+              case (?rewards) { rewards };
+            };
+
+            if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
+              return (false, "Individual Achievement reward already claimed");
+            };
+
+            // Mint the rewards and collect messages
+            var rewardMessage : Text = "";
+            for (reward in individualAchievement.reward.vals()) {
+              let (success, message) = await mintAchievementRewards(reward, id);
+              if (not success) {
+                return (false, message);
+              };
+              rewardMessage := rewardMessage # "; " # message;
+            };
+
+            // Update claimed rewards
+            let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
+            for (reward in claimedRewards.vals()) {
+              updatedClaimedRewardsBuffer.add(reward);
+            };
+            updatedClaimedRewardsBuffer.add(achievementId);
+            claimedIndividualAchievementRewards.put(id, Buffer.toArray(updatedClaimedRewardsBuffer));
+
+            // Safely unwrap the optionals using a switch
+            switch (achievementLineOpt) {
+              case (null) {
+                return (false, "Achievement Line not found");
+              };
+              case (?achievementLine) {
+                // Update the claimed status by creating a new object with claimed = true
+                let updatedIndividualAchievement : IndividualAchievement = {
+                  id = individualAchievement.id;
+                  achievementId = individualAchievement.achievementId;
+                  name = individualAchievement.name;
+                  achievementType = individualAchievement.achievementType;
+                  requiredProgress = individualAchievement.requiredProgress;
+                  reward = individualAchievement.reward;
+                  progress = individualAchievement.progress;
+                  completed = individualAchievement.completed;
+                  claimed = true; // Set claimed to true
+                };
+
+                // Replace the old individual achievement with the updated one
+                let updatedIndividualAchievements = Array.tabulate<IndividualAchievement>(
+                  Array.size(achievementLine.individualAchievements),
+                  func(i : Nat) : IndividualAchievement {
+                    let indAch = achievementLine.individualAchievements[i];
+                    if (indAch.id == updatedIndividualAchievement.id) {
+                      updatedIndividualAchievement;
+                    } else {
+                      indAch;
+                    };
+                  },
+                );
+
+                let updatedAchievementLine : AchievementLine = {
+                  id = achievementLine.id;
+                  name = achievementLine.name;
+                  individualAchievements = updatedIndividualAchievements;
+                  categoryId = achievementLine.categoryId;
+                  reward = achievementLine.reward;
+                  requiredProgress = achievementLine.requiredProgress;
+                  completed = achievementLine.completed;
+                  progress = achievementLine.progress;
+                  claimed = achievementLine.claimed;
+                };
+
+                switch (categoryOpt) {
+                  case (null) {
+                    return (false, "Achievement Category not found");
+                  };
+                  case (?category) {
+                    // Update the category with the new achievement line
+                    let updatedLines = Array.tabulate<AchievementLine>(
+                      Array.size(category.achievements),
+                      func(i : Nat) : AchievementLine {
+                        let line = category.achievements[i];
+                        if (line.id == updatedAchievementLine.id) {
+                          updatedAchievementLine;
+                        } else {
+                          line;
+                        };
+                      },
+                    );
+
+                    let updatedCategory : AchievementCategory = {
+                      id = category.id;
+                      name = category.name;
+                      achievements = updatedLines;
+                      reward = category.reward;
+                      requiredProgress = category.requiredProgress;
+                      completed = category.completed;
+                      progress = category.progress;
+                      claimed = category.claimed;
+                    };
+
+                    // Update the user's progress
+                    let updatedCategories = Array.tabulate<AchievementCategory>(
+                      Array.size(userCategoriesList),
+                      func(i : Nat) : AchievementCategory {
+                        let cat = userCategoriesList[i];
+                        if (cat.id == updatedCategory.id) {
+                          updatedCategory;
+                        } else {
+                          cat;
+                        };
+                      },
+                    );
+
+                    userProgress.put(id, updatedCategories);
+
+                    // Update stable arrays
+                    updateStableArrays();
+
+                    return (true, "Individual Achievement rewards claimed successfully. " # rewardMessage);
+                  };
+                };
+              };
+            };
+          };
         };
+      };
     };
   };
 
   public shared (msg) func claimIndividualAchievementReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
-        case (null) {
-            return (false, "User has no progress records.");
-        };
-        case (?userCategoriesList) {
-            let (categoryOpt, achievementLineOpt, individualAchievementOpt) = findIndividualAchievement(userCategoriesList, achievementId);
-            switch (individualAchievementOpt) {
-                case (null) {
-                    return (false, "Individual Achievement not found");
-                };
-                case (?individualAchievement) {
-                    if (not individualAchievement.completed) {
-                        return (false, "Individual Achievement not completed");
-                    };
-
-                    let claimedRewards = switch (claimedIndividualAchievementRewards.get(msg.caller)) {
-                        case (null) { [] };
-                        case (?rewards) { rewards };
-                    };
-
-                    if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
-                        return (false, "Individual Achievement reward already claimed");
-                    };
-
-                    // Mint the rewards and collect messages
-                    var rewardMessage : Text = "";
-                    for (reward in individualAchievement.reward.vals()) {
-                        let (success, message) = await mintAchievementRewards(reward, msg.caller);
-                        if (not success) {
-                            return (false, message);
-                        };
-                        rewardMessage := rewardMessage # "; " # message;
-                    };
-
-                    // Update claimed rewards
-                    let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
-                    for (reward in claimedRewards.vals()) {
-                        updatedClaimedRewardsBuffer.add(reward);
-                    };
-                    updatedClaimedRewardsBuffer.add(achievementId);
-                    claimedIndividualAchievementRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
-
-                    // Safely unwrap the optionals using a switch
-                    switch (achievementLineOpt) {
-                        case (null) {
-                            return (false, "Achievement Line not found");
-                        };
-                        case (?achievementLine) {
-                            // Update the claimed status by creating a new object with claimed = true
-                            let updatedIndividualAchievement : IndividualAchievement = {
-                                id = individualAchievement.id;
-                                achievementId = individualAchievement.achievementId;
-                                name = individualAchievement.name;
-                                achievementType = individualAchievement.achievementType;
-                                requiredProgress = individualAchievement.requiredProgress;
-                                reward = individualAchievement.reward;
-                                progress = individualAchievement.progress;
-                                completed = individualAchievement.completed;
-                                claimed = true; // Set claimed to true
-                            };
-
-                            // Replace the old individual achievement with the updated one
-                            let updatedIndividualAchievements = Array.tabulate<IndividualAchievement>(
-                                Array.size(achievementLine.individualAchievements),
-                                func(i : Nat) : IndividualAchievement {
-                                    let indAch = achievementLine.individualAchievements[i];
-                                    if (indAch.id == updatedIndividualAchievement.id) {
-                                        updatedIndividualAchievement;
-                                    } else {
-                                        indAch;
-                                    };
-                                },
-                            );
-
-                            let updatedAchievementLine : AchievementLine = {
-                                id = achievementLine.id;
-                                name = achievementLine.name;
-                                individualAchievements = updatedIndividualAchievements;
-                                categoryId = achievementLine.categoryId;
-                                reward = achievementLine.reward;
-                                requiredProgress = achievementLine.requiredProgress;
-                                completed = achievementLine.completed;
-                                progress = achievementLine.progress;
-                                claimed = achievementLine.claimed;
-                            };
-
-                            switch (categoryOpt) {
-                                case (null) {
-                                    return (false, "Achievement Category not found");
-                                };
-                                case (?category) {
-                                    // Update the category with the new achievement line
-                                    let updatedLines = Array.tabulate<AchievementLine>(
-                                        Array.size(category.achievements),
-                                        func(i : Nat) : AchievementLine {
-                                            let line = category.achievements[i];
-                                            if (line.id == updatedAchievementLine.id) {
-                                                updatedAchievementLine;
-                                            } else {
-                                                line;
-                                            };
-                                        },
-                                    );
-
-                                    let updatedCategory : AchievementCategory = {
-                                        id = category.id;
-                                        name = category.name;
-                                        achievements = updatedLines;
-                                        reward = category.reward;
-                                        requiredProgress = category.requiredProgress;
-                                        completed = category.completed;
-                                        progress = category.progress;
-                                        claimed = category.claimed;
-                                    };
-
-                                    // Update the user's progress
-                                    let updatedCategories = Array.tabulate<AchievementCategory>(
-                                        Array.size(userCategoriesList),
-                                        func(i : Nat) : AchievementCategory {
-                                            let cat = userCategoriesList[i];
-                                            if (cat.id == updatedCategory.id) {
-                                                updatedCategory;
-                                            } else {
-                                                cat;
-                                            };
-                                        },
-                                    );
-
-                                    userProgress.put(msg.caller, updatedCategories);
-
-                                    // Update stable arrays
-                                    updateStableArrays();
-
-                                    return (true, "Individual Achievement rewards claimed successfully. " # rewardMessage);
-                                };
-                            };
-                        };
-                    };
-                };
+      case (null) {
+        return (false, "User has no progress records.");
+      };
+      case (?userCategoriesList) {
+        let (categoryOpt, achievementLineOpt, individualAchievementOpt) = findIndividualAchievement(userCategoriesList, achievementId);
+        switch (individualAchievementOpt) {
+          case (null) {
+            return (false, "Individual Achievement not found");
+          };
+          case (?individualAchievement) {
+            if (not individualAchievement.completed) {
+              return (false, "Individual Achievement not completed");
             };
+
+            let claimedRewards = switch (claimedIndividualAchievementRewards.get(msg.caller)) {
+              case (null) { [] };
+              case (?rewards) { rewards };
+            };
+
+            if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
+              return (false, "Individual Achievement reward already claimed");
+            };
+
+            // Mint the rewards and collect messages
+            var rewardMessage : Text = "";
+            for (reward in individualAchievement.reward.vals()) {
+              let (success, message) = await mintAchievementRewards(reward, msg.caller);
+              if (not success) {
+                return (false, message);
+              };
+              rewardMessage := rewardMessage # "; " # message;
+            };
+
+            // Update claimed rewards
+            let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
+            for (reward in claimedRewards.vals()) {
+              updatedClaimedRewardsBuffer.add(reward);
+            };
+            updatedClaimedRewardsBuffer.add(achievementId);
+            claimedIndividualAchievementRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
+
+            // Safely unwrap the optionals using a switch
+            switch (achievementLineOpt) {
+              case (null) {
+                return (false, "Achievement Line not found");
+              };
+              case (?achievementLine) {
+                // Update the claimed status by creating a new object with claimed = true
+                let updatedIndividualAchievement : IndividualAchievement = {
+                  id = individualAchievement.id;
+                  achievementId = individualAchievement.achievementId;
+                  name = individualAchievement.name;
+                  achievementType = individualAchievement.achievementType;
+                  requiredProgress = individualAchievement.requiredProgress;
+                  reward = individualAchievement.reward;
+                  progress = individualAchievement.progress;
+                  completed = individualAchievement.completed;
+                  claimed = true; // Set claimed to true
+                };
+
+                // Replace the old individual achievement with the updated one
+                let updatedIndividualAchievements = Array.tabulate<IndividualAchievement>(
+                  Array.size(achievementLine.individualAchievements),
+                  func(i : Nat) : IndividualAchievement {
+                    let indAch = achievementLine.individualAchievements[i];
+                    if (indAch.id == updatedIndividualAchievement.id) {
+                      updatedIndividualAchievement;
+                    } else {
+                      indAch;
+                    };
+                  },
+                );
+
+                let updatedAchievementLine : AchievementLine = {
+                  id = achievementLine.id;
+                  name = achievementLine.name;
+                  individualAchievements = updatedIndividualAchievements;
+                  categoryId = achievementLine.categoryId;
+                  reward = achievementLine.reward;
+                  requiredProgress = achievementLine.requiredProgress;
+                  completed = achievementLine.completed;
+                  progress = achievementLine.progress;
+                  claimed = achievementLine.claimed;
+                };
+
+                switch (categoryOpt) {
+                  case (null) {
+                    return (false, "Achievement Category not found");
+                  };
+                  case (?category) {
+                    // Update the category with the new achievement line
+                    let updatedLines = Array.tabulate<AchievementLine>(
+                      Array.size(category.achievements),
+                      func(i : Nat) : AchievementLine {
+                        let line = category.achievements[i];
+                        if (line.id == updatedAchievementLine.id) {
+                          updatedAchievementLine;
+                        } else {
+                          line;
+                        };
+                      },
+                    );
+
+                    let updatedCategory : AchievementCategory = {
+                      id = category.id;
+                      name = category.name;
+                      achievements = updatedLines;
+                      reward = category.reward;
+                      requiredProgress = category.requiredProgress;
+                      completed = category.completed;
+                      progress = category.progress;
+                      claimed = category.claimed;
+                    };
+
+                    // Update the user's progress
+                    let updatedCategories = Array.tabulate<AchievementCategory>(
+                      Array.size(userCategoriesList),
+                      func(i : Nat) : AchievementCategory {
+                        let cat = userCategoriesList[i];
+                        if (cat.id == updatedCategory.id) {
+                          updatedCategory;
+                        } else {
+                          cat;
+                        };
+                      },
+                    );
+
+                    userProgress.put(msg.caller, updatedCategories);
+
+                    // Update stable arrays
+                    updateStableArrays();
+
+                    return (true, "Individual Achievement rewards claimed successfully. " # rewardMessage);
+                  };
+                };
+              };
+            };
+          };
         };
+      };
     };
   };
 
   public shared (msg) func claimAchievementLineReward(achievementId : Nat) : async (Bool, Text) {
-      let userProgressOpt = userProgress.get(msg.caller);
-      switch (userProgressOpt) {
-          case (null) {
-              return (false, "User has no progress records.");
-          };
-          case (?userCategoriesList) {
-              for (category in userCategoriesList.vals()) {
-                  for (achievementLineOpt in category.achievements.vals()) {
-                      switch (achievementLineOpt) {
-                          case (achievementLine) {
-                              if (achievementLine.id == achievementId) {
-                                  if (not achievementLine.completed) {
-                                      return (false, "Achievement Line not completed");
-                                  };
-
-                                  let claimedRewards = switch (claimedAchievementLineRewards.get(msg.caller)) {
-                                      case (null) { [] };
-                                      case (?rewards) { rewards };
-                                  };
-
-                                  if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
-                                      return (false, "Achievement Line reward already claimed");
-                                  };
-
-                                  // Mint the rewards and collect messages
-                                  var rewardMessage : Text = "";
-                                  for (reward in achievementLine.reward.vals()) {
-                                      let (success, message) = await mintAchievementRewards(reward, msg.caller);
-                                      if (not success) {
-                                          return (false, message);
-                                      };
-                                      rewardMessage := rewardMessage # "; " # message;
-                                  };
-
-                                  // Update claimed rewards
-                                  let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
-                                  for (reward in claimedRewards.vals()) {
-                                      updatedClaimedRewardsBuffer.add(reward);
-                                  };
-                                  updatedClaimedRewardsBuffer.add(achievementId);
-                                  claimedAchievementLineRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
-
-                                  // Update the claimed status by creating a new object with claimed = true
-                                  let updatedAchievementLine : AchievementLine = {
-                                      id = achievementLine.id;
-                                      name = achievementLine.name;
-                                      individualAchievements = achievementLine.individualAchievements;
-                                      categoryId = achievementLine.categoryId;
-                                      reward = achievementLine.reward;
-                                      requiredProgress = achievementLine.requiredProgress;
-                                      completed = achievementLine.completed;
-                                      progress = achievementLine.progress;
-                                      claimed = true; // Set claimed to true
-                                  };
-
-                                  let updatedLines = Array.tabulate<AchievementLine>(
-                                      Array.size(category.achievements),
-                                      func(i : Nat) : AchievementLine {
-                                          let line = category.achievements[i];
-                                          if (line.id == updatedAchievementLine.id) {
-                                              updatedAchievementLine;
-                                          } else {
-                                              line;
-                                          };
-                                      },
-                                  );
-
-                                  let updatedCategory : AchievementCategory = {
-                                      id = category.id;
-                                      name = category.name;
-                                      achievements = updatedLines;
-                                      reward = category.reward;
-                                      requiredProgress = category.requiredProgress;
-                                      completed = category.completed;
-                                      progress = category.progress;
-                                      claimed = category.claimed;
-                                  };
-
-                                  let updatedCategories = Array.tabulate<AchievementCategory>(
-                                      Array.size(userCategoriesList),
-                                      func(i : Nat) : AchievementCategory {
-                                          let cat = userCategoriesList[i];
-                                          if (cat.id == updatedCategory.id) {
-                                              updatedCategory;
-                                          } else {
-                                              cat;
-                                          };
-                                      },
-                                  );
-
-                                  userProgress.put(msg.caller, updatedCategories);
-
-                                  // Update stable arrays
-                                  updateStableArrays();
-
-                                  return (true, "Achievement Line rewards claimed successfully. " # rewardMessage);
-                              };
-                          };
-                      };
-                  };
-              };
-              return (false, "Achievement Line not found");
-          };
+    let userProgressOpt = userProgress.get(msg.caller);
+    switch (userProgressOpt) {
+      case (null) {
+        return (false, "User has no progress records.");
       };
+      case (?userCategoriesList) {
+        for (category in userCategoriesList.vals()) {
+          for (achievementLineOpt in category.achievements.vals()) {
+            switch (achievementLineOpt) {
+              case (achievementLine) {
+                if (achievementLine.id == achievementId) {
+                  if (not achievementLine.completed) {
+                    return (false, "Achievement Line not completed");
+                  };
+
+                  let claimedRewards = switch (claimedAchievementLineRewards.get(msg.caller)) {
+                    case (null) { [] };
+                    case (?rewards) { rewards };
+                  };
+
+                  if (Array.find<Nat>(claimedRewards, func(r) { r == achievementId }) != null) {
+                    return (false, "Achievement Line reward already claimed");
+                  };
+
+                  // Mint the rewards and collect messages
+                  var rewardMessage : Text = "";
+                  for (reward in achievementLine.reward.vals()) {
+                    let (success, message) = await mintAchievementRewards(reward, msg.caller);
+                    if (not success) {
+                      return (false, message);
+                    };
+                    rewardMessage := rewardMessage # "; " # message;
+                  };
+
+                  // Update claimed rewards
+                  let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
+                  for (reward in claimedRewards.vals()) {
+                    updatedClaimedRewardsBuffer.add(reward);
+                  };
+                  updatedClaimedRewardsBuffer.add(achievementId);
+                  claimedAchievementLineRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
+
+                  // Update the claimed status by creating a new object with claimed = true
+                  let updatedAchievementLine : AchievementLine = {
+                    id = achievementLine.id;
+                    name = achievementLine.name;
+                    individualAchievements = achievementLine.individualAchievements;
+                    categoryId = achievementLine.categoryId;
+                    reward = achievementLine.reward;
+                    requiredProgress = achievementLine.requiredProgress;
+                    completed = achievementLine.completed;
+                    progress = achievementLine.progress;
+                    claimed = true; // Set claimed to true
+                  };
+
+                  let updatedLines = Array.tabulate<AchievementLine>(
+                    Array.size(category.achievements),
+                    func(i : Nat) : AchievementLine {
+                      let line = category.achievements[i];
+                      if (line.id == updatedAchievementLine.id) {
+                        updatedAchievementLine;
+                      } else {
+                        line;
+                      };
+                    },
+                  );
+
+                  let updatedCategory : AchievementCategory = {
+                    id = category.id;
+                    name = category.name;
+                    achievements = updatedLines;
+                    reward = category.reward;
+                    requiredProgress = category.requiredProgress;
+                    completed = category.completed;
+                    progress = category.progress;
+                    claimed = category.claimed;
+                  };
+
+                  let updatedCategories = Array.tabulate<AchievementCategory>(
+                    Array.size(userCategoriesList),
+                    func(i : Nat) : AchievementCategory {
+                      let cat = userCategoriesList[i];
+                      if (cat.id == updatedCategory.id) {
+                        updatedCategory;
+                      } else {
+                        cat;
+                      };
+                    },
+                  );
+
+                  userProgress.put(msg.caller, updatedCategories);
+
+                  // Update stable arrays
+                  updateStableArrays();
+
+                  return (true, "Achievement Line rewards claimed successfully. " # rewardMessage);
+                };
+              };
+            };
+          };
+        };
+        return (false, "Achievement Line not found");
+      };
+    };
   };
 
   public shared (msg) func claimCategoryAchievementReward(categoryId : Nat) : async (Bool, Text) {
-      let userProgressOpt = userProgress.get(msg.caller);
-      switch (userProgressOpt) {
-          case (null) {
-              return (false, "User has no progress records.");
-          };
-          case (?userCategoriesList) {
-              for (categoryOpt in userCategoriesList.vals()) {
-                  switch (categoryOpt) {
-                      case (category) {
-                          if (category.id == categoryId) {
-                              if (not category.completed) {
-                                  return (false, "Achievement Category not completed");
-                              };
-
-                              let claimedRewards = switch (claimedCategoryAchievementRewards.get(msg.caller)) {
-                                  case (null) { [] };
-                                  case (?rewards) { rewards };
-                              };
-
-                              if (Array.find<Nat>(claimedRewards, func(r) { r == categoryId }) != null) {
-                                  return (false, "Achievement Category reward already claimed");
-                              };
-
-                              // Mint the rewards and collect messages
-                              var rewardMessage : Text = "";
-                              for (reward in category.reward.vals()) {
-                                  let (success, message) = await mintAchievementRewards(reward, msg.caller);
-                                  if (not success) {
-                                      return (false, message);
-                                  };
-                                  rewardMessage := rewardMessage # "; " # message;
-                              };
-
-                              // Update claimed rewards
-                              let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
-                              for (reward in claimedRewards.vals()) {
-                                  updatedClaimedRewardsBuffer.add(reward);
-                              };
-                              updatedClaimedRewardsBuffer.add(categoryId);
-                              claimedCategoryAchievementRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
-
-                              // Update the claimed status by creating a new object with claimed = true
-                              let updatedCategory : AchievementCategory = {
-                                  id = category.id;
-                                  name = category.name;
-                                  achievements = category.achievements;
-                                  reward = category.reward;
-                                  requiredProgress = category.requiredProgress;
-                                  completed = category.completed;
-                                  progress = category.progress;
-                                  claimed = true; // Set claimed to true
-                              };
-
-                              let updatedCategories = Array.tabulate<AchievementCategory>(
-                                  Array.size(userCategoriesList),
-                                  func(i : Nat) : AchievementCategory {
-                                      let cat = userCategoriesList[i];
-                                      if (cat.id == updatedCategory.id) {
-                                          updatedCategory;
-                                      } else {
-                                          cat;
-                                      };
-                                  },
-                              );
-
-                              userProgress.put(msg.caller, updatedCategories);
-
-                              // Update stable arrays
-                              updateStableArrays();
-
-                              return (true, "Achievement Category rewards claimed successfully. " # rewardMessage);
-                          };
-                      };
-                  };
-              };
-              return (false, "Achievement Category not found");
-          };
+    let userProgressOpt = userProgress.get(msg.caller);
+    switch (userProgressOpt) {
+      case (null) {
+        return (false, "User has no progress records.");
       };
+      case (?userCategoriesList) {
+        for (categoryOpt in userCategoriesList.vals()) {
+          switch (categoryOpt) {
+            case (category) {
+              if (category.id == categoryId) {
+                if (not category.completed) {
+                  return (false, "Achievement Category not completed");
+                };
+
+                let claimedRewards = switch (claimedCategoryAchievementRewards.get(msg.caller)) {
+                  case (null) { [] };
+                  case (?rewards) { rewards };
+                };
+
+                if (Array.find<Nat>(claimedRewards, func(r) { r == categoryId }) != null) {
+                  return (false, "Achievement Category reward already claimed");
+                };
+
+                // Mint the rewards and collect messages
+                var rewardMessage : Text = "";
+                for (reward in category.reward.vals()) {
+                  let (success, message) = await mintAchievementRewards(reward, msg.caller);
+                  if (not success) {
+                    return (false, message);
+                  };
+                  rewardMessage := rewardMessage # "; " # message;
+                };
+
+                // Update claimed rewards
+                let updatedClaimedRewardsBuffer = Buffer.Buffer<Nat>(claimedRewards.size() + 1);
+                for (reward in claimedRewards.vals()) {
+                  updatedClaimedRewardsBuffer.add(reward);
+                };
+                updatedClaimedRewardsBuffer.add(categoryId);
+                claimedCategoryAchievementRewards.put(msg.caller, Buffer.toArray(updatedClaimedRewardsBuffer));
+
+                // Update the claimed status by creating a new object with claimed = true
+                let updatedCategory : AchievementCategory = {
+                  id = category.id;
+                  name = category.name;
+                  achievements = category.achievements;
+                  reward = category.reward;
+                  requiredProgress = category.requiredProgress;
+                  completed = category.completed;
+                  progress = category.progress;
+                  claimed = true; // Set claimed to true
+                };
+
+                let updatedCategories = Array.tabulate<AchievementCategory>(
+                  Array.size(userCategoriesList),
+                  func(i : Nat) : AchievementCategory {
+                    let cat = userCategoriesList[i];
+                    if (cat.id == updatedCategory.id) {
+                      updatedCategory;
+                    } else {
+                      cat;
+                    };
+                  },
+                );
+
+                userProgress.put(msg.caller, updatedCategories);
+
+                // Update stable arrays
+                updateStableArrays();
+
+                return (true, "Achievement Category rewards claimed successfully. " # rewardMessage);
+              };
+            };
+          };
+        };
+        return (false, "Achievement Category not found");
+      };
+    };
   };
 
   public shared func mintAchievementRewards(reward : AchievementReward, caller : Types.PlayerId) : async (Bool, Text) {
@@ -8245,16 +8997,16 @@ Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Views|
+  //#region |Views|
 
   public type TopView = {
     referralsTop : [ReferralsTop];
-    eloTop :  [ELOTop];
-    nftTop :  [NFTTop];
-    levelTop :  [LevelTop];
-    achTop :  [AchievementsTop];
+    eloTop : [ELOTop];
+    nftTop : [NFTTop];
+    levelTop : [LevelTop];
+    achTop : [AchievementsTop];
   };
 
   public shared func get_tops() : async (TopView) {
@@ -8263,15 +9015,15 @@ Self {
       eloTop = await getTopELO(0);
       nftTop = await getTopNFT(0);
       levelTop = await getTopLevel(0);
-      achTop =  await getTopAchievements(0);
+      achTop = await getTopAchievements(0);
     };
   };
 
-  public shared ({ caller }) func getAchievementsView() 
-    : async (
-      [AchievementCategory],
-      [AchievementLine],
-      [IndividualAchievement]) {
+  public shared ({ caller }) func get_ach() : async (
+    [AchievementCategory],
+    [AchievementLine],
+    [IndividualAchievement],
+  ) {
 
     let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
@@ -8290,70 +9042,6 @@ Self {
     (categories, lines, individuals);
   };
 
-  public shared ({ caller}) func get_player() : async (
-    ?(Player, PlayerGamesStats, AverageStats),?[PlayerId],[MissionsUser],
-    [MissionsUser],[Tournament],?[TypesICRC7.TokenId],Nat,Float,
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)],
-    TypesICRC7.Account,([AchievementCategory],[AchievementLine],
-    [IndividualAchievement]),[FriendRequest], PrivacySetting ) {
-    
-      let notifications = await getNotifications();
-      let friendRequests = await getFriendRequests();
-      let privacySettings = await getMyPrivacySettings();
-      let fullProfile = await getFullProfile(caller);
-      let friendsList = await getFriendsList();
-      let generalMissions = await getGeneralMissions();
-      let userMissions = await getUserMissions();
-      let allTournaments = await getAllTournaments();
-      let playerDeck = await getPlayerDeck(caller);
-      let totalReferrals = await getTotalReferrals(caller);
-      let multiplier = await getMultiplier(caller);
-      let achievements = await getAchievementsView();
-      let nfts = await getNFTs(caller);
-      let chests = await getChests(caller);
-      let avatars = await getAvatars(caller);
-      let characters = await getCharacters(caller);
-      let trophies = await getTrophies(caller);
-      let units = await getUnits(caller);
-      let collectionOwner = await get_collection_owner();
-      let (categories, lines, individuals) = await getAchievementsView();
-
-    return (
-    fullProfile,friendsList,generalMissions,userMissions,
-    allTournaments,playerDeck,totalReferrals,multiplier,
-    nfts,chests,avatars,characters,trophies,units,collectionOwner,
-    (categories, lines, individuals),friendRequests,privacySettings
-    );
-  };
-
-  public shared ({ caller }) func get_ach() 
-    : async (
-      [AchievementCategory],
-      [AchievementLine],
-      [IndividualAchievement]) {
-
-    let data = await getUserAchievements(caller);
-    var categories : [AchievementCategory] = [];
-    var lines : [AchievementLine] = [];
-    var individuals : [IndividualAchievement] = [];
-
-    for (category in data.vals()) {
-      categories := Array.append(categories, [category]);
-      for (line in category.achievements.vals()) {
-        lines := Array.append(lines, [line]);
-        for (achievement in line.individualAchievements.vals()) {
-          individuals := Array.append(individuals, [achievement]);
-        };
-      };
-    };
-    (categories, lines, individuals);
-  };
-
-// #endregion 
+  // #endregion
 
 };
