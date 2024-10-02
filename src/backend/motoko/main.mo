@@ -36,7 +36,7 @@ import Set "Set";
 
 shared actor class Cosmicrafts() = Self {
 
-  //#region |Admin Functions|
+//#region |Admin Functions|
   public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
     if (caller == ADMIN_PRINCIPAL) {
       Debug.print("Admin function called by admin.");
@@ -71,9 +71,9 @@ shared actor class Cosmicrafts() = Self {
       return (false, "Access denied: Only admin can call this function.");
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Types|
+// #region |Types|
   public type UserID = Types.UserID;
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -161,9 +161,9 @@ shared actor class Cosmicrafts() = Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
-  // #endregion
+// #endregion
 
-  // #region |Missions|
+// #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -328,9 +328,9 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
-  // #endregion
+// #endregion
 
-  // #region |General Missions|
+// #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -677,9 +677,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |User-Specific Missions|
+// #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -1158,9 +1158,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Progress Manager|
+// #region |Progress Manager|
 
   // Function to update achievement progress manager (cleaned version)
   func updateAchievementProgressManager(
@@ -1677,9 +1677,9 @@ shared actor class Cosmicrafts() = Self {
       case (null) {};
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Users|
+// #region |Users|
 
   public type BasicUserInfo = Types.BasicUserInfo;
   public type UserNameBasicInfo = Text;
@@ -1696,6 +1696,7 @@ shared actor class Cosmicrafts() = Self {
   public type UserNetwork = Types.UserNetwork;
   public type AIFeatures = Types.AIFeatures;
   public type FriendDetails = Types.FriendDetails;
+  public type LikeVariant = Types.LikeVariant;
   public type Comment = Types.Comment;
   public type Post = Types.Post;
   public type Like = Types.Like;
@@ -1707,6 +1708,7 @@ shared actor class Cosmicrafts() = Self {
 
   // Stable Variables
   stable var _userProfile : [(UserID, UserProfile)] = [];
+
   var userProfile : HashMap.HashMap<UserID, UserProfile> = HashMap.fromIter(
     _userProfile.vals(),
     0,
@@ -1729,14 +1731,15 @@ shared actor class Cosmicrafts() = Self {
   );
 
   // Registers a new player
-  public shared ({ caller : UserID }) func registerPlayer(
+  public shared ({ caller : UserID }) func registerUser(
     username : Text,
     avatarId : Nat,
     referralCode : ReferralCode,
-  ) : async (Bool, Text) {
+    ) : async (Bool, Text) {
 
     switch (userBasicInfo.get(caller)) {
       case (?existingPlayer) {
+        let _ = ?existingPlayer;
         return (false, "User is already registered");
       };
       case (null) {
@@ -1805,15 +1808,35 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+  // Retrieves the user profile by caller
+  public query ({ caller }) func getUserProfile() : async ?UserProfile {
+    return userProfile.get(caller);
+  };
+  // Retrieves the user profile by id
+  public query func getUserProfileByID(id : UserID) : async ?UserProfile {
+    return userProfile.get(id);
+  };
+  // Retrieves the basic user information caller
+  public query ({ caller }) func getUserBasicInfo() : async ?BasicUserInfo {
+    return userBasicInfo.get(caller);
+  };
+  // Retrieves the basic user information by id
+  public query func getUserBasicInfoByID(id : UserID) : async ?BasicUserInfo {
+    return userBasicInfo.get(id);
+  };
+  // Retrieves the basic user information by id
+  public query func getAllUsersBasicInfo() : async [BasicUserInfo] {
+    return Iter.toArray(userBasicInfo.vals());
+  };
   // Update the user in userBasicInfo information
   public shared ({ caller }) func updUserBasicInfo(
     newUsername : ?UserNameBasicInfo,
     newAvatarId : ?AvatarIDBasicInfo,
     newVerificationBadge : ?VerificationBadgeBasicInfo,
     newTitle : ?TitleBasicInfo,
-    newDescription : ?DescriptionBasicInfo,
+    newDescription :?DescriptionBasicInfo,
     newCountry : ?CountryBasicInfo,
-  ) : async (Bool, Text) {
+    ) : async (Bool, Text) {
 
     switch (userBasicInfo.get(caller)) {
       case (?info) {
@@ -1853,99 +1876,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Function to accept a friend request
-  public shared ({ caller }) func acceptFriendRequest(
-    fromUserID : UserID,
-    fromUsername : Text,
-    avatarId : Nat,
-  ) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.friendRequests) {
-          case (null) return false;
-          case (?friendRequests) {
-            let requestOpt = Array.find<FriendRequest>(
-              friendRequests,
-              func(request) {
-                request.from == fromUserID;
-              },
-            );
-            switch (requestOpt) {
-              case (null) return false;
-              case (?request) {
-                let indexOpt = Array.indexOf<FriendRequest>(
-                  request,
-                  friendRequests,
-                  func(a : FriendRequest, b : FriendRequest) : Bool {
-                    a.from == b.from and a.to == b.to and a.timestamp == b.timestamp
-                  },
-                );
-                switch (indexOpt) {
-                  case (null) return false;
-                  case (?index) {
-                    let updatedFriendRequests = Array.filter<FriendRequest>(
-                      friendRequests,
-                      func(request) {
-                        request != friendRequests[index];
-                      },
-                    );
-                    let newFriend : FriendDetails = {
-                      id = fromUserID;
-                      username = fromUsername;
-                      avatar = avatarId;
-                      friendProfile = null;
-                    };
-                    let updatedFriends = switch (network.friends) {
-                      case (null) [newFriend];
-                      case (?friends) Array.append<FriendDetails>(
-                        friends,
-                        [newFriend],
-                      );
-                    };
-                    let newNotification : Notification = {
-                      from = #FriendRequest(fromUserID);
-                      body = "Friend Request accepted";
-                      timestamp = Time.now();
-                    };
-                    let fromUserNetworkOpt = userNetwork.get(fromUserID);
-                    switch (fromUserNetworkOpt) {
-                      case (null) return false;
-                      case (?fromUserNetwork) {
-                        let updatedNotifications = switch (
-                          fromUserNetwork.notifications
-                        ) {
-                          case (null) [newNotification];
-                          case (?notifications) Array.append<Notification>(
-                            notifications,
-                            [newNotification],
-                          );
-                        };
-                        let updatedFromUserNetwork = {
-                          fromUserNetwork with
-                          notifications = ?updatedNotifications
-                        };
-                        userNetwork.put(
-                          fromUserID,
-                          updatedFromUserNetwork,
-                        );
-                      };
-                    };
-                    let updatedUserNetwork = {
-                      network with
-                      friends = ?updatedFriends;
-                      friendRequests = ?updatedFriendRequests;
-                    };
-                    userNetwork.put(caller, updatedUserNetwork);
-                    return true;
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
+  // Retrieves the user network information
+  public func getUserNetwork(id : UserID) : async ?UserNetwork {
+    return userNetwork.get(id);
   };
   // Function to create a post
   public shared ({ caller }) func createPost(
@@ -1953,7 +1886,7 @@ shared actor class Cosmicrafts() = Self {
     username : Text,
     images : ?[Nat],
     content : Text,
-  ) : async Bool {
+    ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -1993,13 +1926,189 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+  // Function to get a post by caller and postId
+  public query ({ caller }) func getPost(postId : Nat) : async ?Post {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return null;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            return postOpt;
+          };
+        };
+      };
+    };
+  };
+  // Example usage in deletePost function
+  public shared ({ caller }) func deletePost(postId : Nat) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            let updatedPosts = Array.filter<Post>(
+              posts,
+              func(post : Post) : Bool {
+                post.id != postId;
+              },
+            );
+            let updatedNetwork = {
+              network with
+              posts = ?updatedPosts;
+            };
+            userNetwork.put(caller, updatedNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to update a post
+  public shared ({ caller }) func updatePost(
+    postId : Nat, 
+    newContent : Text
+    ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return false;
+          case (?posts) {
+            if (postId >= posts.size() or posts[postId].userId != caller) {
+              return false; // Invalid index or not the author
+            };
+            let updatedPost = {
+              posts[postId] with
+              content = newContent;
+              timestamp = Time.now(); // Update the timestamp to the current time
+            };
+            let filteredPosts = Array.filter<Post>(
+              posts,
+              func(post : Post) : Bool {
+                post.id != postId;
+              },
+            );
+            let updatedPosts = Array.append(filteredPosts, [updatedPost]);
+            let updatedNetwork = {
+              network with
+              posts = ?updatedPosts;
+            };
+            userNetwork.put(caller, updatedNetwork);
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to like with LikeVariant and id that can be a post or comment id
+  public shared({ caller }) func like(
+    likeVariant : LikeVariant,
+    id : Nat,
+    fromUserID : UserID,
+    fromUsername : Text,
+    ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.likes) {
+          case (null) return false;
+          case (?likes) {
+            let likeCount = likes.size();
+            let newLike : Like = {
+              id = likeCount + 1;
+              likeVariant = likeVariant;
+              likeId = id;
+              fromUserID = fromUserID;
+              fromUsername = fromUsername;
+              timestamp = Time.now();
+            };
+            let updatedLikes = Array.append<Like>(
+              likes,
+              [newLike],
+            );
+            let updatedUserNetwork = {
+              network with
+              likes = ?updatedLikes
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to unlike with LikeVariant and id that can be a post or comment id
+  public shared ({ caller }) func unlike(
+    likeVariant : LikeVariant,
+    id : Nat,
+    fromUserID : UserID,
+    ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.likes) {
+          case (null) return false;
+          case (?likes) {
+            let updatedLikes = Array.filter<Like>(
+              likes,
+              func(like : Like) : Bool {
+                like.likeVariant == likeVariant and like.id == id and like.fromUserID == fromUserID;
+              },
+            );
+            let updatedUserNetwork = {
+              network with
+              likes = ?updatedLikes
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to get a like by fromUserID and likeId
+  public query func getLike(fromUserID : UserID, likeId : Nat) : async ?Like {
+    let userNetworkOpt = userNetwork.get(fromUserID);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.likes) {
+          case (null) return null;
+          case (?likes) {
+            let likeOpt = Array.find<Like>(
+              likes,
+              func(like) {
+                like.id == likeId;
+              },
+            );
+            return likeOpt;
+          };
+        };
+      };
+    };
+  };
   // Function to add a comment to a post
-  public shared ({ caller }) func addComment(
+  public shared ({ caller }) func createComment(
     postId : Nat,
     fromUserID : UserID,
     fromUsername : Text,
     content : Text,
-  ) : async Bool {
+    ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -2056,173 +2165,63 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Function to like a post
-  public shared ({ caller }) func givelikePost(
-    postId : Nat,
-    likeId : Nat,
-    fromUserID : UserID,
-    fromUsername : Text,
-    timestamp : Time.Time,
-  ) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
+  // Function to get a comment by fromUserID and commentId
+  public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
+    let userNetworkOpt = userNetwork.get(fromUserID);
+    switch (userNetworkOpt) {
+      case (null) return null;
       case (?network) {
-        switch (network.posts) {
-          case (null) return false;
-          case (?posts) {
-            let postOpt = Array.find<Post>(
-              posts,
-              func(post) {
-                post.id == postId;
+        switch (network.comments) {
+          case (null) return null;
+          case (?comments) {
+            let commentOpt = Array.find<Comment>(
+              comments,
+              func(comment) {
+                comment.id == commentId;
               },
             );
-            switch (postOpt) {
-              case (null) return false;
-              case (?post) {
-                let newLike : Like = {
-                  id = likeId;
-                  fromUserID = fromUserID;
-                  likeVariant = #Post;
-                  fromUsername = fromUsername;
-                  timestamp = timestamp;
-                };
-                let updatedLikes = switch (post.likes) {
-                  case (null) [newLike];
-                  case (?likes) Array.append<Like>(likes, [newLike]);
-                };
-                let updatedPost = {
-                  post with
-                  likes = ?updatedLikes
-                };
-                let updatedPosts = Array.map<Post, Post>(
-                  posts,
-                  func(p : Post) : Post {
-                    if (p.id == postId) updatedPost else p;
-                  },
-                );
-                let updatedUserNetwork = {
-                  network with
-                  posts = ?updatedPosts
-                };
-                userNetwork.put(caller, updatedUserNetwork);
-                return true;
-              };
-            };
+            return commentOpt;
           };
         };
       };
     };
   };
-  // Function to like a comment
-  public shared ({ caller }) func givelikeComment(
-    postId : Nat,
-    commentId : Nat,
-    likeId : Nat,
-    fromUserID : UserID,
-    fromUsername : Text,
-    timestamp : Time.Time,
-  ) : async Bool {
+  // Function to delete a comment
+  public shared ({ caller }) func deleteComment(commentId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
         switch (network.posts) {
           case (null) return false;
           case (?posts) {
-            let postOpt = Array.find<Post>(
+            let updatedPosts = Array.map<Post, Post>(
               posts,
-              func(post) {
-                post.id == postId;
-              },
-            );
-            switch (postOpt) {
-              case (null) return false;
-              case (?post) {
-                let commentOpt = switch (post.comments) {
-                  case (null) null;
-                  case (?comments) Array.find<Comment>(
+              func(post : Post) : Post {
+                let updatedComments = switch (post.comments) {
+                  case (null) [];
+                  case (?comments) Array.filter<Comment>(
                     comments,
-                    func(comment) {
-                      comment.id == commentId;
+                    func(comment : Comment) : Bool {
+                      comment.id != commentId;
                     },
                   );
                 };
-                switch (commentOpt) {
-                  case (null) return false;
-                  case (?comment) {
-                    let newLike : Like = {
-                      id = likeId;
-                      fromUserID = fromUserID;
-                      likeVariant = #Comment;
-                      fromUsername = fromUsername;
-                      timestamp = timestamp;
-                    };
-                    let updatedLikes = switch (comment.likes) {
-                      case (null) [newLike];
-                      case (?likes) Array.append<Like>(likes, [newLike]);
-                    };
-                    let updatedComment = {
-                      comment with
-                      likes = ?updatedLikes
-                    };
-                    switch (post.comments) {
-                      case (null) return false;
-                      case (?comments) {
-                        let updatedComments = Array.map<Comment, Comment>(
-                          comments,
-                          func(c : Comment) : Comment {
-                            if (c.id == commentId) updatedComment else c;
-                          },
-                        );
-                        let updatedPost = {
-                          post with
-                          comments = ?updatedComments
-                        };
-                        let updatedPosts = Array.map<Post, Post>(
-                          posts,
-                          func(p : Post) : Post {
-                            if (p.id == postId) updatedPost else p;
-                          },
-                        );
-                        let updatedUserNetwork = {
-                          network with
-                          posts = ?updatedPosts
-                        };
-                        userNetwork.put(caller, updatedUserNetwork);
-                        return true;
-                      };
-                    };
-                  };
+                {
+                  post with
+                  comments = ?updatedComments;
                 };
-              };
+              },
+            );
+            let updatedNetwork = {
+              network with
+              posts = ?updatedPosts;
             };
+            userNetwork.put(caller, updatedNetwork);
+            return true;
           };
         };
       };
     };
-  };
-  // Retrieves the user profile by caller
-  public query ({ caller }) func getUserProfile() : async ?UserProfile {
-    return userProfile.get(caller);
-  };
-  // Retrieves the user profile by id
-  public query func getUserProfileByID(id : UserID) : async ?UserProfile {
-    return userProfile.get(id);
-  };
-  // Retrieves the basic user information caller
-  public query ({ caller }) func getUserBasicInfo() : async ?BasicUserInfo {
-    return userBasicInfo.get(caller);
-  };
-  // Retrieves the basic user information by id
-  public query func getUserBasicInfoByID(id : UserID) : async ?BasicUserInfo {
-    return userBasicInfo.get(id);
-  };
-  // Retrieves the basic user information by id
-  public query func getAllUsersBasicInfo() : async [BasicUserInfo] {
-    return Iter.toArray(userBasicInfo.vals());
-  };
-  // Retrieves the user network information
-  public func getUserNetwork(id : UserID) : async ?UserNetwork {
-    return userNetwork.get(id);
   };
   // Retrieves the friend details with pagination
   public query ({ caller }) func getFriends(page : Nat) : async ?[FriendDetails] {
@@ -2329,35 +2328,13 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Retrieves the friend requests with pagination
-  public query ({ caller }) func getFriendRequests(page : Nat) : async ?[FriendRequest] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.friendRequests) {
-          case (null) return null;
-          case (?friendRequests) {
-            let startIndex = page * 10;
-            let endIndex = if (
-              (page + 1) * 10 < friendRequests.size()
-            ) (page + 1) * 10 else friendRequests.size();
-            if (startIndex >= friendRequests.size()) (return null);
-            ?Iter.toArray(
-              Array.slice<FriendRequest>(
-                friendRequests,
-                startIndex,
-                endIndex,
-              )
-            );
-          };
-        };
-      };
+   // Function to send a friend request
+  public shared({caller}) func sendFriendRequest( 
+    request : FriendRequest) : async Bool {
+    if(caller != request.from) {
+      return false;
     };
-  };
-  // Function to send a friend request
-  public func sendFriendRequest(recipient : Principal, request : FriendRequest) : async Bool {
-    switch (userNetwork.get(recipient)) {
+    switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
         switch (network.friendRequests) {
@@ -2371,8 +2348,108 @@ shared actor class Cosmicrafts() = Self {
               network with
               friendRequests = ?updatedRequests
             };
-            userNetwork.put(recipient, updatedUserNetwork);
+            userNetwork.put(caller, updatedUserNetwork);
             return true;
+          };
+        };
+      };
+    };
+  };
+  // Function to accept a friend request
+  public shared ({ caller }) func acceptFriendRequest(
+    fromUserID : UserID,
+    fromUsername : Text,
+    avatarId : Nat,
+    ) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.friendRequests) {
+          case (null) return false;
+          case (?friendRequests) {
+            let requestOpt = Array.find<FriendRequest>(
+              friendRequests,
+              func(request) {
+                request.from == fromUserID;
+              },
+            );
+            switch (requestOpt) {
+              case (null) return false;
+              case (?request) {
+                let indexOpt = Array.indexOf<FriendRequest>(
+                  request,
+                  friendRequests,
+                  func(a : FriendRequest, b : FriendRequest) : Bool {
+                    a.from == b.from and a.to == b.to and a.timestamp == b.timestamp
+                  },
+                );
+                switch (indexOpt) {
+                  case (null) return false;
+                  case (?index) {
+                    let updatedFriendRequests = Array.filter<FriendRequest>(
+                      friendRequests,
+                      func(request) {
+                        request != friendRequests[index];
+                      },
+                    );
+                    let newFriend : FriendDetails = {
+                      id = fromUserID;
+                      username = fromUsername;
+                      avatar = avatarId;
+                      friendProfile = null;
+                    };
+                    let updatedFriends = switch (network.friends) {
+                      case (null) [newFriend];
+                      case (?friends) Array.append<FriendDetails>(
+                        friends,
+                        [newFriend],
+                      );
+                    };
+
+                    let id = switch(network.notifications) {
+                      case (null) 0;
+                      case (?notifications) notifications.size();
+                    };  
+                    let newNotification : Notification = {
+                      id = id + 1;
+                      from = #FriendRequest(fromUserID);
+                      body = "Friend Request accepted";
+                      timestamp = Time.now();
+                    };
+                    let fromUserNetworkOpt = userNetwork.get(fromUserID);
+                    switch (fromUserNetworkOpt) {
+                      case (null) return false;
+                      case (?fromUserNetwork) {
+                        let updatedNotifications = switch (
+                          fromUserNetwork.notifications
+                        ) {
+                          case (null) [newNotification];
+                          case (?notifications) Array.append<Notification>(
+                            notifications,
+                            [newNotification],
+                          );
+                        };
+                        let updatedFromUserNetwork = {
+                          fromUserNetwork with
+                          notifications = ?updatedNotifications
+                        };
+                        userNetwork.put(
+                          fromUserID,
+                          updatedFromUserNetwork,
+                        );
+                      };
+                    };
+                    let updatedUserNetwork = {
+                      network with
+                      friends = ?updatedFriends;
+                      friendRequests = ?updatedFriendRequests;
+                    };
+                    userNetwork.put(caller, updatedUserNetwork);
+                    return true;
+                  };
+                };
+              };
+            };
           };
         };
       };
@@ -2403,29 +2480,27 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Function to unblock a user
-  public func unblockUser(caller : Principal, userIdToUnblock : UserID) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
+  // Retrieves the friend requests with pagination
+  public query ({ caller }) func getFriendRequests(page : Nat) : async ?[FriendRequest] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
       case (?network) {
-        switch (network.blockedUsers) {
-          case (null) return false;
-          case (?blockedUsers) {
-            let updatedBlockedUsers = Array.filter<UserID>(
-              blockedUsers,
-              func(userId) {
-                userId != userIdToUnblock;
-              },
+        switch (network.friendRequests) {
+          case (null) return null;
+          case (?friendRequests) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < friendRequests.size()
+            ) (page + 1) * 10 else friendRequests.size();
+            if (startIndex >= friendRequests.size()) (return null);
+            ?Iter.toArray(
+              Array.slice<FriendRequest>(
+                friendRequests,
+                startIndex,
+                endIndex,
+              )
             );
-            let updatedUserNetwork = {
-              network with
-              blockedUsers = ?updatedBlockedUsers
-            };
-            userNetwork.put(
-              caller,
-              updatedUserNetwork,
-            );
-            return true;
           };
         };
       };
@@ -2433,7 +2508,7 @@ shared actor class Cosmicrafts() = Self {
   };
   // Retrieves the blocked users with pagination
   public query ({ caller }) func getBlockedUsers(page : Nat) : async ?[UserID] {
-    switch (userNetwork.get(caller)) {
+        switch (userNetwork.get(caller)) {
       case (null) return null;
       case (?network) {
         switch (network.blockedUsers) {
@@ -2456,28 +2531,49 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Function to get notifications by caller
-  public query ({ caller }) func getNotifications(page : Nat) : async ?[Notification] {
+  // Retrieves a blocked user by id
+  public query ({ caller }) func getBlockedUserById(userId : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
-      case (null) return null;
+      case (null) return false;
       case (?network) {
-        switch (network.notifications) {
-          case (null) return null;
-          case (?notifications) {
-            let startIndex = page * 10;
-            let endIndex = if (
-              (page + 1) * 10 < notifications.size()
-            ) (page + 1) * 10 else notifications.size();
-            if (startIndex >= notifications.size()) {
-              return null;
-            };
-            ?Iter.toArray(
-              Array.slice<Notification>(
-                notifications,
-                startIndex,
-                endIndex,
-              )
+        switch (network.blockedUsers) {
+          case (null) return false;
+          case (?blockedUsers) {
+            let blockedUser = Array.find<UserID>(
+              blockedUsers,
+              func(user) {
+                user == userId;
+              },
             );
+            return blockedUser != null;
+          };
+        };
+      };
+    };
+  };
+  // Function to unblock a user
+  public shared({caller}) func unblockUser(userIdToUnblock : UserID) : async Bool {
+    switch (userNetwork.get(caller)) {
+      case (null) return false;
+      case (?network) {
+        switch (network.blockedUsers) {
+          case (null) return false;
+          case (?blockedUsers) {
+            let updatedBlockedUsers = Array.filter<UserID>(
+              blockedUsers,
+              func(userId) {
+                userId != userIdToUnblock;
+              },
+            );
+            let updatedUserNetwork = {
+              network with
+              blockedUsers = ?updatedBlockedUsers
+            };
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
+            return true;
           };
         };
       };
@@ -2563,132 +2659,112 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Function to get a post by caller and postId
-  public query ({ caller }) func getPost(postId : Nat) : async ?Post {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.posts) {
-          case (null) return null;
-          case (?posts) {
-            let postOpt = Array.find<Post>(
-              posts,
-              func(post) {
-                post.id == postId;
-              },
-            );
-            return postOpt;
-          };
-        };
-      };
-    };
-  };
-  // Function to get a comment by fromUserID and commentId
-  public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
-    let userNetworkOpt = userNetwork.get(fromUserID);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            return commentOpt;
-          };
-        };
-      };
-    };
-  };
-  // Function to get a like by fromUserID and likeId
-  public query func getLike(fromUserID : UserID, likeId : Nat) : async ?Like {
-    let userNetworkOpt = userNetwork.get(fromUserID);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.likes) {
-          case (null) return null;
-          case (?likes) {
-            let likeOpt = Array.find<Like>(
-              likes,
-              func(like) {
-                like.id == likeId;
-              },
-            );
-            return likeOpt;
-          };
-        };
-      };
-    };
-  };
-  // Example usage in deletePost function
-  public shared ({ caller }) func deletePost(postId : Nat) : async Bool {
+  // Function to unfollow a user
+  public shared ({ caller }) func unfollowUser(unfollowId : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
-        switch (network.posts) {
+        switch (network.following) {
           case (null) return false;
-          case (?posts) {
-            let updatedPosts = Array.filter<Post>(
-              posts,
-              func(post : Post) : Bool {
-                post.id != postId;
+          case (?following) {
+            let updatedFollowing = Array.filter<UserID>(
+              following,
+              func(userId) {
+                userId != unfollowId;
               },
             );
-            let updatedNetwork = {
+            let updatedUserNetwork = {
               network with
-              posts = ?updatedPosts;
+              following = ?updatedFollowing
             };
-            userNetwork.put(caller, updatedNetwork);
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
             return true;
           };
         };
       };
     };
   };
-  // Function to update a post
-  public shared ({ caller }) func updatePost(postId : Nat, newContent : Text) : async Bool {
+  // Function to get notifications by caller
+  public query ({ caller }) func getAllNotifications(page : Nat) : async ?[Notification] {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.notifications) {
+          case (null) return null;
+          case (?notifications) {
+            let startIndex = page * 10;
+            let endIndex = if (
+              (page + 1) * 10 < notifications.size()
+            ) (page + 1) * 10 else notifications.size();
+            if (startIndex >= notifications.size()) {
+              return null;
+            };
+            ?Iter.toArray(
+              Array.slice<Notification>(
+                notifications,
+                startIndex,
+                endIndex,
+              )
+            );
+          };
+        };
+      };
+    };
+  };
+  // Function to get a notification by id
+  public query ({ caller }) func getNotificationById(notificationId : Nat) : async ?Notification {
+    switch (userNetwork.get(caller)) {
+      case (null) return null;
+      case (?network) {
+        switch (network.notifications) {
+          case (null) return null;
+          case (?notifications) {
+            let notificationOpt = Array.find<Notification>(
+              notifications,
+              func(notification) {
+                notification.id == notificationId;
+              },
+            );
+            return notificationOpt;
+          };
+        };
+      };
+    };
+  };
+  // Function to delete a notification
+  public shared ({ caller }) func deleteNotification(notificationId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
-        switch (network.posts) {
+        switch (network.notifications) {
           case (null) return false;
-          case (?posts) {
-            if (postId >= posts.size() or posts[postId].userId != caller) {
-              return false; // Invalid index or not the author
-            };
-            let updatedPost = {
-              posts[postId] with
-              content = newContent;
-              timestamp = Time.now(); // Update the timestamp to the current time
-            };
-            let filteredPosts = Array.filter<Post>(
-              posts,
-              func(post : Post) : Bool {
-                post.id != postId;
+          case (?notifications) {
+            let updatedNotifications = Array.filter<Notification>(
+              notifications,
+              func(notification) {
+                notification.id != notificationId;
               },
             );
-            let updatedPosts = Array.append(filteredPosts, [updatedPost]);
-            let updatedNetwork = {
+            let updatedUserNetwork = {
               network with
-              posts = ?updatedPosts;
+              notifications = ?updatedNotifications
             };
-            userNetwork.put(caller, updatedNetwork);
+            userNetwork.put(
+              caller,
+              updatedUserNetwork,
+            );
             return true;
           };
         };
       };
     };
   };
+// #endregion
 
-  // #endregion
-
-  // #region |Players|
+// #region |Players|
 
   var ONE_SECOND : Nat64 = 1_000_000_000;
   var ONE_MINUTE : Nat64 = 60 * ONE_SECOND;
@@ -3075,9 +3151,9 @@ shared actor class Cosmicrafts() = Self {
   public query func getAllPlayers() : async [Player] {
     return Iter.toArray(players.vals());
   };
-  // #endregion
+// #endregion
 
-  //#region |MatchMaking|
+//#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * ONE_SECOND;
 
@@ -3704,9 +3780,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Statistics|
+// #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -3864,9 +3940,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // #endregion
+// #endregion
 
-  //#region |Tournaments Matchmaking|
+//#region |Tournaments Matchmaking|
 
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
@@ -4426,9 +4502,9 @@ shared actor class Cosmicrafts() = Self {
     matches := [];
     return true;
   };
-  // #endregion
+// #endregion
 
-  //#region |ICRC7|
+//#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -5313,9 +5389,9 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(resultBuffer);
   };
-  // #endregion
+// #endregion
 
-  //#region |GameNFTs|
+//#region |GameNFTs|
   public shared (msg) func upgradeNFT(nftID : TokenID) : async (Bool, Text) {
     // Perform ownership check
     let ownerof : TypesICRC7.OwnerResult = await icrc7_owner_of(nftID);
@@ -5698,9 +5774,9 @@ shared actor class Cosmicrafts() = Self {
     },
     // Add more templates as needed
   ];
-  // #endregion
+// #endregion
 
-  //#region |Chests|
+//#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5799,9 +5875,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |ICRC1|
+//#region |ICRC1|
 
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
@@ -5902,9 +5978,9 @@ shared actor class Cosmicrafts() = Self {
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
-  // #endregion
+// #endregion
 
-  //#region |Logging|
+//#region |Logging|
 
   public type MintedStardust = {
     quantity : Nat;
@@ -6079,9 +6155,9 @@ shared actor class Cosmicrafts() = Self {
       gameNFTs = gameNFTs;
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |Migrations|
+//#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
@@ -6174,9 +6250,9 @@ shared actor class Cosmicrafts() = Self {
     claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
     claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
   };
-  // #endregion
+// #endregion
 
-  //#region |Soul NFT|
+//#region |Soul NFT|
 
   stable var savedPlayerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
   stable var playerDecks : Trie<Principal, PlayerGameData> = savedPlayerDecks;
@@ -6508,9 +6584,9 @@ shared actor class Cosmicrafts() = Self {
     #Ok;
     #Err : Text;
   };
-  // #endregion
+// #endregion
 
-  //#region |Avatars and Titles|
+//#region |Avatars and Titles|
 
   // Types for Avatars and Titles
   public type Avatar = {
@@ -6813,9 +6889,9 @@ shared actor class Cosmicrafts() = Self {
 
     return titleDetails;
   };
-  // #endregion
+// #endregion
 
-  //#region |Referrals|
+//#region |Referrals|
 
   public type ReferralCode = Text;
 
@@ -7514,9 +7590,9 @@ shared actor class Cosmicrafts() = Self {
       case (?multiplier) { return multiplier };
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |Tops|
+//#region |Tops|
   public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
     for ((playerId, multiplier) in multiplierByPlayer.entries()) {
@@ -7926,9 +8002,9 @@ shared actor class Cosmicrafts() = Self {
     };
     return topAchievementPlayers;
   };
-  // #endregion
+// #endregion
 
-  //#region |Achievements|
+//#region |Achievements|
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -8997,9 +9073,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |Views|
+//#region |Views|
 
   public type TopView = {
     referralsTop : [ReferralsTop];
@@ -9042,6 +9118,6 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-  // #endregion
+// #endregion
 
 };

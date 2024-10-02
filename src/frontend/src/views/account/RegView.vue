@@ -55,7 +55,7 @@ export default {
       const avatarId = selectedAvatarId.value || 1;
 
       try {
-        const [r, a, c] = await cosmicrafts.registerPlayer(
+        const [r, a, c] = await cosmicrafts.registerUser(
           username.value,
           avatarId,  // Use default avatar ID if none is selected
           referralCode.value || ''  // Provide an empty string if no referral code is given
