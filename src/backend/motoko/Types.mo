@@ -123,6 +123,7 @@ module Types {
   };
 
   public type Notification = {
+    id : Nat;
     from : NotificationIdentity;
     timestamp : Time.Time;
     body : Text;
