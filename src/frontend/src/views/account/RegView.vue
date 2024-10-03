@@ -21,20 +21,7 @@ export default {
     const acceptedTerms = ref(true);
     const registerResult = ref(null);
 
-    onMounted(async () => {
-      if (authStore.isAuthenticated === false) {
-        console.log('User is not authenticated');
-        router.push({ path: '/login' });
-      } else {
-        const isRegistered = await authStore.isPlayerRegistered();
-        if (isRegistered) {
-          router.push({ path: '/' });
-        }
-      }
-    });
-
-    
-    if(authStore.isAuthenticated == false) {
+    if(authStore.isAuthenticated() == false) {
       console.log('User is not authenticated');
       router.push({path: '/login'});
     }
@@ -45,38 +32,41 @@ export default {
 
     const registerPlayer = async () => {
       loading.value = true;
-      registerResult.value = null; // Clear previous result
+      registerResult.value = null; 
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
       var result = false;
       var rawMessage = '';
 
-      // Set default avatar ID to 1 if none is selected
       const avatarId = selectedAvatarId.value || 1;
 
       try {
-        const [r, a, c] = await cosmicrafts.registerUser(
+        const [r, t] = await cosmicrafts.registerUser(
           username.value,
-          avatarId,  // Use default avatar ID if none is selected
-          referralCode.value || ''  // Provide an empty string if no referral code is given
+          avatarId, 
+          referralCode.value || '' 
         );
-        console.log(r, a, c);
+        console.log(r,t);
         result = r;
-        rawMessage = a;  // Capture the raw message (assuming 'a' holds the message)
+        rawMessage = t; 
       } catch (error) {
         console.error(error);
-        rawMessage = error.toString();  // Capture the error message from blockchain if there's a failure
+        rawMessage = error.toString();
       }
 
-      if (result) {
-        
-        await authStore.isPlayerRegistered() ? router.push('/') : registerResult.value = rawMessage;
+      if (result) {       
+        await authStore.userExists() ? 
+        router.push('/') : 
+        registerResult.value = rawMessage;
       } else {
         registerResult.value = rawMessage;
       }
       
       loading.value = false;
     };
+
+    onMounted(async () => {
+    });
 
     return {
       loading,
@@ -105,7 +95,7 @@ export default {
 
         <!-- Registration Result -->
         <div v-if="registerResult" class="register-result">
-          {{ registerResult }}
+          {{ registerResult.value }}
         </div>
 
         <form @submit.prevent="registerPlayer" class="form-grid">

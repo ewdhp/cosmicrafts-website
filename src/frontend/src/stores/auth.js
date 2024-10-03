@@ -20,7 +20,6 @@ function base64ToUint8Array(base64) {
 
 let identity = null;
 let registered = false;
-let authenticated = false;
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     googleSub: '',
@@ -30,17 +29,18 @@ export const useAuthStore = defineStore('auth', {
       return identity;
     },
     isAuthenticated() {
-      return authenticated;
+      if (this.getIdentity())
+        return true;
+      else
+        return false;
     },
     isRegistered() {
       return registered;
     },
-    async isPlayerRegistered() {
+    async userExists() {
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
-      const result = await cosmicrafts.userExists();
-      console.log('isPlayerRegistered:', result);
-      if (result) {
+      if (await cosmicrafts.userExists()) {
         registered = true;
         return registered;
       }
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore('auth', {
       const payload = JSON.parse(atob(decodedIdToken));
       this.googleSub = payload.sub;
       await this.generateKeysFromSub(this.googleSub);
-      this.isAuthenticated = true;
+      identity = true;
       this.saveStateToLocalStorage();
     },
     async loginWithMetaMask() {
@@ -68,8 +68,7 @@ export const useAuthStore = defineStore('auth', {
           base64ToUint8Array(keys.private)
         );
         console.log('Principal:', identity.getPrincipal().toText());
-        authenticated = true;
-        registered = await this.isPlayerRegistered();
+        registered = await this.userExists();
         console.log('isRegistered:', registered);
         console.log('AuthStore: loginWithMetaMask keys generated');
       }
@@ -91,7 +90,9 @@ export const useAuthStore = defineStore('auth', {
     async loginWithNFID() {
       await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize');
     },
-    async loginWithAuthClient(identityProviderUrl, router) {
+    async loginWithAuthClient(
+      identityProviderUrl,
+      router) {
       const authClient = await AuthClient.create();
 
       if (authClient !== null) {
