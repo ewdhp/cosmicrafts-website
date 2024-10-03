@@ -46,15 +46,17 @@ module Types {
 
   public type UserProfile = {
     aiFeatures : ?AIFeatures;
-    basicInfo : BasicUserInfo;
+    basicInfo : UserBasicInfo;
     referrals : ?ReferralInfo;
     stats : ?PlayerGamesStats;
   };
 
-  public type BasicUserInfo = {
+  public type UserBasicInfo = {
     id : Principal;
     username : Text;
     avatarId : Nat;
+    level : Level;
+    elo : Float;
     verificationBadge : Bool;
     title : ?Text;
     description : ?Text;
@@ -149,10 +151,6 @@ module Types {
   public type AIFeatures = {
     aiAvatar : Nat;
     aiBackground : ?Nat;
-  };
-
-  public type UserActivity = {
-
   };
 
   public type Post = {

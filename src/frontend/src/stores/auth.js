@@ -18,7 +18,7 @@ function base64ToUint8Array(base64) {
   return bytes;
 }
 
-let identity= null;
+let identity = null;
 let registered = false;
 let authenticated = false;
 export const useAuthStore = defineStore('auth', {
@@ -32,13 +32,13 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated() {
       return authenticated;
     },
-    isRegistered(){
+    isRegistered() {
       return registered;
     },
     async isPlayerRegistered() {
       const canister = useCanisterStore();
       const cosmicrafts = await canister.get("cosmicrafts");
-      const [result, player] = await cosmicrafts.getPlayerByCaller();
+      const result = await cosmicrafts.userExists();
       console.log('isPlayerRegistered:', result);
       if (result) {
         registered = true;
@@ -78,15 +78,15 @@ export const useAuthStore = defineStore('auth', {
       const message = 'Sign this message to log in with your Phantom Wallet';
       const signature = await PhantomService.signAndSend(message);
       if (signature) {
-        
+
         await this.generateKeysFromSignature(signature);
         this.isAuthenticated = true;
         this.saveStateToLocalStorage();
       }
     },
     async loginWithInternetIdentity(router) {
-      await this.loginWithAuthClient('https://identity.ic0.app',router);
-      
+      await this.loginWithAuthClient('https://identity.ic0.app', router);
+
     },
     async loginWithNFID() {
       await this.loginWithAuthClient('https://nfid.one/authenticate/?applicationName=COSMICRAFTS&applicationLogo=https://cosmicrafts.com/wp-content/uploads/2023/09/cosmisrafts-242x300.png#authorize');
@@ -114,7 +114,7 @@ export const useAuthStore = defineStore('auth', {
         console.error('AuthStore: AuthClient initialization failed');
       }
     },
-    async generateKeysFromSignature (signature) {
+    async generateKeysFromSignature(signature) {
       const encoder = new TextEncoder();
       const encodedSignature = encoder.encode(signature);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSignature);
@@ -125,8 +125,8 @@ export const useAuthStore = defineStore('auth', {
         public: base64Encode(keyPair.publicKey),
         private: base64Encode(keyPair.secretKey)
       };
-    }, 
-    async generateKeysFromSub (sub) {
+    },
+    async generateKeysFromSub(sub) {
       const encoder = new TextEncoder();
       const encodedSub = encoder.encode(sub);
       const hashBuffer = await crypto.subtle.digest('SHA-256', encodedSub);
