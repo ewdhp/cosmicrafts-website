@@ -32,19 +32,17 @@ export default {
 
     // Load the store in background at mount
     onMounted(async () => {
-      cosmicrafts.loadStore().then(() => {
-          data.value = cosmicrafts.module.player;
-      });
+      await cosmicrafts.loadStore();
     });
 
     // Watch for changes and update data
     watch(
-      () => cosmicrafts.module.player,
+      () => cosmicrafts.module.achievements,
       (newValue) => {      
           data.value = newValue;
       }
     );
-    
+ 
     // Helper functions
     const isObject = (value) => {
       return typeof value === 'object' && 

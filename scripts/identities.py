@@ -8,6 +8,12 @@ def create_identities(num_identities):
             # Run the `dfx identity new` command
             subprocess.run(["dfx", "identity", "new", identity_name, "--storage-mode=plaintext"], check=True)
             print(f"Identity {identity_name} created successfully.")
+            
+            # Get the principal value of the new identity
+            result = subprocess.run(["dfx", "identity", "use", identity_name], check=True)
+            result = subprocess.run(["dfx", "identity", "get-principal"], capture_output=True, text=True, check=True)
+            principal = result.stdout.strip()
+            print(f"Principal for {identity_name}: {principal}")
         except subprocess.CalledProcessError as e:
             print(f"Error creating identity {identity_name}: {e}")
 

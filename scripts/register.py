@@ -76,7 +76,7 @@ async def register_user(semaphore, user, username, avatar_id, referral_code, reg
                 player_principal = await switch_identity(user)
                 
                 print(f"Identity switched to {user} (Principal: {player_principal}), now making canister call")
-                command = f'dfx canister call cosmicrafts registerPlayer \'("{username}", {avatar_id}, "{referral_code}")\''
+                command = f'dfx canister call cosmicrafts registerUser \'("{username}", {avatar_id}, "{referral_code}")\''
                 
                 success, output = await execute_dfx_command(command)
                 if not success:

@@ -17,18 +17,6 @@ module Types {
   public type MatchMap = Text;
   public type PlayerFaction = Text;
 
-  public type Player = {
-    id : PlayerId;
-    username : Username;
-    avatar : AvatarID;
-    title : Title;
-    description : Description;
-    registrationDate : RegistrationDate;
-    level : Level;
-    elo : Float;
-    friends : [FriendDetails];
-  };
-
   public type UserID = Principal;
 
   ///////////////////////////////////////
@@ -165,8 +153,6 @@ module Types {
     comments : ?[Comment];
   };
 
-  //review the comments functions....
-  //because was missing postId
   public type Comment = {
     id : Nat;
     postId : Nat;
@@ -196,6 +182,7 @@ module Types {
   };
 
   //Referals
+
   public type ReferralCode = Nat;
 
   public type ReferralInfo = {

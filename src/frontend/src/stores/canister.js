@@ -1,6 +1,6 @@
 // /stores/canisterStore.js
 import { defineStore } from 'pinia';
-import { createActor} from '../../../declarations/cosmicrafts/index.js';
+import { createActor } from '../../../declarations/cosmicrafts/index.js';
 import { HttpAgent } from '@dfinity/agent';
 import useAuthStore from './auth.js';
 
@@ -14,19 +14,22 @@ const init = () => {
   return [canisters, canisterIds];
 };
 
-const get = async (canisterName) =>{
+const get = async (canisterName) => {
   const isLocal = process.env.DFX_NETWORK !== 'ic';
   const host = isLocal ? 'http://localhost:3000' : 'https://ic0.app';
 
   const authStore = useAuthStore();
   const identity = authStore.getIdentity();
+  //console.log("identity=", identity);
   const agent = new HttpAgent({ identity, host });
   try {
+    console.log("isLocal=", isLocal);
     if (isLocal) agent.fetchRootKey();
     canisters[canisterName] = createActor(
-      canisterIds[canisterName], 
+      canisterIds[canisterName],
       { agent }
     );
+    // console.log("canisters[canisterName]=", canisters[canisterName]);
   } catch (error) {
     console.error(error);
   }
@@ -36,7 +39,7 @@ const get = async (canisterName) =>{
 const [canisters, canisterIds] = init();
 export const useCanisterStore = defineStore('canister', {
   state: () => ({
-    canisterIds: canisterIds, 
+    canisterIds: canisterIds,
   }),
   actions: {
     get,

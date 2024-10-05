@@ -1,10 +1,7 @@
 <template>
   <h2>Tournaments</h2>
   <div>
-    <section v-if="isLoading">Loading...</section>
-    <section v-else>
 
-   
         <form @submit.prevent="createTournament">
           <input v-model="name" type="text" placeholder="Tournament Name" />
           <input v-model="startDate" type="date" r />
@@ -21,7 +18,7 @@
           </li>
         </ul>
       </div>
-    </section>
+
   </div>
 </template>
 

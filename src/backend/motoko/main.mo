@@ -36,7 +36,7 @@ import Set "Set";
 
 shared actor class Cosmicrafts() = Self {
 
-//#region |Admin Functions|
+  //#region |Admin Functions|
   public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
     if (caller == ADMIN_PRINCIPAL) {
       Debug.print("Admin function called by admin.");
@@ -71,9 +71,9 @@ shared actor class Cosmicrafts() = Self {
       return (false, "Access denied: Only admin can call this function.");
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Types|
+  // #region |Types|
   public type UserID = Types.UserID;
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -82,7 +82,6 @@ shared actor class Cosmicrafts() = Self {
   public type Description = Types.Description;
   public type RegistrationDate = Types.RegistrationDate;
   public type Level = Types.Level;
-  public type Player = Types.Player;
 
   public type MutualFriendship = Types.MutualFriendship;
   public type UpdateTimestamps = Types.UpdateTimestamps;
@@ -161,9 +160,9 @@ shared actor class Cosmicrafts() = Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
-// #endregion
+  // #endregion
 
-// #region |Missions|
+  // #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -328,9 +327,9 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
-// #endregion
+  // #endregion
 
-// #region |General Missions|
+  // #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -522,8 +521,7 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Function to get the progress of a specific general mission for a user
-  public query func getGeneralMissionProgress(user : Principal, missionID : Nat) 
-  : async ?MissionsUser {
+  public query func getGeneralMissionProgress(user : Principal, missionID : Nat) : async ?MissionsUser {
     let userMissions : [MissionsUser] = switch (generalUserProgress.get(user)) {
       case (null) return null;
       case (?missions) missions;
@@ -598,7 +596,7 @@ shared actor class Cosmicrafts() = Self {
           };
 
           // Update player's level based on new total XP
-          let (_,_)= await updatePlayerLevel(msg.caller);
+          let (_, _) = await updatePlayerLevel(msg.caller);
 
           // Remove claimed reward from userProgress and add it to claimedRewards
           var userMissions : [MissionsUser] = switch (generalUserProgress.get(msg.caller)) {
@@ -678,9 +676,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |User-Specific Missions|
+  // #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -1079,7 +1077,7 @@ shared actor class Cosmicrafts() = Self {
             };
           };
 
-          let (_,_) = await updatePlayerLevel(msg.caller);
+          let (_, _) = await updatePlayerLevel(msg.caller);
 
           var userMissions = switch (userMissionProgress.get(msg.caller)) {
             case (null) { [] };
@@ -1664,9 +1662,9 @@ shared actor class Cosmicrafts() = Self {
         };
         let updatedPlayer : UserBasicInfo = {
           id = player.id;
-          username =  player.username;
+          username = player.username;
           avatarId = player.avatarId;
-          level =Utils.calculateLevel(totalXp);
+          level = Utils.calculateLevel(totalXp);
           elo = 1200.0;
           verificationBadge = false;
           title = null;
@@ -1677,12 +1675,12 @@ shared actor class Cosmicrafts() = Self {
         userBasicInfo.put(playerId, updatedPlayer);
         return (true, "Player level updated successfully");
       };
-      case (null) {(false,"Player not found")};
+      case (null) { (false, "Player not found") };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Users|
+  // #region |Users|
 
   public type UserBasicInfo = Types.UserBasicInfo;
   public type UserNameBasicInfo = Text;
@@ -1726,15 +1724,14 @@ shared actor class Cosmicrafts() = Self {
     Principal.hash,
   );
 
-
   // Register new user
   public shared ({ caller : UserID }) func registerUser(
     username : Text,
     avatarId : Nat,
     referralCode : ReferralCode,
-    ) : async (Bool, Text) {
-      switch (userBasicInfo.get(caller)) {
-      case (?_) {       
+  ) : async (Bool, Text) {
+    switch (userBasicInfo.get(caller)) {
+      case (?_) {
         return (false, "User is already registered");
       };
       case (null) {
@@ -1771,7 +1768,7 @@ shared actor class Cosmicrafts() = Self {
           id = caller;
           username = username;
           avatarId = avatarId;
-          level =0;
+          level = 0;
           elo = 1200.0;
           verificationBadge = false;
           title = null;
@@ -1798,6 +1795,9 @@ shared actor class Cosmicrafts() = Self {
           comments = ?[];
           likes = ?[];
         };
+
+        let result = await initAchievements();
+
         userNetwork.put(caller, newUserNetwork);
         userBasicInfo.put(caller, newPlayer);
 
@@ -1806,20 +1806,15 @@ shared actor class Cosmicrafts() = Self {
     };
   };
   // Evaluates if the caller user exists
-  public query({caller}) func userExists() : async Bool {
+  public query ({ caller }) func userExists() : async Bool {
     switch (userBasicInfo.get(caller)) {
-      case (?player) {
-        return true;
-      };
-      case (null) {
-        return false;
-      };
+      case null { return false };
+      case (?_) { return true };
     };
   };
 
-
   //////////////////////////////////////////
-  // 
+  //
   //  User Profile
   //
 
@@ -1832,9 +1827,8 @@ shared actor class Cosmicrafts() = Self {
     return userProfile.get(id);
   };
 
-
   //////////////////////////////////////////
-  // 
+  //
   //  User Basic Info
   //
   //
@@ -1861,11 +1855,10 @@ shared actor class Cosmicrafts() = Self {
     newTitle : ?TitleBasicInfo,
     newDescription : ?DescriptionBasicInfo,
     newCountry : ?CountryBasicInfo,
-    ) : async (Bool, Text) {
+  ) : async (Bool, Text) {
 
     switch (userBasicInfo.get(caller)) {
-      case (null)
-        return (false, "User not found");
+      case (null) return (false, "User not found");
       case (?info) {
         let updatedInfo = {
           id = info.id;
@@ -1909,20 +1902,17 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   //////////////////////////////////////////
   //
   //   User Network
   //
   //
 
-
   // Get the user network information
   public func getUserNetwork(id : UserID) : async ?UserNetwork {
     return userNetwork.get(id);
   };
 
-  
   // Send a friend request
   public func sendFriendRequest(recipient : Principal, request : FriendRequest) : async Bool {
     switch (userNetwork.get(recipient)) {
@@ -1951,7 +1941,7 @@ shared actor class Cosmicrafts() = Self {
     fromUserID : UserID,
     fromUsername : Text,
     avatarId : Nat,
-    ) : async Bool {
+  ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -1971,18 +1961,14 @@ shared actor class Cosmicrafts() = Self {
                 let indexOpt = Array.indexOf<FriendRequest>(
                   request,
                   friendRequests,
-                  func(a : FriendRequest, b : FriendRequest) 
-                  : Bool {
-                    a.timestamp == b.timestamp and
-                    a.from == b.from and 
-                    a.to == b.to                    
+                  func(a : FriendRequest, b : FriendRequest) : Bool {
+                    a.timestamp == b.timestamp and a.from == b.from and a.to == b.to
                   },
                 );
                 switch (indexOpt) {
                   case (null) return false;
                   case (?index) {
-                    let updatedFriendRequests = 
-                    Array.filter<FriendRequest>(
+                    let updatedFriendRequests = Array.filter<FriendRequest>(
                       friendRequests,
                       func(request) {
                         request != friendRequests[index];
@@ -2006,13 +1992,14 @@ shared actor class Cosmicrafts() = Self {
                       case (null) return false;
                       case (?fromUserNetwork) {
                         let updatedNotifications = switch (
-                          fromUserNetwork.notifications) {                           
+                          fromUserNetwork.notifications
+                        ) {
                           case (null) [{
-                              id = 1;
-                              from = #FriendRequest(fromUserID);
-                              body = "Friend Request accepted";
-                              timestamp = Time.now();
-                            }];
+                            id = 1;
+                            from = #FriendRequest(fromUserID);
+                            body = "Friend Request accepted";
+                            timestamp = Time.now();
+                          }];
                           case (?notifications) {
                             let nCount = notifications.size();
                             let newNotification : Notification = {
@@ -2022,8 +2009,8 @@ shared actor class Cosmicrafts() = Self {
                               timestamp = Time.now();
                             };
                             Array.append<Notification>(
-                            notifications,
-                            [newNotification],
+                              notifications,
+                              [newNotification],
                             );
                           };
                         };
@@ -2196,14 +2183,13 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   // Create a post by caller
   public shared ({ caller }) func createPost(
     userID : UserID,
     username : Text,
     images : ?[Nat],
     content : Text,
-    ) : async Bool {
+  ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -2324,14 +2310,13 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   // Create a comment in a post
   public shared ({ caller }) func createComment(
     postId : Nat,
     fromUserID : UserID,
     fromUsername : Text,
     content : Text,
-    ) : async Bool {
+  ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -2349,7 +2334,7 @@ shared actor class Cosmicrafts() = Self {
             switch (postOpt) {
               case (null) return false;
               case (?post) {
-                
+
                 let newComment : Comment = {
                   id = commentCount;
                   postId = postId;
@@ -2389,7 +2374,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // Get a comment by user ID and comment ID 
+  // Get a comment by user ID and comment ID
   public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
     let userNetworkOpt = userNetwork.get(fromUserID);
     switch (userNetworkOpt) {
@@ -2414,7 +2399,7 @@ shared actor class Cosmicrafts() = Self {
   public shared ({ caller }) func updateComment(
     commentId : Nat,
     newContent : Text,
-    ) : async Bool {
+  ) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -2480,7 +2465,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   // Give a like to post
   public shared ({ caller }) func likePost(
     postId : Nat,
@@ -2488,7 +2472,7 @@ shared actor class Cosmicrafts() = Self {
     fromUserID : UserID,
     fromUsername : Text,
     timestamp : Time.Time,
-    ) : async Bool {
+  ) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -2546,7 +2530,7 @@ shared actor class Cosmicrafts() = Self {
     fromUserID : UserID,
     fromUsername : Text,
     timestamp : Time.Time,
-    ) : async Bool {
+  ) : async Bool {
 
     switch (userNetwork.get(caller)) {
       case (null) return false;
@@ -2627,7 +2611,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
   // Get all likes from a post by postId and by query caller
-  public query ({ caller }) func getLikesFromPost(postId : Nat) : async ?[Like] {
+  public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
     let userNetworkOpt = userNetwork.get(caller);
     switch (userNetworkOpt) {
       case (null) return null;
@@ -2653,7 +2637,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
   // Get all likes from a comment by commentId and by query caller
-  public query ({ caller }) func getLikesFromComment(commentId : Nat) : async ?[Like] {
+  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
     let userNetworkOpt = userNetwork.get(caller);
     switch (userNetworkOpt) {
       case (null) return null;
@@ -2781,7 +2765,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   // Block a user by user ID
   public shared ({ caller }) func blockUser(userIdToBlock : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2859,9 +2842,8 @@ shared actor class Cosmicrafts() = Self {
           };
         };
       };
-    };  
+    };
   };
-
 
   // Follow a user by user ID
   public shared ({ caller }) func followUser(followId : UserID) : async Bool {
@@ -2972,7 +2954,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
   // Get all notifications by caller with pagination
   public query ({ caller }) func getAllNotifications(page : Nat) : async ?[Notification] {
     switch (userNetwork.get(caller)) {
@@ -3001,9 +2982,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-// #endregion
+  // #endregion
 
-//#region |MatchMaking|
+  //#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * 1000; //check the value
 
@@ -3630,9 +3611,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Statistics|
+  // #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -3727,7 +3708,7 @@ shared actor class Cosmicrafts() = Self {
           id = existingPlayer.id;
           username = existingPlayer.username;
           avatarId = existingPlayer.avatarId;
-          level =existingPlayer.level;
+          level = existingPlayer.level;
           elo = newELO;
           verificationBadge = existingPlayer.verificationBadge;
           title = existingPlayer.title;
@@ -3791,9 +3772,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-// #endregion
+  // #endregion
 
-//#region |Tournaments Matchmaking|
+  //#region |Tournaments Matchmaking|
 
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
@@ -4353,9 +4334,9 @@ shared actor class Cosmicrafts() = Self {
     matches := [];
     return true;
   };
-// #endregion
+  // #endregion
 
-//#region |ICRC7|
+  //#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -5625,9 +5606,9 @@ shared actor class Cosmicrafts() = Self {
     },
     // Add more templates as needed
   ];
-// #endregion
+  // #endregion
 
-//#region |Chests|
+  //#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5726,9 +5707,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |ICRC1|
+  //#region |ICRC1|
 
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
@@ -5829,9 +5810,9 @@ shared actor class Cosmicrafts() = Self {
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
-// #endregion
+  // #endregion
 
-//#region |Logging|
+  //#region |Logging|
 
   public type MintedStardust = {
     quantity : Nat;
@@ -6006,9 +5987,9 @@ shared actor class Cosmicrafts() = Self {
       gameNFTs = gameNFTs;
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Migrations|
+  //#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
@@ -6047,6 +6028,10 @@ shared actor class Cosmicrafts() = Self {
     _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
     _claimedAchievementLineRewards := Iter.toArray(claimedAchievementLineRewards.entries());
     _claimedCategoryAchievementRewards := Iter.toArray(claimedCategoryAchievementRewards.entries());
+
+    _userBasicInfo := Iter.toArray(userBasicInfo.entries());
+    _userNetwork := Iter.toArray(userNetwork.entries());
+
   };
 
   system func postupgrade() {
@@ -6086,10 +6071,13 @@ shared actor class Cosmicrafts() = Self {
     claimedIndividualAchievementRewards := HashMap.fromIter(_claimedIndividualAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
     claimedAchievementLineRewards := HashMap.fromIter(_claimedAchievementLineRewards.vals(), 0, Principal.equal, Principal.hash);
     claimedCategoryAchievementRewards := HashMap.fromIter(_claimedCategoryAchievementRewards.vals(), 0, Principal.equal, Principal.hash);
-  };
-// #endregion
 
-//#region |Soul NFT|
+    userBasicInfo := HashMap.fromIter(_userBasicInfo.vals(), 0, Principal.equal, Principal.hash);
+    userNetwork := HashMap.fromIter(_userNetwork.vals(), 0, Principal.equal, Principal.hash);
+  };
+  // #endregion
+
+  //#region |Soul NFT|
 
   stable var savedPlayerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
   stable var playerDecks : Trie<Principal, PlayerGameData> = savedPlayerDecks;
@@ -6421,9 +6409,9 @@ shared actor class Cosmicrafts() = Self {
     #Ok;
     #Err : Text;
   };
-// #endregion
+  // #endregion
 
-//#region |Avatars and Titles|
+  //#region |Avatars and Titles|
 
   // Types for Avatars and Titles
   public type Avatar = {
@@ -6726,9 +6714,9 @@ shared actor class Cosmicrafts() = Self {
 
     return titleDetails;
   };
-// #endregion
+  // #endregion
 
-//#region |Referrals|
+  //#region |Referrals|
 
   public type ReferralCode = Text;
 
@@ -7240,7 +7228,7 @@ shared actor class Cosmicrafts() = Self {
 
     return indirectReferrals;
   };
-  // Get a player's beyond referrer 
+  // Get a player's beyond referrer
   public query func getBeyondReferrals(playerId : PlayerId) : async [PlayerId] {
     var beyondReferrals : [PlayerId] = [];
 
@@ -7305,7 +7293,7 @@ shared actor class Cosmicrafts() = Self {
     directReferrals : [PlayerId];
     indirectReferrals : [PlayerId];
     beyondReferrals : [PlayerId];
-    } {
+  } {
     var directReferrals : [PlayerId] = [];
     var indirectReferrals : [PlayerId] = [];
     var beyondReferrals : [PlayerId] = [];
@@ -7418,9 +7406,9 @@ shared actor class Cosmicrafts() = Self {
       case (?multiplier) { return multiplier };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Tops|
+  //#region |Tops|
   public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
     for ((playerId, multiplier) in multiplierByPlayer.entries()) {
@@ -7831,9 +7819,9 @@ shared actor class Cosmicrafts() = Self {
     };
     return topAchievementPlayers;
   };
-// #endregion
+  // #endregion
 
-//#region |Achievements|
+  //#region |Achievements|
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -8877,7 +8865,7 @@ shared actor class Cosmicrafts() = Self {
             };
             playerGamesStats.put(caller, updatedStats);
 
-            let (_,_) = await updatePlayerLevel(caller);
+            let (_, _) = await updatePlayerLevel(caller);
             return (true, "XP earned: " # Nat.toText(reward.amount));
           };
         };
@@ -8901,9 +8889,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Views|
+  //#region |Views|
 
   public type TopView = {
     referralsTop : [ReferralsTop];
@@ -8923,7 +8911,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  public shared ({ caller }) func get_ach() : async (
+  public shared ({ caller }) func get_achievements() : async (
     [AchievementCategory],
     [AchievementLine],
     [IndividualAchievement],
@@ -8946,194 +8934,16 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-// #endregion
+  // #endregion
 
-//#region |Referrals test|
-  public type ReferredPlayer = {
-    id : Nat32;
-    username : Text;
-    avatar : Nat;
-  };
   public type ReferralAccount = {
-    id : Nat;
+    id : PlayerId;
     username : Text;
     avatar : Nat;
     multiplier : Float;
-    referralCode : ReferralCode;
+    earnings : Float;
+    referralCode : Text;
+    node : [ReferralAccount];
   };
-  class Players(referralAccount : ReferralAccount) {
-    var earnings : Float = 0.0;
-    var children : [Players] = [];
-
-    public func addReferral(referralAccount : ReferralAccount) : Players {
-      let newPlayer = Players(referralAccount);
-      children := Array.append(children, [newPlayer]);
-      return newPlayer;
-    };
-
-    public func calculateEarnings(level : Int, multiplier : Float) : Float {
-      if (level > 3) {
-        return 0.0;
-      };
-      var totalEarnings : Float = multiplier;
-      for (child in children.vals()) {
-        totalEarnings += child.calculateEarnings(level + 1, multiplier / 2.0);
-      };
-      earnings += totalEarnings; // Update the instance variable earnings
-      return totalEarnings;
-    };
-
-    public func displayTree(level : Int) {
-      Debug.print(generateIndent(level) # referralAccount.username # ": Earnings " # debug_show (earnings));
-      for (child in children.vals()) {
-        child.displayTree(level + 1);
-      };
-    };
-
-    public func getReferredPlayersTree(level : Int) : Text {
-      var tree : Text = generateIndent(level) # referralAccount.username # "\n";
-      for (child in children.vals()) {
-        tree #= child.getReferredPlayersTree(level + 1);
-      };
-      return tree;
-    };
-
-    public func getSummary(level : Int) : Text {
-      var summary : Text = generateIndent(level) # referralAccount.username # ": Level " # debug_show (level) # ", Earnings " # debug_show (earnings) # ", Referred Players " # debug_show (children.size()) # "\n";
-      for (child in children.vals()) {
-        summary #= child.getSummary(level + 1);
-      };
-      return summary;
-    };
-
-    private func generateIndent(level : Int) : Text {
-      var indent : Text = "";
-      for (i in Iter.range(0, level - 1)) {
-        indent #= "  ";
-      };
-      return indent;
-    };
-  };
-
-  public func exampleUsage() : async () {
-    let rootAccount : ReferralAccount = {
-      id = 1;
-      username = "root";
-      avatar = 0;
-      multiplier = 1.0;
-      referralCode = "root_code";
-    };
-    let root = Players(rootAccount);
-
-    // Create L1 referrals
-    let l1Accounts : [ReferralAccount] = [
-      {
-        id = 2;
-        username = "L1_player1";
-        avatar = 1;
-        multiplier = 1.0;
-        referralCode = "L1_player1_code";
-      },
-      {
-        id = 3;
-        username = "L1_player2";
-        avatar = 2;
-        multiplier = 1.0;
-        referralCode = "L1_player2_code";
-      },
-      {
-        id = 4;
-        username = "L1_player3";
-        avatar = 3;
-        multiplier = 1.0;
-        referralCode = "L1_player3_code";
-      },
-      {
-        id = 5;
-        username = "L1_player4";
-        avatar = 4;
-        multiplier = 1.0;
-        referralCode = "L1_player4_code";
-      },
-    ];
-
-    var l1Players : [Players] = [];
-
-    for (account in l1Accounts.vals()) {
-      let newPlayer = root.addReferral(account);
-      l1Players := Array.append(l1Players, [newPlayer]);
-    };
-
-    var l2Players : [Players] = [];
-    var idCounter : Nat = 6;
-    var totalReferralsL2 : Nat = 0;
-    var totalReferralsL3 : Nat = 0;
-    var l2PlayerDetails : [(Text, Float)] = [];
-    var l3PlayerDetails : [(Text, Float)] = [];
-
-    // Create L2 referrals
-    for (l1Player in l1Players.vals()) {
-      for (i in Iter.range(0, 1)) {
-        let l2Account : ReferralAccount = {
-          id = idCounter;
-          username = "L2_player" # debug_show (idCounter);
-          avatar = idCounter;
-          multiplier = 1.0;
-          referralCode = "L2_player" # debug_show (idCounter) # "_code";
-        };
-        let newPlayer = l1Player.addReferral(l2Account);
-        l2Players := Array.append(l2Players, [newPlayer]);
-        idCounter += 1;
-        totalReferralsL2 += 1;
-        l2PlayerDetails := Array.append(l2PlayerDetails, [(l2Account.username, l2Account.multiplier)]);
-      };
-    };
-
-    // Create L3 referrals
-    var idCounterL3 : Nat = idCounter;
-
-    for (l2Player in l2Players.vals()) {
-      for (i in Iter.range(0, 2)) {
-        let l3Account : ReferralAccount = {
-          id = idCounterL3;
-          username = "L3_player" # debug_show (idCounterL3);
-          avatar = idCounterL3;
-          multiplier = 1.0;
-          referralCode = "L3_player" # debug_show (idCounterL3) # "_code";
-        };
-        let r = l2Player.addReferral(l3Account);
-        idCounterL3 += 1;
-        totalReferralsL3 += 1;
-        l3PlayerDetails := Array.append(l3PlayerDetails, [(l3Account.username, l3Account.multiplier)]);
-      };
-    };
-
-    // Calculate earnings
-    let earningsL1 = root.calculateEarnings(1, rootAccount.multiplier);
-    let earningsL2 = root.calculateEarnings(2, rootAccount.multiplier);
-    let earningsL3 = root.calculateEarnings(3, rootAccount.multiplier);
-
-    // Print summary
-    Debug.print("=== Summary ===");
-    Debug.print("Level 1:");
-    Debug.print("Earnings: " # debug_show (earningsL1));
-    Debug.print("Total referrals: " # debug_show (l1Players.size()));
-    Debug.print("Level 2:");
-    Debug.print("Earnings: " # debug_show (earningsL2));
-    Debug.print("Total referrals: " # debug_show (totalReferralsL2));
-    Debug.print("Referred Players and Contributions:");
-    for (player in l2PlayerDetails.vals()) {
-      Debug.print("Player: " # player.0 # ", Contribution: " # debug_show (player.1));
-    };
-    Debug.print("Level 3:");
-    Debug.print("Earnings: " # debug_show (earningsL3));
-    Debug.print("Total referrals: " # debug_show (totalReferralsL3));
-    Debug.print("Referred Players and Contributions:");
-    for (player in l3PlayerDetails.vals()) {
-      Debug.print("Player: " # player.0 # ", Contribution: " # debug_show (player.1));
-    };
-    Debug.print("================");
-  };
-// #endregion
 
 };
