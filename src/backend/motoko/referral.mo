@@ -44,7 +44,7 @@ actor class Referral() {
   };
 
   // Get the referrer id by code
-  public func getReferrerIdByCode(code : Text) : async ?Principal {
+  public query func getReferrerIdByCode(code : Text) : async ?Principal {
     for ((_, node) in referrals.entries()) {
       if (node.referralCode == code) {
         return ?node.id;
@@ -54,7 +54,7 @@ actor class Referral() {
   };
 
   // Get the referral code by id
-  public func getReferralCode(id : Principal) : async ?Text {
+  public query func getReferralCode(id : Principal) : async ?Text {
     for ((_, node) in referrals.entries()) {
       if (node.id == id) {
         return ?node.referralCode;
@@ -64,7 +64,7 @@ actor class Referral() {
   };
 
   // Get the referral node by id
-  public func getReferralNodeById(id : Principal) : async ?RNode {
+  public query func getReferralNodeById(id : Principal) : async ?RNode {
     for ((_, node) in referrals.entries()) {
       if (node.id == id) {
         return ?node;
@@ -74,7 +74,7 @@ actor class Referral() {
   };
 
   // Get the count of the matching referrals searched by id
-  public func getReferralCountById(id : Principal) : async Int {
+  public query func getReferralCountById(id : Principal) : async Int {
     var count = 0;
     for ((_, node) in referrals.entries()) {
       if (node.referrerId == ?id) {
@@ -115,23 +115,58 @@ actor class Referral() {
     return (n, x - 1);
   };
 
+  // Helper function to build the referral tree
+  func buildTree(nodeId : Principal) : async ?RNode {
+    switch (await getReferralNodeById(nodeId)) {
+      case (?node) {
+        var childNodes : [RNode] = [];
+        for ((_, refNode) in referrals.entries()) {
+          if (refNode.referrerId == ?nodeId) {
+            switch (await buildTree(refNode.id)) {
+              case (?childNode) {
+                childNodes := Array.append<RNode>(childNodes, [childNode]);
+              };
+              case null {};
+            };
+          };
+        };
+        return ?{ node with nodes = childNodes };
+      };
+      case null {
+        return null;
+      };
+    };
+  };
+
+  // Public function to get the referral tree for a specific ID
+  public shared func getReferralTree(id : Principal) : async ?RNode {
+    return await buildTree(id);
+  };
+
+  // Example usage
+  public shared func exampleUsage(id : Principal) : async ?RNode {
+    let tree = await getReferralTree(id);
+    return tree;
+  };
+
   // Link the referral to the account
-  public func linkReferral(id : Principal, referralCode : Text) : async (Bool, Text) {
+  public func linkReferral(id : Principal, code : Text) : async (Bool, Text) {
 
     Debug.print("Linking referral");
     Debug.print("Getting the referral id");
-
-    let n = await getReferrerIdByCode(referralCode);
-
+    let n = await getReferrerIdByCode(code);
     let foundId = switch (n) {
       case (?principal) {
-        Debug.print("Referral id found: " # Principal.toText(principal));
+        Debug.print(
+          "Referral id found: " #
+          Principal.toText(principal)
+        );
         principal;
       };
-
       case (null) {
+        Debug.print("Referral code not found");
         if (referrals.size() == 0) {
-          Debug.print("Referral code not found, adding first account");
+          Debug.print("Linking first account");
           let (refs, mult) = await calculateMultiplier(id);
           let earn = Float.fromInt(refs) * mult;
           let newNode : RNode = {
@@ -139,15 +174,13 @@ actor class Referral() {
             username = "user1";
             multiplier = mult;
             earnings = earn;
-            referralCode = referralCode;
+            referralCode = code;
             referrerId = ?Principal.fromText("aaaaa-aa");
             nodes = [];
           };
           referrals.put(newNode.id, newNode);
           return (true, "Referral linked");
         };
-
-        Debug.print("Referral id not found");
         return (true, "Referral not linked");
       };
     };
@@ -186,20 +219,20 @@ actor class Referral() {
     Debug.print("Calculating earnings and multiplier for:");
     let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
     let earnReferrer = Float.fromInt(refsReferrer) * multReferrer;
+
     Debug.print(
       "Referrer has " # Int.toText(refsReferrer) #
       " referrals with " # Float.toText(multReferrer)
       # " of multiplier"
     );
+
+    Debug.print("Updating new linked account and referrer...");
     var updReferrerNode = {
       referrerNode with
       multiplier = multReferrer;
       earnings = earnReferrer;
     };
-
-    Debug.print("Updating new linked account and referrer...");
     referrals.put(updReferrerNode.id, updReferrerNode);
-    Debug.print("Referral linked successfully");
     return (true, "Referral linked");
   };
 
