@@ -1735,6 +1735,7 @@ shared actor class Cosmicrafts() = Self {
         return (false, "User is already registered");
       };
       case (null) {
+
         let codeAssigned = await assignUnassignedReferralCode(
           caller,
           referralCode,
@@ -1763,6 +1764,7 @@ shared actor class Cosmicrafts() = Self {
           );
           finalCode := assignedCode;
         };
+
         let registrationDate = Time.now();
         let newPlayer : UserBasicInfo = {
           id = caller;
