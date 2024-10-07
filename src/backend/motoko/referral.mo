@@ -116,7 +116,7 @@ actor class Referral() {
   };
 
   // Helper function to build the referral tree
-  func buildTree(nodeId : Principal) : async ?RNode {
+  private func buildTree(nodeId : Principal) : async ?RNode {
     switch (await getReferralNodeById(nodeId)) {
       case (?node) {
         var childNodes : [RNode] = [];
@@ -143,16 +143,23 @@ actor class Referral() {
     return await buildTree(id);
   };
 
-  // Example usage
-  public shared func exampleUsage(id : Principal) : async ?RNode {
-    let tree = await getReferralTree(id);
-    return tree;
+  //Check if the referral is linked
+  public func isReferralLinked(id : Principal) : async Bool {
+    for ((_, node) in referrals.entries()) {
+      if (node.id == id) {
+        return true;
+      };
+    };
+    return false;
   };
 
   // Link the referral to the account
   public func linkReferral(id : Principal, code : Text) : async (Bool, Text) {
 
-    Debug.print("Linking referral");
+    if (await isReferralLinked(id)) {
+      return (false, "Referral already linked");
+    };
+
     Debug.print("Getting the referral id");
     let n = await getReferrerIdByCode(code);
     let foundId = switch (n) {
@@ -196,7 +203,7 @@ actor class Referral() {
       };
     };
 
-    Debug.print("Updating referral nodes in hashmap...");
+    Debug.print("Updating referrer nodes");
     let newNode : RNode = {
       id = id;
       username = "user1";
@@ -216,7 +223,7 @@ actor class Referral() {
     referrals.put(updatedNode.id, updatedNode);
     referrals.put(newNode.id, newNode);
 
-    Debug.print("Calculating earnings and multiplier for:");
+    Debug.print("Calculating earnings and multiplier");
     let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
     let earnReferrer = Float.fromInt(refsReferrer) * multReferrer;
 
@@ -226,7 +233,7 @@ actor class Referral() {
       # " of multiplier"
     );
 
-    Debug.print("Updating new linked account and referrer...");
+    Debug.print("Updating referrer");
     var updReferrerNode = {
       referrerNode with
       multiplier = multReferrer;

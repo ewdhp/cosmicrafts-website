@@ -8,6 +8,10 @@
       "main": "src/backend/motoko/referral.mo",
       "type": "motoko"
     },
+    "user": {
+      "main": "src/backend/motoko/user.mo",
+      "type": "motoko"
+    },
     "frontend": {
       "dependencies": [
         "cosmicrafts"

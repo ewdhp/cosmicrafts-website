@@ -36,44 +36,8 @@ import Set "Set";
 
 shared actor class Cosmicrafts() = Self {
 
-  //#region |Admin Functions|
-  public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
-    if (caller == ADMIN_PRINCIPAL) {
-      Debug.print("Admin function called by admin.");
-      switch (funcToCall) {
-        case (#CreateMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active)) {
-          let (success, message, id) = await createGeneralMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active);
-          return (success, message # " Mission ID: " # Nat.toText(id));
-        };
-        case (#CreateMissionsPeriodically()) {
-          await createMissionsPeriodically();
-          return (true, "Missions created.");
-        };
-        case (#MintChest(PlayerId, rarity)) {
-          let (success, message) = await mintChest(PlayerId, rarity);
-          return (success, message);
-        };
-        case (#BurnToken(_caller, from, tokenId, now)) {
-          let result = await _burnToken(_caller, from, tokenId, now);
-          switch (result) {
-            case null return (true, "Token burned successfully.");
-            case (?error) return (false, "Failed to burn token: " # Utils.transferErrorToText(error));
-          };
-        };
-        case (#GetCollectionOwner(_)) {
-          return (true, "Collection Owner: " # debug_show (icrc7_CollectionOwner));
-        };
-        case (#GetInitArgs(_)) {
-          return (true, "Init Args: " # debug_show (icrc7_InitArgs));
-        };
-      };
-    } else {
-      return (false, "Access denied: Only admin can call this function.");
-    };
-  };
-  // #endregion
-
-  // #region |Types|
+//#region |Types|
+  
   public type UserID = Types.UserID;
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -133,8 +97,46 @@ shared actor class Cosmicrafts() = Self {
   //ICRC
   public type TokenID = Types.TokenID;
 
-  //--
-  // Admin Tools
+//#endregion
+
+//#region |Admin Functions|
+  public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
+    if (caller == ADMIN_PRINCIPAL) {
+      Debug.print("Admin function called by admin.");
+      switch (funcToCall) {
+        case (#CreateMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active)) {
+          let (success, message, id) = await createGeneralMission(name, missionCategory, missionType, rewardType, rewardAmount, total, hours_active);
+          return (success, message # " Mission ID: " # Nat.toText(id));
+        };
+        case (#CreateMissionsPeriodically()) {
+          await createMissionsPeriodically();
+          return (true, "Missions created.");
+        };
+        case (#MintChest(PlayerId, rarity)) {
+          let (success, message) = await mintChest(PlayerId, rarity);
+          return (success, message);
+        };
+        case (#BurnToken(_caller, from, tokenId, now)) {
+          let result = await _burnToken(_caller, from, tokenId, now);
+          switch (result) {
+            case null return (true, "Token burned successfully.");
+            case (?error) return (false, "Failed to burn token: " # Utils.transferErrorToText(error));
+          };
+        };
+        case (#GetCollectionOwner(_)) {
+          return (true, "Collection Owner: " # debug_show (icrc7_CollectionOwner));
+        };
+        case (#GetInitArgs(_)) {
+          return (true, "Init Args: " # debug_show (icrc7_InitArgs));
+        };
+      };
+    } else {
+      return (false, "Access denied: Only admin can call this function.");
+    };
+  };
+// #endregion
+  
+// #region |Admin tools|
 
   // migrations BEFORE deployment
 
@@ -160,9 +162,9 @@ shared actor class Cosmicrafts() = Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
-  // #endregion
+// #endregion
 
-  // #region |Missions|
+// #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -327,9 +329,9 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
-  // #endregion
+// #endregion
 
-  // #region |General Missions|
+// #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -676,9 +678,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |User-Specific Missions|
+// #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -1157,9 +1159,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Progress Manager|
+// #region |Progress Manager|
 
   // Function to update achievement progress manager (cleaned version)
   func updateAchievementProgressManager(
@@ -1678,9 +1680,9 @@ shared actor class Cosmicrafts() = Self {
       case (null) { (false, "Player not found") };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Users|
+// #region |Users|
 
   public type UserBasicInfo = Types.UserBasicInfo;
   public type UserNameBasicInfo = Text;
@@ -1736,35 +1738,6 @@ shared actor class Cosmicrafts() = Self {
       };
       case (null) {
 
-        let codeAssigned = await assignUnassignedReferralCode(
-          caller,
-          referralCode,
-        );
-        var finalCode = referralCode;
-        switch (codeAssigned) {
-          case (#ok(true)) {
-            finalCode := referralCode;
-          };
-          case (#err(errMsg)) {
-            return (false, errMsg);
-          };
-          case (#ok(false)) {
-            switch (referralCodes.get(referralCode)) {
-              case (null) return (false, "Invalid referral code");
-              case (?referrerId) {
-                trackReferrer(referrerId, caller);
-              };
-            };
-          };
-        };
-        if (codeAssigned != #ok(true)) {
-          let (assignedCode, _assignedReferrerId) = await assignReferralCode(
-            caller,
-            null,
-          );
-          finalCode := assignedCode;
-        };
-
         let registrationDate = Time.now();
         let newPlayer : UserBasicInfo = {
           id = caller;
@@ -1807,6 +1780,63 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
+    // Register new user by id
+  public shared func registerUserByID(
+    userId : Principal,
+    username : Text,
+    avatarId : Nat,
+    referralCode : ReferralCode,
+  ) : async (Bool, Text) {
+    switch (userBasicInfo.get(userId)) {
+      case (?_) {
+        return (false, "User is already registered");
+      };
+      case (null) {
+
+        let registrationDate = Time.now();
+        let newPlayer : UserBasicInfo = {
+          id = userId;
+          username = username;
+          avatarId = avatarId;
+          level = 0;
+          elo = 1200.0;
+          verificationBadge = false;
+          title = null;
+          description = null;
+          country = null;
+          registrationDate = registrationDate;
+        };
+        let newUserNetwork : UserNetwork = {
+          connection = {
+            platform = #cosmicrafts;
+            username = username;
+            profileLink = "/profile/username-uuid";
+            memberSince = registrationDate;
+          };
+          notifications = ?[];
+          connections = ?[];
+          friends = ?[];
+          friendRequests = ?[];
+          mutualFriends = ?[];
+          blockedUsers = ?[];
+          following = ?[];
+          followers = ?[];
+          posts = ?[];
+          comments = ?[];
+          likes = ?[];
+        };
+
+        let result = await initAchievements();
+
+        userNetwork.put(userId, newUserNetwork);
+        userBasicInfo.put(userId, newPlayer);
+
+        return (true, "User registered successfully");
+      };
+    };
+  };
+
   // Evaluates if the caller user exists
   public query ({ caller }) func userExists() : async Bool {
     switch (userBasicInfo.get(caller)) {
@@ -1815,10 +1845,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  //////////////////////////////////////////
-  //
+
   //  User Profile
-  //
+
 
   // Get the user profile by caller
   public query ({ caller }) func getUserProfileByCaller() : async ?UserProfile {
@@ -1829,11 +1858,9 @@ shared actor class Cosmicrafts() = Self {
     return userProfile.get(id);
   };
 
-  //////////////////////////////////////////
-  //
+
   //  User Basic Info
-  //
-  //
+
 
   // Get the basic user information caller
   public query ({ caller }) func getUserBasicInfo() : async ?UserBasicInfo {
@@ -1904,11 +1931,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  //////////////////////////////////////////
-  //
+
   //   User Network
-  //
-  //
+
 
   // Get the user network information
   public func getUserNetwork(id : UserID) : async ?UserNetwork {
@@ -1938,6 +1963,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Accept a friend request
   public shared ({ caller }) func acceptFriendRequest(
     fromUserID : UserID,
@@ -2042,6 +2068,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete a friend request
   public shared ({ caller }) func deleteFriendRequest(requestId : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2067,6 +2094,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get friend requests with pagination
   public query ({ caller }) func getFriendRequests(page : Nat) : async ?[FriendRequest] {
     let userNetworkOpt = userNetwork.get(caller);
@@ -2093,6 +2121,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Add a new friend
   public shared ({ caller }) func addFriend(friendId : UserID) : async (Bool, Text) {
     let friend = switch (userBasicInfo.get(friendId)) {
@@ -2131,6 +2160,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete a friend
   public func deleteFriend(caller : Principal, deleteId : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2159,6 +2189,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get the all friends with pagination
   public query ({ caller }) func getAllFriends(page : Nat) : async ?[FriendDetails] {
     switch (userNetwork.get(caller)) {
@@ -2231,6 +2262,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get a post by caller and postId
   public query ({ caller }) func getPost(postId : Nat) : async ?Post {
     let userNetworkOpt = userNetwork.get(caller);
@@ -2252,6 +2284,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Update a post by postId and caller
   public shared ({ caller }) func updatePost(postId : Nat, newContent : Text) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2286,6 +2319,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete a post by postId and caller
   public shared ({ caller }) func deletePost(postId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2376,6 +2410,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get a comment by user ID and comment ID
   public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
     let userNetworkOpt = userNetwork.get(fromUserID);
@@ -2397,6 +2432,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Update comment by caller and comment ID
   public shared ({ caller }) func updateComment(
     commentId : Nat,
@@ -2441,6 +2477,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete comment from caller by comment ID
   public shared ({ caller }) func deleteComment(commentId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2524,6 +2561,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Give a like to comment
   public shared ({ caller }) func likeComment(
     postId : Nat,
@@ -2612,6 +2650,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get all likes from a post by postId and by query caller
   public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
     let userNetworkOpt = userNetwork.get(caller);
@@ -2638,6 +2677,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get all likes from a comment by commentId and by query caller
   public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
     let userNetworkOpt = userNetwork.get(caller);
@@ -2664,6 +2704,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete a like from a post ID by likeId and by caller
   public shared ({ caller }) func deleteLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2715,6 +2756,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Delete a like from a comment ID by likeId and by caller
   public shared ({ caller }) func deleteLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2793,6 +2835,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Unblock a user by user ID
   public func unblockUser(caller : Principal, userIdToUnblock : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2821,6 +2864,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get the blocked users with pagination
   public query ({ caller }) func getBlockedUsers(page : Nat) : async ?[UserID] {
     switch (userNetwork.get(caller)) {
@@ -2873,6 +2917,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Unfollow a user by user ID
   public shared ({ caller }) func unfollowUser(unfollowId : UserID) : async Bool {
     switch (userNetwork.get(caller)) {
@@ -2901,6 +2946,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get the list of users that user caller is following with pagination
   public query ({ caller }) func getFollowing(page : Nat) : async ?[UserID] {
     switch (userNetwork.get(caller)) {
@@ -2928,6 +2974,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   // Get the list of users that are following the user caller with pagination
   public query ({ caller }) func getFollowers(page : Nat) : async ?[UserID] {
     switch (userNetwork.get(caller)) {
@@ -2984,9 +3031,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // #endregion
+// #endregion
 
-  //#region |MatchMaking|
+//#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * 1000; //check the value
 
@@ -3613,9 +3660,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  // #region |Statistics|
+// #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -3724,7 +3771,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Helper function to check if the caller is part of the match
   func isCallerPartOfMatch(matchID : MatchID, caller : Principal) : async Bool {
     let matchParticipants = await getMatchParticipants(matchID);
     switch (matchParticipants) {
@@ -3774,9 +3820,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // #endregion
+// #endregion
 
-  //#region |Tournaments Matchmaking|
+//#region |Tournaments Matchmaking|
 
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
@@ -4007,8 +4053,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Calculate the base-2 logarithm of a number
-  func log2(x : Nat) : Nat {
+  private func log2(x : Nat) : Nat {
     var result = 0;
     var value = x;
     while (value > 1) {
@@ -4018,7 +4063,6 @@ shared actor class Cosmicrafts() = Self {
     return result;
   };
 
-  // Helper function to update the bracket after a match result is verified
   public shared func updateBracketAfterMatchUpdate(tournamentId : Nat, matchId : Nat, winner : Principal) : async () {
     Debug.print("Starting updateBracketAfterMatchUpdate");
     Debug.print("Updated Match ID: " # Nat.toText(matchId));
@@ -4336,9 +4380,9 @@ shared actor class Cosmicrafts() = Self {
     matches := [];
     return true;
   };
-  // #endregion
+// #endregion
 
-  //#region |ICRC7|
+//#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -4410,7 +4454,6 @@ shared actor class Cosmicrafts() = Self {
   private func _keyFromTransactionId(t : TypesICRC7.TransactionId) : Key<TypesICRC7.TransactionId> {
     { hash = Utils._natHash(t); key = t };
   };
-
   public shared query func icrc7_collection_metadata() : async TypesICRC7.CollectionMetadata {
     return {
       name = name;
@@ -4423,39 +4466,30 @@ shared actor class Cosmicrafts() = Self {
       supplyCap = supplyCap;
     };
   };
-
   public shared query func icrc7_name() : async Text {
     return name;
   };
-
   public shared query func icrc7_symbol() : async Text {
     return symbol;
   };
-
   public shared query func icrc7_royalties() : async ?Nat16 {
     return royalties;
   };
-
   public shared query func icrc7_royalty_recipient() : async ?TypesICRC7.Account {
     return royaltyRecipient;
   };
-
   public shared query func icrc7_description() : async ?Text {
     return description;
   };
-
   public shared query func icrc7_image() : async ?Blob {
     return image;
   };
-
   public shared query func icrc7_total_supply() : async Nat {
     return totalSupply;
   };
-
   public shared query func icrc7_supply_cap() : async ?Nat {
     return supplyCap;
   };
-
   public shared query func icrc7_metadata(tokenId : TypesICRC7.TokenId) : async TypesICRC7.MetadataResult {
     let item = Trie.get(tokens, _keyFromTokenId tokenId, Nat.equal);
     switch (item) {
@@ -4467,7 +4501,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared query func icrc7_owner_of(tokenId : TypesICRC7.TokenId) : async TypesICRC7.OwnerResult {
     let item = Trie.get(tokens, _keyFromTokenId tokenId, Nat.equal);
     switch (item) {
@@ -4479,7 +4512,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared query func icrc7_balance_of(account : TypesICRC7.Account) : async TypesICRC7.BalanceResult {
     let acceptedAccount : TypesICRC7.Account = _acceptAccount(account);
     let accountText : Text = ICRC7Utils.accountToText(acceptedAccount);
@@ -4493,7 +4525,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared query func icrc7_tokens_of(account : TypesICRC7.Account) : async TypesICRC7.TokensOfResult {
     let acceptedAccount : TypesICRC7.Account = _acceptAccount(account);
     let accountText : Text = ICRC7Utils.accountToText(acceptedAccount);
@@ -4507,7 +4538,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared ({ caller }) func icrc7_transfer(transferArgs : TypesICRC7.TransferArgs) : async TypesICRC7.TransferReceipt {
     let now = Nat64.fromIntWrap(Time.now());
 
@@ -4598,7 +4628,6 @@ shared actor class Cosmicrafts() = Self {
 
     return #Ok(transferId);
   };
-
   public shared ({ caller }) func icrc7_approve(approvalArgs : TypesICRC7.ApprovalArgs) : async TypesICRC7.ApprovalReceipt {
     let now = Nat64.fromIntWrap(Time.now());
 
@@ -4649,18 +4678,15 @@ shared actor class Cosmicrafts() = Self {
 
     return #Ok(approvalId);
   };
-
   public shared query func icrc7_supported_standards() : async [TypesICRC7.SupportedStandard] {
     return [{
       name = "ICRC-7";
       url = "https://github.com/dfinity/ICRC/ICRCs/ICRC-7";
     }];
   };
-
   public shared query func get_collection_owner() : async TypesICRC7.Account {
     return owner;
   };
-
   public func icrc7_get_transactions(getTransactionsArgs : TypesICRC7.GetTransactionsArgs) : async TypesICRC7.GetTransactionsResult {
     let result : TypesICRC7.GetTransactionsResult = switch (getTransactionsArgs.account) {
       case null {
@@ -4705,7 +4731,6 @@ shared actor class Cosmicrafts() = Self {
     };
     return result;
   };
-
   private func _addTokenToOwners(account : TypesICRC7.Account, tokenId : TypesICRC7.TokenId) {
     //get Textual rapresentation of the Account
     let textAccount : Text = ICRC7Utils.accountToText(account);
@@ -4716,7 +4741,6 @@ shared actor class Cosmicrafts() = Self {
     //add the token id
     owners := Trie.put(owners, _keyFromText textAccount, Text.equal, ICRC7Utils.pushIntoArray<TypesICRC7.TokenId>(tokenId, newOwners)).0;
   };
-
   private func _removeTokenFromOwners(account : TypesICRC7.Account, tokenId : TypesICRC7.TokenId) {
     //get Textual rapresentation of the Account
     let textAccount : Text = ICRC7Utils.accountToText(account);
@@ -4729,7 +4753,6 @@ shared actor class Cosmicrafts() = Self {
     //add the token id
     owners := Trie.put(owners, _keyFromText textAccount, Text.equal, updated).0;
   };
-
   private func _incrementBalance(account : TypesICRC7.Account) {
     //get Textual rapresentation of the Account
     let textAccount : Text = ICRC7Utils.accountToText(account);
@@ -4745,7 +4768,6 @@ shared actor class Cosmicrafts() = Self {
     //update the balance
     balances := Trie.put(balances, _keyFromText textAccount, Text.equal, actualBalance + 1).0;
   };
-
   private func _decrementBalance(account : TypesICRC7.Account) {
     // Get textual representation of the account
     let textAccount : Text = ICRC7Utils.accountToText(account);
@@ -4762,12 +4784,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
-  //increment the total supply
   private func _incrementTotalSupply(quantity : Nat) {
     totalSupply := totalSupply + quantity;
   };
-
   private func _singleTransfer(caller : ?TypesICRC7.Account, from : TypesICRC7.Account, to : TypesICRC7.Account, tokenId : TypesICRC7.TokenId, dryRun : Bool, now : Nat64) : ?TypesICRC7.TransferError {
     //check if token exists
     if (_exists(tokenId) == false) {
@@ -4809,7 +4828,6 @@ shared actor class Cosmicrafts() = Self {
 
     return null;
   };
-
   private func _updateToken(tokenId : TypesICRC7.TokenId, newOwner : ?TypesICRC7.Account, newMetadata : ?TypesICRC7.Metadata) {
     let item = Trie.get(tokens, _keyFromTokenId(tokenId), Nat.equal);
 
@@ -4831,11 +4849,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   private func _isApprovedOrOwner(spender : TypesICRC7.Account, tokenId : TypesICRC7.TokenId, now : Nat64) : Bool {
     return _isOwner(spender, tokenId) or _isApproved(spender, tokenId, now);
   };
-
   private func _isOwner(spender : TypesICRC7.Account, tokenId : TypesICRC7.TokenId) : Bool {
     let item = Trie.get(tokens, _keyFromTokenId tokenId, Nat.equal);
     switch (item) {
@@ -4847,7 +4863,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   private func _isApproved(spender : TypesICRC7.Account, tokenId : TypesICRC7.TokenId, now : Nat64) : Bool {
     let item = Trie.get(tokens, _keyFromTokenId tokenId, Nat.equal);
 
@@ -4878,7 +4893,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   private func _exists(tokenId : TypesICRC7.TokenId) : Bool {
     let tokensResult = Trie.get(tokens, _keyFromTokenId tokenId, Nat.equal);
     switch (tokensResult) {
@@ -4886,15 +4900,12 @@ shared actor class Cosmicrafts() = Self {
       case (?_elem) return true;
     };
   };
-
   private func _incrementTransferIndex() {
     transferSequentialIndex := transferSequentialIndex + 1;
   };
-
   private func _getDefaultSubaccount() : Blob {
     return Blob.fromArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   };
-
   private func _acceptAccount(account : TypesICRC7.Account) : TypesICRC7.Account {
     let effectiveSubaccount : Blob = switch (account.subaccount) {
       case null _getDefaultSubaccount();
@@ -4906,34 +4917,28 @@ shared actor class Cosmicrafts() = Self {
       subaccount = ?effectiveSubaccount;
     };
   };
-
   private func _transferErrorCodeToCode(d : TypesICRC7.TransferErrorCode) : Nat {
     switch d {
       case (#EmptyTokenIds) 0;
       case (#DuplicateInTokenIds) 1;
     };
   };
-
   private func _transferErrorCodeToText(d : TypesICRC7.TransferErrorCode) : Text {
     switch d {
       case (#EmptyTokenIds) "Empty Token Ids";
       case (#DuplicateInTokenIds) "Duplicates in Token Ids array";
     };
   };
-
   private func _approveErrorCodeToCode(d : TypesICRC7.ApproveErrorCode) : Nat {
     switch d {
       case (#SelfApproval) 0;
     };
   };
-
   private func _approveErrorCodeToText(d : TypesICRC7.ApproveErrorCode) : Text {
     switch d {
       case (#SelfApproval) "No Self Approvals";
     };
   };
-
-  //if token_ids is empty, approve entire collection
   private func _createApproval(from : TypesICRC7.Account, spender : TypesICRC7.Account, tokenIds : [TypesICRC7.TokenId], expiresAt : ?Nat64, memo : ?Blob, createdAtTime : ?Nat64) : TypesICRC7.ApprovalId {
 
     // Handle approvals
@@ -4969,15 +4974,12 @@ shared actor class Cosmicrafts() = Self {
 
     return approvalId;
   };
-
   private func _incrementApprovalIndex() {
     approvalSequentialIndex := approvalSequentialIndex + 1;
   };
-
   private func _deleteAllTokenApprovals(tokenId : TypesICRC7.TokenId) {
     tokenApprovals := Trie.remove(tokenApprovals, _keyFromTokenId tokenId, Nat.equal).0;
   };
-
   private func _addTransaction(kind : { #mint; #icrc7_transfer; #icrc7_approve; #upgrade }, timestamp : Nat64, tokenIds : ?[TypesICRC7.TokenId], to : ?TypesICRC7.Account, from : ?TypesICRC7.Account, spender : ?TypesICRC7.Account, memo : ?Blob, createdAtTime : ?Nat64, expiresAt : ?Nat64) : TypesICRC7.Transaction {
     let transactionId : TypesICRC7.TransactionId = transactionSequentialIndex;
     _incrementTransactionIndex();
@@ -5075,17 +5077,14 @@ shared actor class Cosmicrafts() = Self {
 
     return transaction;
   };
-
   private func _addTransactionIdToAccount(transactionId : TypesICRC7.TransactionId, account : TypesICRC7.Account) {
     let accountText : Text = ICRC7Utils.accountToText(_acceptAccount(account));
     let accountTransactions : [TypesICRC7.TransactionId] = ICRC7Utils.nullishCoalescing<[TypesICRC7.TransactionId]>(Trie.get(transactionsByAccount, _keyFromText accountText, Text.equal), []);
     transactionsByAccount := Trie.put(transactionsByAccount, _keyFromText accountText, Text.equal, ICRC7Utils.pushIntoArray<TypesICRC7.TransactionId>(transactionId, accountTransactions)).0;
   };
-
   private func _incrementTransactionIndex() {
     transactionSequentialIndex := transactionSequentialIndex + 1;
   };
-
   private func _burnToken(_caller : ?TypesICRC7.Account, from : TypesICRC7.Account, tokenId : TypesICRC7.TokenId, now : Nat64) : async ?TypesICRC7.TransferError {
     // Check if token exists
     if (_exists(tokenId) == false) {
@@ -5157,27 +5156,21 @@ shared actor class Cosmicrafts() = Self {
     };
     return Buffer.toArray(resultBuffer);
   };
-
   public query func getChests(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     return _filterNFTsByCategory(principal, "Chest");
   };
-
   public query func getAvatars(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     return _filterNFTsByCategory(principal, "Avatar");
   };
-
   public query func getCharacters(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     return _filterNFTsByCategory(principal, "Character");
   };
-
   public query func getTrophies(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     return _filterNFTsByCategory(principal, "Trophy");
   };
-
   public query func getUnits(principal : Principal) : async [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     return _filterNFTsByCategory(principal, "Unit");
   };
-
   // Helper function to filter NFTs by a specified category
   private func _filterNFTsByCategory(caller : Principal, category : Text) : [(TypesICRC7.TokenId, TypesICRC7.TokenMetadata)] {
     let entries = Iter.toArray(Trie.iter(tokens));
@@ -5223,9 +5216,12 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(resultBuffer);
   };
-  // #endregion
+// #endregion
 
-  //#region |GameNFTs|
+//#region |GameNFTs|
+  stable var _mintedCallers : [(Principal, Bool)] = [];
+  var mintedCallersMap : HashMap.HashMap<Principal, Bool> = HashMap.fromIter(_mintedCallers.vals(), 0, Principal.equal, Principal.hash);
+
   public shared (msg) func upgradeNFT(nftID : TokenID) : async (Bool, Text) {
     // Perform ownership check
     let ownerof : TypesICRC7.OwnerResult = await icrc7_owner_of(nftID);
@@ -5345,7 +5341,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared ({ caller }) func mintNFT(mintArgs : TypesICRC7.MintArgs) : async TypesICRC7.MintReceipt {
     let now = Nat64.fromIntWrap(Time.now());
     let acceptedTo : TypesICRC7.Account = _acceptAccount(mintArgs.to);
@@ -5395,12 +5390,6 @@ shared actor class Cosmicrafts() = Self {
 
     return #Ok(mintArgs.token_id);
   };
-
-  // Stable map to store the principal IDs of callers who have minted a deck
-  stable var _mintedCallers : [(Principal, Bool)] = [];
-
-  var mintedCallersMap : HashMap.HashMap<Principal, Bool> = HashMap.fromIter(_mintedCallers.vals(), 0, Principal.equal, Principal.hash);
-
   public shared ({ caller }) func mintDeck() : async (Bool, Text, [TypesICRC7.TokenId]) {
     let units = ICRC7Utils.initDeck(); // Initialize the deck with units
     var uuids = Buffer.Buffer<TypesICRC7.TokenId>(8);
@@ -5492,7 +5481,6 @@ shared actor class Cosmicrafts() = Self {
 
     return (true, "Deck minted and stored successfully", Buffer.toArray(uuids));
   };
-
   private func mintUnit(templateId : Nat, owner : Principal) : async TypesICRC7.MintReceipt {
     let _now = Nat64.fromIntWrap(Time.now());
     let acceptedTo : TypesICRC7.Account = {
@@ -5580,7 +5568,6 @@ shared actor class Cosmicrafts() = Self {
       case (#Err(err)) return #Err(err);
     };
   };
-
   private let nftTemplates : [NFTDetails] = [
     {
       unitType = #Spaceship;
@@ -5608,9 +5595,9 @@ shared actor class Cosmicrafts() = Self {
     },
     // Add more templates as needed
   ];
-  // #endregion
+// #endregion
 
-  //#region |Chests|
+//#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5642,7 +5629,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared ({ caller }) func openChest(chestID : Nat) : async (Bool, Text) {
     // Perform ownership check
     let ownerof : TypesICRC7.OwnerResult = await icrc7_owner_of(chestID);
@@ -5709,10 +5695,12 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
 
-  //#region |ICRC1|
+// #endregion
 
+//#region |ICRC1|
+
+  
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
     symbol = "STDs";
@@ -5726,7 +5714,6 @@ shared actor class Cosmicrafts() = Self {
     advanced_settings = null;
     min_burn_amount = 0;
   };
-
   let icrc1_args : ICRC1.InitArgs = {
     init_args with minting_account = Option.get(
       init_args.minting_account,
@@ -5736,85 +5723,65 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
+ 
 
   public query func getInitArgs() : async TypesICRC1.TokenInitArgs {
     return init_args;
   };
-
   stable let token = ICRC1.init(icrc1_args);
-
-  /// Functions for the ICRC1 token standard
   public shared query func icrc1_name() : async Text {
     ICRC1.name(token);
   };
-
   public shared query func icrc1_symbol() : async Text {
     ICRC1.symbol(token);
   };
-
   public shared query func icrc1_decimals() : async Nat8 {
     ICRC1.decimals(token);
   };
-
   public shared query func icrc1_fee() : async ICRC1.Balance {
     ICRC1.fee(token);
   };
-
   public shared query func icrc1_metadata() : async [ICRC1.MetaDatum] {
     ICRC1.metadata(token);
   };
-
   public shared query func icrc1_total_supply() : async ICRC1.Balance {
     ICRC1.total_supply(token);
   };
-
   public shared query func icrc1_minting_account() : async ?ICRC1.Account {
     ?ICRC1.minting_account(token);
   };
-
   public shared query func icrc1_balance_of(args : ICRC1.Account) : async ICRC1.Balance {
     ICRC1.balance_of(token, args);
   };
-
   public shared query func icrc1_supported_standards() : async [ICRC1.SupportedStandard] {
     ICRC1.supported_standards(token);
   };
-
   public shared ({ caller }) func icrc1_transfer(args : ICRC1.TransferArgs) : async ICRC1.TransferResult {
     await* ICRC1.transfer(token, args, caller);
   };
-
   public shared func icrc1_pay_for_transaction(args : ICRC1.TransferArgs, from : Principal) : async ICRC1.TransferResult {
     await* ICRC1.transfer(token, args, from);
   };
-
   public shared ({ caller }) func mint(args : ICRC1.Mint) : async ICRC1.TransferResult {
     await* ICRC1.mint(token, args, caller);
   };
-
   public shared ({ caller }) func burn(args : ICRC1.BurnArgs) : async ICRC1.TransferResult {
     await* ICRC1.burn(token, args, caller);
   };
-
-  // Functions for integration with the rosetta standard
   public shared query func get_transactions(req : ICRC1.GetTransactionsRequest) : async ICRC1.GetTransactionsResponse {
     ICRC1.get_transactions(token, req);
   };
-
-  // Additional functions not included in the ICRC1 standard
   public shared func get_transaction(i : ICRC1.TxIndex) : async ?ICRC1.Transaction {
     await* ICRC1.get_transaction(token, i);
   };
-
-  // Deposit cycles into this canister.
   public shared func deposit_cycles() : async () {
     let amount = ExperimentalCycles.available();
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
-  // #endregion
+// #endregion
 
-  //#region |Logging|
+//#region |Logging|
 
   public type MintedStardust = {
     quantity : Nat;
@@ -5855,7 +5822,6 @@ shared actor class Cosmicrafts() = Self {
   var mintedChestsMap : HashMap.HashMap<Principal, MintedChest> = HashMap.HashMap<Principal, MintedChest>(10, Principal.equal, Principal.hash);
   var mintedGameNFTsMap : HashMap.HashMap<Principal, MintedGameNFT> = HashMap.HashMap<Principal, MintedGameNFT>(10, Principal.equal, Principal.hash);
 
-  //Functions
   // Function to update stable variables
   func updateStableVariables() {
     mintedStardust := Iter.toArray(mintedStardustMap.entries());
@@ -5989,9 +5955,9 @@ shared actor class Cosmicrafts() = Self {
       gameNFTs = gameNFTs;
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |Migrations|
+//#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
@@ -6077,9 +6043,14 @@ shared actor class Cosmicrafts() = Self {
     userBasicInfo := HashMap.fromIter(_userBasicInfo.vals(), 0, Principal.equal, Principal.hash);
     userNetwork := HashMap.fromIter(_userNetwork.vals(), 0, Principal.equal, Principal.hash);
   };
-  // #endregion
+// #endregion
 
-  //#region |Soul NFT|
+//#region |Soul NFT|
+
+  private type UpdateResult = {
+    #Ok;
+    #Err : Text;
+  };
 
   stable var savedPlayerDecks : Trie<Principal, PlayerGameData> = Trie.empty();
   stable var playerDecks : Trie<Principal, PlayerGameData> = savedPlayerDecks;
@@ -6087,7 +6058,6 @@ shared actor class Cosmicrafts() = Self {
   private func _keyFromPrincipal(p : Principal) : Key<Principal> {
     { hash = Principal.hash p; key = p };
   };
-
   public shared (msg) func storeCurrentDeck(newDeck : [TypesICRC7.TokenId]) : async Bool {
     // Iterate over each token ID and check ownership
     for (tokenId in newDeck.vals()) {
@@ -6115,7 +6085,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("Stored current deck for player: " # Principal.toText(msg.caller) # " with deck: " # debug_show (newDeck));
     return true;
   };
-
   private func storeDeck(caller : Principal, newDeck : [TypesICRC7.TokenId]) : async Bool {
     // Iterate over each token ID and check ownership
     for (tokenId in newDeck.vals()) {
@@ -6143,7 +6112,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("Stored current deck for player: " # Principal.toText(caller) # " with deck: " # debug_show (newDeck));
     return true;
   };
-
   public query func getPlayerDeck(principal : Principal) : async ?[TypesICRC7.TokenId] {
     let playerDataOpt = Trie.find(playerDecks, _keyFromPrincipal(principal), Principal.equal);
 
@@ -6156,7 +6124,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   func setGameOver(caller : Principal) : async (Bool, Bool, ?Principal) {
     switch (playerStatus.get(caller)) {
       case (null) {
@@ -6198,7 +6165,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public func handleCombatXP(deck : [TypesICRC7.TokenId], totalXP : Nat) : async [TypesICRC7.TokenId] {
     let selectedUnits = await selectRandomUnits(deck);
 
@@ -6208,7 +6174,6 @@ shared actor class Cosmicrafts() = Self {
 
     return updatedUnits;
   };
-
   // Function to randomly select 3 units from the player's deck
   public func selectRandomUnits(deck : [TypesICRC7.TokenId]) : async [TypesICRC7.TokenId] {
     let indices : [Nat] = Array.tabulate(deck.size(), func(i : Nat) : Nat { i });
@@ -6221,7 +6186,6 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(selectedUnitsBuffer);
   };
-
   func distributeXP(totalXP : Nat, selectedUnits : [TypesICRC7.TokenId]) : async [Nat] {
     let totalCombatXP = totalXP;
     var xpDistribution = Buffer.Buffer<Nat>(3);
@@ -6264,7 +6228,6 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(xpDistribution);
   };
-
   func applyXPToUnits(selectedUnits : [TypesICRC7.TokenId], xpDistribution : [Nat]) : async [TypesICRC7.TokenId] {
     var updatedUnits = Buffer.Buffer<TypesICRC7.TokenId>(3); // Using a Buffer for efficient memory management
 
@@ -6328,8 +6291,6 @@ shared actor class Cosmicrafts() = Self {
     // Convert Buffer to Array before returning
     return Buffer.toArray(updatedUnits);
   };
-
-  // Helper function to update token metadata
   private func _updateTokenMetadata(tokenId : TypesICRC7.TokenId, newMetadata : ?TypesICRC7.Metadata) : async UpdateResult {
     // Update the token metadata in the Trie
     let tokenExists = _exists(tokenId);
@@ -6340,7 +6301,6 @@ shared actor class Cosmicrafts() = Self {
       return #Err("Token does not exist");
     };
   };
-
   public func updateSoulNFTPlayed(playerDeck : [TypesICRC7.TokenId]) : async [TypesICRC7.TokenId] {
     var updatedUnits = Buffer.Buffer<TypesICRC7.TokenId>(playerDeck.size());
 
@@ -6406,16 +6366,10 @@ shared actor class Cosmicrafts() = Self {
     // Convert Buffer to Array before returning
     return Buffer.toArray(updatedUnits);
   };
+// #endregion
 
-  private type UpdateResult = {
-    #Ok;
-    #Err : Text;
-  };
-  // #endregion
+//#region |Avatars and Titles|
 
-  //#region |Avatars and Titles|
-
-  // Types for Avatars and Titles
   public type Avatar = {
     id : Nat;
     description : Text;
@@ -6716,9 +6670,9 @@ shared actor class Cosmicrafts() = Self {
 
     return titleDetails;
   };
-  // #endregion
+// #endregion
 
-  //#region |Referrals|
+//#region |Referrals|
 
   public type ReferralCode = Text;
 
@@ -7821,9 +7775,9 @@ shared actor class Cosmicrafts() = Self {
     };
     return topAchievementPlayers;
   };
-  // #endregion
+// #endregion
 
-  //#region |Achievements|
+//#region |Achievements|
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -7885,7 +7839,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("Achievements initialized successfully");
     return true;
   };
-
   public func assignAchievementsToUser(user : PlayerId) : async ([AchievementCategory]) {
 
     let userProgressOpt = userProgress.get(user);
@@ -7918,7 +7871,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(user)));
     userCategoriesList;
   };
-
   public shared ({ caller }) func assignAchievementsToUserByCaller() : async Bool {
     let userProgressOpt = userProgress.get(caller);
 
@@ -7947,7 +7899,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[assignAchievementsToUser] User progress after update: " # debug_show (userProgress.get(caller)));
     return true;
   };
-
   public func getUserAchievements(user : PlayerId) : async [AchievementCategory] {
     let userProgressOpt = userProgress.get(user);
     switch (userProgressOpt) {
@@ -7959,7 +7910,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared ({ caller }) func getUserAchievementsByCaller() : async [AchievementCategory] {
     let userProgressOpt = userProgress.get(caller);
 
@@ -7972,7 +7922,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public query func getAllAchievements() : async [AchievementCategory] {
     var categories : [AchievementCategory] = [];
     let iter = achievementCategories.vals();
@@ -7991,7 +7940,6 @@ shared actor class Cosmicrafts() = Self {
 
     return categories;
   };
-
   private func findIndividualAchievement(userCategoriesList : [AchievementCategory], individualAchievementId : Nat) : (?AchievementCategory, ?AchievementLine, ?IndividualAchievement) {
 
     for (category in userCategoriesList.vals()) {
@@ -8006,7 +7954,6 @@ shared actor class Cosmicrafts() = Self {
 
     return (null, null, null);
   };
-
   public func createAchievement(categoryId : Nat, name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = achievementIDCounter;
     achievementIDCounter += 1;
@@ -8036,7 +7983,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[createAchievement] Achievement created with ID: " # Nat.toText(id));
     return (true, "Achievement created successfully", id);
   };
-
   public func createIndividualAchievement(achievementId : Nat, name : Text, achievementType : AchievementType, requiredProgress : Nat, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = individualAchievementIDCounter;
     individualAchievementIDCounter += 1;
@@ -8068,7 +8014,6 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("[createIndividualAchievement] Individual Achievement created with ID: " # Nat.toText(id));
     return (true, "Individual Achievement created successfully", id);
   };
-
   public func createAchievementCategory(name : Text, rewards : [AchievementReward]) : async (Bool, Text, Nat) {
     let id = achievementCategoryIDCounter;
     achievementCategoryIDCounter += 1;
@@ -8089,7 +8034,6 @@ shared actor class Cosmicrafts() = Self {
 
     return (true, "Category created successfully", id);
   };
-
   public shared func addProgressToIndividualAchievement(user : PlayerId, individualAchievementId : Nat, progressToAdd : Nat) : async Bool {
     // Get the user's progress structure from the unified HashMap
     let userProgressOpt = userProgress.get(user);
@@ -8287,14 +8231,12 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   func updateStableArrays() {
     _userProgress := Iter.toArray(userProgress.entries());
     _claimedIndividualAchievementRewards := Iter.toArray(claimedIndividualAchievementRewards.entries());
     _claimedAchievementLineRewards := Iter.toArray(claimedAchievementLineRewards.entries());
     _claimedCategoryAchievementRewards := Iter.toArray(claimedCategoryAchievementRewards.entries());
   };
-
   public shared func claimIndACH(id : Principal, achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(id);
     switch (userProgressOpt) {
@@ -8440,7 +8382,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared (msg) func claimIndividualAchievementReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -8586,7 +8527,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared (msg) func claimAchievementLineReward(achievementId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -8693,7 +8633,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared (msg) func claimCategoryAchievementReward(categoryId : Nat) : async (Bool, Text) {
     let userProgressOpt = userProgress.get(msg.caller);
     switch (userProgressOpt) {
@@ -8774,7 +8713,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared func mintAchievementRewards(reward : AchievementReward, caller : Types.PlayerId) : async (Bool, Text) {
     switch (reward.rewardType) {
       case (#Stardust) {
@@ -8891,9 +8829,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-  // #endregion
+// #endregion
 
-  //#region |Views|
+//#region |Views|
 
   public type TopView = {
     referralsTop : [ReferralsTop];
@@ -8936,16 +8874,6 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-  // #endregion
-
-  public type ReferralAccount = {
-    id : PlayerId;
-    username : Text;
-    avatar : Nat;
-    multiplier : Float;
-    earnings : Float;
-    referralCode : Text;
-    node : [ReferralAccount];
-  };
+// #endregion
 
 };
