@@ -41,7 +41,7 @@ export default {
       const avatarId = selectedAvatarId.value || 1;
 
       try {
-        const [r, t] = await cosmicrafts.registerUser(
+        const [r, t] = await cosmicrafts.signup(
           username.value,
           avatarId, 
           referralCode.value || '' 

@@ -9,8 +9,7 @@ import Text "mo:base/Text";
 import Bool "mo:base/Bool";
 import Types "Types";
 
-import Referral "canister:referral";
-
+//import Referral "canister:referral";
 
 actor class User() {
   public type UserID = Types.UserID;
@@ -58,12 +57,10 @@ actor class User() {
 
   //////////  Register  //////////
 
-
-
-  public shared ({ caller : UserID }) func registerUser(
+  public shared ({ caller : UserID }) func signup(
     username : Text,
     avatarId : Nat,
-    referralCode : Text,
+    code : Text,
   ) : async (Bool, Text) {
     switch (userBasicInfo.get(caller)) {
       case (?_) {
@@ -114,11 +111,11 @@ actor class User() {
     };
   };
 
-  public shared func registerUserByID(
+  public shared func signupByID(
     userId : Principal,
     username : Text,
     avatarId : Nat,
-    referralCode : Text,
+    code : Text,
   ) : async (Bool, Text) {
     switch (userBasicInfo.get(userId)) {
       case (?_) {
@@ -158,15 +155,15 @@ actor class User() {
           comments = ?[];
           likes = ?[];
         };
-        
-        //referral
-        let referral = Referral;
-        let (success, text) = await referral.linkReferral(userId, referralCode);
+
+        /**referral
+        let r = Referral;
+        let (success, text) = await r.linkReferral(userId, code);
 
         if (not success) {
           return (false, text);
         };
-
+        */
         // let result = await initAchievements();
         // createMissionsPeriodically
         // mintDeck
@@ -988,7 +985,7 @@ actor class User() {
     };
   };
 
-    // Unlike from a post ID by likeId and by caller
+  // Unlike from a post ID by likeId and by caller
   public shared ({ caller }) func unLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;

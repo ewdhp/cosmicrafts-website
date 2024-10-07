@@ -16,9 +16,8 @@ import Utils "Utils";
 
 shared actor class Referral() {
 
-  type PlayerId = Principal;
   public type RNode = {
-    id : PlayerId;
+    id : Principal;
     username : Text;
     multiplier : Float;
     earnings : Float;

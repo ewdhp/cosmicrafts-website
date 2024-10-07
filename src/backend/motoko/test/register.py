@@ -6,7 +6,7 @@ import sys
 
 # Configuration
 USERS_CANISTER = "bkyz2-fmaaa-aaaaa-qaaaq-cai"          # Replace with your actual 'users' canister name if different
-REFERRALS_CANISTER = "br5f7-7uaaa-aaaaa-qaaca-cai"  # Replace with your actual 'referrals' canister name if different
+REFERRALS_CANISTER = "bkyz2-fmaaa-aaaaa-qaaaq-cai"  # Replace with your actual 'referrals' canister name if different
 
 def run_command(command, capture_output=True, text=True):
     """
@@ -113,7 +113,7 @@ def get_referral_code(principal):
 
 def register_user(user_id, username, avatar_id, referral_code):
     """
-    Registers a user by calling the users canister's registerUserByID function.
+    Registers a user by calling the users canister's signupByID function.
     Returns a tuple (success: bool, message: str).
     """
     # Prepare referral_code parameter
@@ -128,7 +128,7 @@ def register_user(user_id, username, avatar_id, referral_code):
 
     command = [
         "dfx", "canister", "call", USERS_CANISTER,
-        "registerUserByID",
+        "signupByID",
         argument  # No need to wrap in single quotes as run_command handles the string
     ]
     output = run_command(command)

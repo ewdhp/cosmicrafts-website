@@ -36,8 +36,8 @@ import Set "Set";
 
 shared actor class Cosmicrafts() = Self {
 
-//#region |Types|
-  
+  //#region |Types|
+
   public type UserID = Types.UserID;
   public type Result<T, E> = { #ok : T; #err : E };
   public type PlayerId = Types.PlayerId;
@@ -97,9 +97,9 @@ shared actor class Cosmicrafts() = Self {
   //ICRC
   public type TokenID = Types.TokenID;
 
-//#endregion
+  //#endregion
 
-//#region |Admin Functions|
+  //#region |Admin Functions|
   public shared ({ caller }) func admin(funcToCall : AdminFunction) : async (Bool, Text) {
     if (caller == ADMIN_PRINCIPAL) {
       Debug.print("Admin function called by admin.");
@@ -134,9 +134,9 @@ shared actor class Cosmicrafts() = Self {
       return (false, "Access denied: Only admin can call this function.");
     };
   };
-// #endregion
-  
-// #region |Admin tools|
+  // #endregion
+
+  // #region |Admin tools|
 
   // migrations BEFORE deployment
 
@@ -162,9 +162,9 @@ shared actor class Cosmicrafts() = Self {
     #GetCollectionOwner : TypesICRC7.Account;
     #GetInitArgs : TypesICRC7.CollectionInitArgs;
   };
-// #endregion
+  // #endregion
 
-// #region |Missions|
+  // #region |Missions|
 
   let ONE_HOUR : Nat64 = 60 * 60 * 1_000_000_000;
   let ONE_DAY : Nat64 = 60 * 60 * 24 * 1_000_000_000;
@@ -329,9 +329,9 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
-// #endregion
+  // #endregion
 
-// #region |General Missions|
+  // #region |General Missions|
 
   //Stable Vars
   stable var generalMissionIDCounter : Nat = 1;
@@ -678,9 +678,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |User-Specific Missions|
+  // #region |User-Specific Missions|
 
   //Stable Variables
   stable var _userMissionProgress : [(Principal, [MissionsUser])] = [];
@@ -1159,9 +1159,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Progress Manager|
+  // #region |Progress Manager|
 
   // Function to update achievement progress manager (cleaned version)
   func updateAchievementProgressManager(
@@ -1680,9 +1680,9 @@ shared actor class Cosmicrafts() = Self {
       case (null) { (false, "Player not found") };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Users|
+  // #region |Users|
 
   public type UserBasicInfo = Types.UserBasicInfo;
   public type UserNameBasicInfo = Text;
@@ -1726,11 +1726,12 @@ shared actor class Cosmicrafts() = Self {
     Principal.hash,
   );
 
-  // Register new user
-  public shared ({ caller : UserID }) func registerUser(
+  //////////  Register  //////////
+
+  public shared ({ caller : UserID }) func signup(
     username : Text,
     avatarId : Nat,
-    referralCode : ReferralCode,
+    code : Text,
   ) : async (Bool, Text) {
     switch (userBasicInfo.get(caller)) {
       case (?_) {
@@ -1771,7 +1772,13 @@ shared actor class Cosmicrafts() = Self {
           likes = ?[];
         };
 
-        let result = await initAchievements();
+        let (success, text) = await linkReferral(caller, code);
+
+        if (not success) {
+          return (false, text);
+        };
+
+        // let result = await initAchievements();
 
         userNetwork.put(caller, newUserNetwork);
         userBasicInfo.put(caller, newPlayer);
@@ -1781,12 +1788,11 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-    // Register new user by id
-  public shared func registerUserByID(
+  public shared func signupByID(
     userId : Principal,
     username : Text,
     avatarId : Nat,
-    referralCode : ReferralCode,
+    code : Text,
   ) : async (Bool, Text) {
     switch (userBasicInfo.get(userId)) {
       case (?_) {
@@ -1827,7 +1833,17 @@ shared actor class Cosmicrafts() = Self {
           likes = ?[];
         };
 
-        let result = await initAchievements();
+        let (success, text) = await linkReferral(userId, code);
+
+        if (not success) {
+          return (false, text);
+        };
+
+        // let result = await initAchievements();
+        // createMissionsPeriodically
+        // mintDeck
+        // some nfts mintNFT
+        // stats
 
         userNetwork.put(userId, newUserNetwork);
         userBasicInfo.put(userId, newPlayer);
@@ -1837,7 +1853,6 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Evaluates if the caller user exists
   public query ({ caller }) func userExists() : async Bool {
     switch (userBasicInfo.get(caller)) {
       case null { return false };
@@ -1845,9 +1860,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
-  //  User Profile
-
+  //////////  User Profile  //////////
 
   // Get the user profile by caller
   public query ({ caller }) func getUserProfileByCaller() : async ?UserProfile {
@@ -1858,9 +1871,7 @@ shared actor class Cosmicrafts() = Self {
     return userProfile.get(id);
   };
 
-
-  //  User Basic Info
-
+  //////////  User Basic Info  //////////
 
   // Get the basic user information caller
   public query ({ caller }) func getUserBasicInfo() : async ?UserBasicInfo {
@@ -1931,9 +1942,7 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-
-  //   User Network
-
+  //////////  User Network  //////////
 
   // Get the user network information
   public func getUserNetwork(id : UserID) : async ?UserNetwork {
@@ -2651,62 +2660,8 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Get all likes from a post by postId and by query caller
-  public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.posts) {
-          case (null) return null;
-          case (?posts) {
-            let postOpt = Array.find<Post>(
-              posts,
-              func(post) {
-                post.id == postId;
-              },
-            );
-            switch (postOpt) {
-              case (null) return null;
-              case (?post) {
-                return post.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Get all likes from a comment by commentId and by query caller
-  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return null;
-              case (?comment) {
-                return comment.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Delete a like from a post ID by likeId and by caller
-  public shared ({ caller }) func deleteLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
+  // Unlike from a post ID by likeId and by caller
+  public shared ({ caller }) func unLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -2757,8 +2712,8 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Delete a like from a comment ID by likeId and by caller
-  public shared ({ caller }) func deleteLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
+  // Unlike from a comment ID by likeId and by caller
+  public shared ({ caller }) func unLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -2801,6 +2756,60 @@ shared actor class Cosmicrafts() = Self {
                     return true;
                   };
                 };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  // Get all likes from a post by postId and by query caller
+  public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return null;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            switch (postOpt) {
+              case (null) return null;
+              case (?post) {
+                return post.likes;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  // Get all likes from a comment by commentId and by query caller
+  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.comments) {
+          case (null) return null;
+          case (?comments) {
+            let commentOpt = Array.find<Comment>(
+              comments,
+              func(comment) {
+                comment.id == commentId;
+              },
+            );
+            switch (commentOpt) {
+              case (null) return null;
+              case (?comment) {
+                return comment.likes;
               };
             };
           };
@@ -3030,10 +3039,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+  // #endregion
 
-// #endregion
-
-//#region |MatchMaking|
+  //#region |MatchMaking|
   stable var _matchID : Nat = 0;
   var inactiveSeconds : Nat64 = 30 * 1000; //check the value
 
@@ -3660,9 +3668,9 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-// #endregion
+  // #endregion
 
-// #region |Statistics|
+  // #region |Statistics|
   stable var _basicStats : [(MatchID, BasicStats)] = [];
   var basicStats : HashMap.HashMap<MatchID, BasicStats> = HashMap.fromIter(_basicStats.vals(), 0, Utils._natEqual, Utils._natHash);
 
@@ -3820,9 +3828,9 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-// #endregion
+  // #endregion
 
-//#region |Tournaments Matchmaking|
+  //#region |Tournaments Matchmaking|
 
   stable var tournaments : [Tournament] = [];
   stable var matches : [Match] = [];
@@ -4380,9 +4388,9 @@ shared actor class Cosmicrafts() = Self {
     matches := [];
     return true;
   };
-// #endregion
+  // #endregion
 
-//#region |ICRC7|
+  //#region |ICRC7|
 
   // Hardcoded values for collectionOwner and init
   private let icrc7_CollectionOwner : TypesICRC7.Account = {
@@ -5216,9 +5224,9 @@ shared actor class Cosmicrafts() = Self {
 
     return Buffer.toArray(resultBuffer);
   };
-// #endregion
+  // #endregion
 
-//#region |GameNFTs|
+  //#region |GameNFTs|
   stable var _mintedCallers : [(Principal, Bool)] = [];
   var mintedCallersMap : HashMap.HashMap<Principal, Bool> = HashMap.fromIter(_mintedCallers.vals(), 0, Principal.equal, Principal.hash);
 
@@ -5595,9 +5603,9 @@ shared actor class Cosmicrafts() = Self {
     },
     // Add more templates as needed
   ];
-// #endregion
+  // #endregion
 
-//#region |Chests|
+  //#region |Chests|
 
   public func mintChest(PlayerId : Principal, rarity : Nat) : async (Bool, Text) {
     let uuid = lastMintedId + 1;
@@ -5696,11 +5704,10 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-// #endregion
+  // #endregion
 
-//#region |ICRC1|
+  //#region |ICRC1|
 
-  
   private var init_args : TypesICRC1.TokenInitArgs = {
     name = "Stardust";
     symbol = "STDs";
@@ -5723,7 +5730,6 @@ shared actor class Cosmicrafts() = Self {
       },
     );
   };
- 
 
   public query func getInitArgs() : async TypesICRC1.TokenInitArgs {
     return init_args;
@@ -5779,9 +5785,9 @@ shared actor class Cosmicrafts() = Self {
     let accepted = ExperimentalCycles.accept<system>(amount);
     assert (accepted == amount);
   };
-// #endregion
+  // #endregion
 
-//#region |Logging|
+  //#region |Logging|
 
   public type MintedStardust = {
     quantity : Nat;
@@ -5955,13 +5961,15 @@ shared actor class Cosmicrafts() = Self {
       gameNFTs = gameNFTs;
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Migrations|
+  //#region |Migrations|
 
   system func preupgrade() {
     // Save the state of the stable variables
     savedPlayerDecks := playerDecks;
+
+    _referrals := Iter.toArray(referrals.entries());
 
     _generalUserProgress := Iter.toArray(generalUserProgress.entries());
     _missions := Iter.toArray(missions.entries());
@@ -6006,6 +6014,8 @@ shared actor class Cosmicrafts() = Self {
     // Restore the state of the stable variables
     playerDecks := savedPlayerDecks;
 
+    referrals := HashMap.fromIter(_referrals.vals(), 0, Principal.equal, Principal.hash);
+
     generalUserProgress := HashMap.fromIter(_generalUserProgress.vals(), 0, Principal.equal, Principal.hash);
     missions := HashMap.fromIter(_missions.vals(), 0, Utils._natEqual, Utils._natHash);
     activeMissions := HashMap.fromIter(_activeMissions.vals(), 0, Utils._natEqual, Utils._natHash);
@@ -6043,9 +6053,9 @@ shared actor class Cosmicrafts() = Self {
     userBasicInfo := HashMap.fromIter(_userBasicInfo.vals(), 0, Principal.equal, Principal.hash);
     userNetwork := HashMap.fromIter(_userNetwork.vals(), 0, Principal.equal, Principal.hash);
   };
-// #endregion
+  // #endregion
 
-//#region |Soul NFT|
+  //#region |Soul NFT|
 
   private type UpdateResult = {
     #Ok;
@@ -6366,9 +6376,9 @@ shared actor class Cosmicrafts() = Self {
     // Convert Buffer to Array before returning
     return Buffer.toArray(updatedUnits);
   };
-// #endregion
+  // #endregion
 
-//#region |Avatars and Titles|
+  //#region |Avatars and Titles|
 
   public type Avatar = {
     id : Nat;
@@ -6670,701 +6680,279 @@ shared actor class Cosmicrafts() = Self {
 
     return titleDetails;
   };
-// #endregion
+  // #endregion
 
-//#region |Referrals|
+  //#region |Referrals|
 
-  public type ReferralCode = Text;
-
-  public type ReferralInfo = {
-    directReferrals : Nat;
-    indirectReferrals : Nat;
-    beyondReferrals : Nat;
+  public type RNode = {
+    id : Principal;
+    username : Text;
     multiplier : Float;
-    referredPlayers : [(PlayerId, Bool, Float)];
+    earnings : Float;
+    referralCode : Text;
+    referrerId : ?Principal;
+    nodes : [RNode];
   };
 
-  // Referral stable vars
-  stable var _referralCodes : [(ReferralCode, PlayerId)] = [];
-  stable var _unassignedReferralCodes : [ReferralCode] = [];
-  stable var _referralsByPlayer : [(PlayerId, ReferralInfo)] = [];
-  stable var _referrerOfPlayer : [(PlayerId, PlayerId)] = [];
-  stable var _multiplierByPlayer : [(PlayerId, Float)] = [];
-  stable var _grandReferrerOfPlayer : [(PlayerId, PlayerId)] = [];
-
-  // Referral hashmaps
-  var referralCodes : HashMap.HashMap<ReferralCode, PlayerId> = HashMap.fromIter(_referralCodes.vals(), 0, Text.equal, Text.hash);
-  var referralsByPlayer : HashMap.HashMap<PlayerId, ReferralInfo> = HashMap.fromIter(_referralsByPlayer.vals(), 0, Principal.equal, Principal.hash);
-  var referrerOfPlayer : HashMap.HashMap<PlayerId, PlayerId> = HashMap.fromIter(_referrerOfPlayer.vals(), 0, Principal.equal, Principal.hash);
-  var multiplierByPlayer : HashMap.HashMap<PlayerId, Float> = HashMap.fromIter(_multiplierByPlayer.vals(), 0, Principal.equal, Principal.hash);
-  var grandReferrerOfPlayer : HashMap.HashMap<PlayerId, PlayerId> = HashMap.fromIter(_grandReferrerOfPlayer.vals(), 0, Principal.equal, Principal.hash);
-
-  // Predefined list of cosmic-themed words
+  stable var _referrals : [(Principal, RNode)] = [];
+  var referrals : HashMap.HashMap<Principal, RNode> = HashMap.fromIter(
+    _referrals.vals(),
+    0,
+    Principal.equal,
+    Principal.hash,
+  );
+  stable var _refCodes : [Text] = [];
+  var refCodes : Buffer.Buffer<Text> = Buffer.Buffer<Text>(_refCodes.size());
   let cosmicWords = ["PUMP", "WAGMI", "SHILL", "GWEI", "SATOSHI", "MOON", "WHALE", "LAMBO", "HODL", "FOMO"];
 
-  // Generate a shorter UUID-based referral code (4 digits)
-  private func generateShortUUID() : async Nat {
-    let randomBytes = await Random.blob();
-    var uuid : Nat = 0;
-    let byteArray = Blob.toArray(randomBytes);
-
-    for (i in Iter.range(0, 3)) {
-      // Limiting to 3 bytes for a shorter code
-      uuid := Nat.add(Nat.bitshiftLeft(uuid, 8), Nat8.toNat(byteArray[i]));
-    };
-
-    // Limiting the UUID to a 4-digit number
-    uuid := uuid % 10000;
-    return uuid;
+  // Get All Referrals
+  public query func getAllReferrals() : async ?[(Principal, RNode)] {
+    return ?Iter.toArray(referrals.entries());
   };
-  // Generate a referral code by merging a shuffled cosmic word with the short UUID
-  private func generateReferralCode() : async ReferralCode {
-    let uuid = await generateShortUUID();
 
-    // Shuffle the cosmicWords array
-    let indices : [Nat] = Array.tabulate(cosmicWords.size(), func(i : Nat) : Nat { i });
-    let shuffledIndices = Utils.shuffleArray(indices);
-
-    // Pick the first word after shuffling
-    let word = cosmicWords[shuffledIndices[0]];
-
-    // Combine the word with the UUID to form the final referral code
-    let referralCode = word # Nat.toText(uuid);
-    referralCode;
-  };
-  // Assign a referral code to a player and manage referrers and grand referrers
-  private func assignReferralCode(player : PlayerId, referrerId : ?PlayerId) : async (ReferralCode, ?PlayerId) {
-    let code = await generateReferralCode();
-    referralCodes.put(code, player);
-    _referralCodes := Iter.toArray(referralCodes.entries());
-
-    // If there's a referrer, update the referrer and grand referrer data
-    switch (referrerId) {
-      case (?refId) {
-        // Store the referrer of the new player
-        referrerOfPlayer.put(player, refId);
-        _referrerOfPlayer := Iter.toArray(referrerOfPlayer.entries());
-
-        // Check if the referrer has a grand referrer and update accordingly
-        let grandReferrer = referrerOfPlayer.get(refId);
-        switch (grandReferrer) {
-          case (?grandRefId) {
-            grandReferrerOfPlayer.put(player, grandRefId);
-            _grandReferrerOfPlayer := Iter.toArray(grandReferrerOfPlayer.entries());
-          };
-          case (null) {}; // No grand referrer found
-        };
-      };
-      case (null) {}; // No referrer, do nothing
-    };
-
-    // Return both the referral code and the referrer ID
-    return (code, referrerId);
-  };
-  // Assign an unassigned referral code to a new player
-  private func assignUnassignedReferralCode(player : PlayerId, code : ReferralCode) : async Result<Bool, Text> {
-    if (Utils.arrayContains<ReferralCode>(_unassignedReferralCodes, code, Text.equal)) {
-      // Remove the code from the unassigned list
-      _unassignedReferralCodes := Array.filter<ReferralCode>(_unassignedReferralCodes, func(c : ReferralCode) { c != code });
-
-      // Assign the code to the player
-      referralCodes.put(code, player);
-      _referralCodes := Iter.toArray(referralCodes.entries());
-
-      // Code successfully assigned and now it's in the assigned list
-      return #ok(true);
-    } else if (referralCodes.get(code) != null) {
-      // Code is already assigned and valid for registration
-      return #ok(false); // Indicate that the code is valid but not newly assigned
-    } else {
-      // The code is neither in the unassigned nor in the assigned list
-      return #err("Invalid referral code.");
-    };
-  };
-  // Helper function to check if a referral is direct (second element is true)
-  private func isDirectReferral(ref : (PlayerId, Bool, Float)) : Bool {
-    return ref.1 == true;
-  };
-  // Helper function to check if a player is already referred
-  private func isPlayerAlreadyReferred(referrerInfo : { directReferrals : Nat; indirectReferrals : Nat; beyondReferrals : Nat; multiplier : Float; referredPlayers : [(PlayerId, Bool, Float)] }, newPlayerId : PlayerId) : Bool {
-    let playerIds = Array.map(referrerInfo.referredPlayers, func(ref : (PlayerId, Bool, Float)) : PlayerId { ref.0 });
-    return Utils.arrayContains(playerIds, newPlayerId, Principal.equal);
-  };
-  // Calculate the diminishing return based on the referral count and tier
-  private func calculateDiminishingReturn(count : Nat, tier : Text) : Float {
-    if (tier == "direct") {
-      if (count <= 3) return 1.0;
-      if (count <= 10) return 0.5;
-      if (count <= 25) return 0.25;
-      return 0.1;
-    } else if (tier == "indirect") {
-      if (count <= 25) return 0.25;
-      if (count <= 50) return 0.1;
-      return 0.05;
-    } else if (tier == "beyond") {
-      if (count <= 25) return 0.1;
-      if (count <= 100) return 0.05;
-      return 0.01;
-    };
-    return 0.0; // Default case if something goes wrong
-  };
-  // Update the multiplier based on the type of referral (direct, indirect, or beyond)
-  private func updateMultiplier(referrerId : PlayerId, newPlayerId : PlayerId) {
-    var isDirectReferralFlag = false;
-
-    // Check if the new player is a direct referral
-    switch (referralsByPlayer.get(referrerId)) {
-      case (null) { isDirectReferralFlag := false };
-      case (?info) {
-        for (ref in info.referredPlayers.vals()) {
-          if (ref.0 == newPlayerId and isDirectReferral(ref)) {
-            isDirectReferralFlag := true;
-          };
-        };
-      };
-    };
-
-    // Update the multiplier for the direct referrer
-    let directReferrerInfo = referralsByPlayer.get(referrerId);
-    let directCount = switch (directReferrerInfo) {
-      case (null) { 0 };
-      case (?info) { info.directReferrals };
-    };
-
-    let multiplierIncrement = calculateDiminishingReturn(directCount, "direct");
-
-    let currentMultiplier = switch (multiplierByPlayer.get(referrerId)) {
-      case (null) { 1.0 }; // Default multiplier
-      case (?multiplier) { multiplier };
-    };
-
-    let updatedMultiplier = currentMultiplier + multiplierIncrement;
-    let cappedMultiplier = if (updatedMultiplier > 100.0) { 100.0 } else {
-      updatedMultiplier;
-    };
-
-    multiplierByPlayer.put(referrerId, cappedMultiplier);
-    _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-    // Apply the multiplier increment to the grand referrer (if exists)
-    let grandReferrer = referrerOfPlayer.get(referrerId);
-    switch (grandReferrer) {
-      case (?grandReferrerId) {
-        let grandReferrerInfo = referralsByPlayer.get(grandReferrerId);
-        let indirectCount = switch (grandReferrerInfo) {
-          case (null) { 0 };
-          case (?info) { info.indirectReferrals };
-        };
-
-        let grandIncrement = calculateDiminishingReturn(indirectCount, "indirect");
-        let grandCurrentMultiplier = switch (multiplierByPlayer.get(grandReferrerId)) {
-          case (null) { 1.0 }; // Default multiplier
-          case (?grandMultiplier) { grandMultiplier };
-        };
-
-        let grandUpdatedMultiplier = grandCurrentMultiplier + grandIncrement;
-        let grandCappedMultiplier = if (grandUpdatedMultiplier > 100.0) {
-          100.0;
-        } else { grandUpdatedMultiplier };
-
-        multiplierByPlayer.put(grandReferrerId, grandCappedMultiplier);
-        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-        // Now, check if there's a beyond referrer (i.e., the referrer of the grand referrer)
-        let beyondReferrer = referrerOfPlayer.get(grandReferrerId);
-        switch (beyondReferrer) {
-          case (?beyondReferrerId) {
-            let beyondReferrerInfo = referralsByPlayer.get(beyondReferrerId);
-            let beyondCount = switch (beyondReferrerInfo) {
-              case (null) { 0 };
-              case (?info) { info.beyondReferrals };
-            };
-
-            let beyondIncrement = calculateDiminishingReturn(beyondCount, "beyond");
-            let beyondCurrentMultiplier = switch (multiplierByPlayer.get(beyondReferrerId)) {
-              case (null) { 1.0 }; // Default multiplier
-              case (?beyondMultiplier) { beyondMultiplier };
-            };
-
-            let beyondUpdatedMultiplier = beyondCurrentMultiplier + beyondIncrement;
-            let beyondCappedMultiplier = if (beyondUpdatedMultiplier > 100.0) {
-              100.0;
-            } else { beyondUpdatedMultiplier };
-
-            multiplierByPlayer.put(beyondReferrerId, beyondCappedMultiplier);
-            _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-          };
-          case (null) { /* No beyond referrer, do nothing */ };
-        };
-      };
-      case (null) { /* No grand referrer, do nothing */ };
-    };
-  };
-  // Function to handle the referral process ?
-  private func trackReferrer(referrerId : PlayerId, newPlayerId : PlayerId) {
-    var referrerInfo = switch (referralsByPlayer.get(referrerId)) {
-      case (null) {
-        {
-          directReferrals = 0;
-          indirectReferrals = 0;
-          beyondReferrals = 0; // Initialize beyond referrals
-          multiplier = 1.0;
-          referredPlayers = [];
-        };
-      };
-      case (?info) { info };
-    };
-
-    if (not isPlayerAlreadyReferred(referrerInfo, newPlayerId)) {
-      // Calculate the increment based on the current number of referrals
-      let directCount = referrerInfo.directReferrals + 1;
-      let increment = if (directCount <= 3) {
-        1.0;
-      } else if (directCount <= 10) {
-        0.75;
-      } else {
-        0.5;
-      };
-
-      // Debug output for increment
-      Debug.print("Direct Count: " # Nat.toText(directCount) # ", Increment: " # Float.toText(increment));
-
-      // Update direct referrals
-      let updatedReferrerInfo = {
-        directReferrals = directCount;
-        indirectReferrals = referrerInfo.indirectReferrals;
-        beyondReferrals = referrerInfo.beyondReferrals;
-        multiplier = referrerInfo.multiplier + increment;
-        referredPlayers = Array.append(referrerInfo.referredPlayers, [(newPlayerId, true, increment)]);
-      };
-
-      // Debug output for updated referredPlayers list
-      for (ref in updatedReferrerInfo.referredPlayers.vals()) {
-        Debug.print("Updated Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
-      };
-
-      referralsByPlayer.put(referrerId, updatedReferrerInfo);
-      _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
-
-      // Set the referrer for the new player
-      referrerOfPlayer.put(newPlayerId, referrerId);
-      _referrerOfPlayer := Iter.toArray(referrerOfPlayer.entries());
-
-      // Ensure the referrer's multiplier is updated
-      multiplierByPlayer.put(referrerId, updatedReferrerInfo.multiplier);
-      _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-      // Handle grand referrer (indirect referrals)
-      let grandReferrer = referrerOfPlayer.get(referrerId);
-      switch (grandReferrer) {
-        case (?grandReferrerId) {
-          grandReferrerOfPlayer.put(newPlayerId, grandReferrerId);
-          _grandReferrerOfPlayer := Iter.toArray(grandReferrerOfPlayer.entries());
-
-          // Calculate the indirect increment
-          let indirectCount = switch (referralsByPlayer.get(grandReferrerId)) {
-            case (null) { 0 };
-            case (?info) { info.indirectReferrals + 1 };
-          };
-
-          let indirectIncrement = if (indirectCount <= 3) {
-            0.5;
-          } else if (indirectCount <= 10) {
-            0.25;
-          } else {
-            0.1;
-          };
-
-          // Debug output for indirect increment
-          Debug.print("Indirect Count: " # Nat.toText(indirectCount) # ", Increment: " # Float.toText(indirectIncrement));
-
-          // Update grand referrer
-          var grandReferrerInfo = switch (referralsByPlayer.get(grandReferrerId)) {
-            case (null) {
-              {
-                directReferrals = 0;
-                indirectReferrals = indirectCount;
-                beyondReferrals = 0;
-                multiplier = 1.0 + indirectIncrement;
-                referredPlayers = [];
-              };
-            };
-            case (?info) {
-              {
-                directReferrals = info.directReferrals;
-                indirectReferrals = indirectCount;
-                beyondReferrals = info.beyondReferrals;
-                multiplier = info.multiplier + indirectIncrement;
-                referredPlayers = Array.append(info.referredPlayers, [(newPlayerId, false, indirectIncrement)]);
-              };
-            };
-          };
-
-          // Debug output for updated grand referrer referredPlayers list
-          for (ref in grandReferrerInfo.referredPlayers.vals()) {
-            Debug.print("Updated Grand Referrer Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
-          };
-
-          referralsByPlayer.put(grandReferrerId, grandReferrerInfo);
-          _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
-
-          // Ensure the grand referrer's multiplier is updated
-          multiplierByPlayer.put(grandReferrerId, grandReferrerInfo.multiplier);
-          _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-          // Handle beyond referrer
-          let beyondReferrer = referrerOfPlayer.get(grandReferrerId);
-          switch (beyondReferrer) {
-            case (?beyondReferrerId) {
-              // Calculate the beyond increment
-              let beyondCount = switch (referralsByPlayer.get(beyondReferrerId)) {
-                case (null) { 0 };
-                case (?info) { info.beyondReferrals + 1 };
-              };
-
-              let beyondIncrement = if (beyondCount <= 3) {
-                0.25;
-              } else if (beyondCount <= 10) {
-                0.1;
-              } else {
-                0.05;
-              };
-
-              // Debug output for beyond increment
-              Debug.print("Beyond Count: " # Nat.toText(beyondCount) # ", Increment: " # Float.toText(beyondIncrement));
-
-              // Update beyond referrer
-              var beyondReferrerInfo = switch (referralsByPlayer.get(beyondReferrerId)) {
-                case (null) {
-                  {
-                    directReferrals = 0;
-                    indirectReferrals = 0;
-                    beyondReferrals = beyondCount;
-                    multiplier = 1.0 + beyondIncrement;
-                    referredPlayers = [];
-                  };
-                };
-                case (?info) {
-                  {
-                    directReferrals = info.directReferrals;
-                    indirectReferrals = info.indirectReferrals;
-                    beyondReferrals = beyondCount;
-                    multiplier = info.multiplier + beyondIncrement;
-                    referredPlayers = Array.append(info.referredPlayers, [(newPlayerId, false, beyondIncrement)]);
-                  };
-                };
-              };
-
-              // Debug output for updated beyond referrer referredPlayers list
-              for (ref in beyondReferrerInfo.referredPlayers.vals()) {
-                Debug.print("Updated Beyond Referrer Referred Player: " # Principal.toText(ref.0) # ", Direct: " # Bool.toText(ref.1) # ", Points: " # Float.toText(ref.2));
-              };
-
-              referralsByPlayer.put(beyondReferrerId, beyondReferrerInfo);
-              _referralsByPlayer := Iter.toArray(referralsByPlayer.entries());
-
-              // Ensure the beyond referrer's multiplier is updated
-              multiplierByPlayer.put(beyondReferrerId, beyondReferrerInfo.multiplier);
-              _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-            };
-            case (null) { /* No beyond referrer, do nothing */ };
-          };
-        };
-        case (null) { /* No grand referrer, do nothing */ };
-      };
-    };
-
-    // Finally, update the multiplier for the current player
-    updateMultiplier(referrerId, newPlayerId);
-  };
-  // Get a batch of 10 unassigned referral codes
-  public func createBatchOfUnassignedCodes() : async [ReferralCode] {
-    var newCodes : [ReferralCode] = [];
-
-    for (i in Iter.range(0, 1)) {
-      // Creating 10 codes
-      let code = await generateReferralCode();
-      newCodes := Array.append(newCodes, [code]);
-    };
-
-    // Add the new codes to the unassigned list
-    _unassignedReferralCodes := Array.append(_unassignedReferralCodes, newCodes);
-
-    return newCodes;
-  };
-  // Get a player's referral code
-  public query func getReferralCode(playerId : PlayerId) : async ?ReferralCode {
-    for ((code, id) in referralCodes.entries()) {
-      if (id == playerId) {
-        return ?code;
+  // Get the referrer id by code
+  public query func getReferrerIdByCode(code : Text) : async ?Principal {
+    for ((_, node) in referrals.entries()) {
+      if (node.referralCode == code) {
+        return ?node.id;
       };
     };
     return null;
   };
-  // Get a player's Grand referrer
-  public query func getGrandReferrer(playerId : PlayerId) : async ?PlayerId {
-    switch (referrerOfPlayer.get(playerId)) {
-      case (?referrerId) {
-        return referrerOfPlayer.get(referrerId); // Return the referrer of the referrer
-      };
-      case (null) { return null }; // No referrer found
-    };
-  };
-  // Get a player's referrer
-  public query func getReferrer(playerId : PlayerId) : async ?PlayerId {
-    return referrerOfPlayer.get(playerId); // Return the direct referrer
-  };
-  // Get a player's direct referrer
-  public query func getDirectReferrals(playerId : PlayerId) : async [PlayerId] {
-    switch (referralsByPlayer.get(playerId)) {
-      case (null) { return [] }; // No direct referrals found
-      case (?info) {
-        // Filter for direct referrals
-        let directRefs = Array.filter(
-          info.referredPlayers,
-          func(ref : (PlayerId, Bool, Float)) : Bool {
-            ref.1 == true;
 
-          },
-        );
-
-        // Map to extract the PlayerIds
-        return Array.map(
-          directRefs,
-          func(ref : (PlayerId, Bool, Float)) : PlayerId {
-            ref.0;
-          },
-        );
-
+  // Get the referral code by id
+  public query func getReferralCode(id : Principal) : async ?Text {
+    for ((_, node) in referrals.entries()) {
+      if (node.id == id) {
+        return ?node.referralCode;
       };
     };
+    return null;
   };
-  // Get a player's indirect referrer
-  public query func getIndirectReferrals(playerId : PlayerId) : async [PlayerId] {
-    var indirectReferrals : [PlayerId] = [];
 
-    // Retrieve the direct referrals of the player
-    switch (referralsByPlayer.get(playerId)) {
-      case (null) { return [] }; // No direct referrals found
-      case (?info) {
-        let directRefs = Array.filter(
-          info.referredPlayers,
-          func(ref : (PlayerId, Bool, Float)) : Bool {
-            ref.1 == true; // Only direct referrals
-          },
-        );
-
-        // For each direct referral, check if they have their own direct referrals (which are indirect for the original player)
-        for (directRef in directRefs.vals()) {
-          switch (referralsByPlayer.get(directRef.0)) {
-            case (null) {}; // No referrals found for this direct referral
-            case (?directInfo) {
-              let indirects = Array.filter(
-                directInfo.referredPlayers,
-                func(ref : (PlayerId, Bool, Float)) : Bool {
-                  ref.1 == true; // Only direct referrals of the direct referral
-                },
-              );
-
-              // Append these indirect referrals to the result
-              indirectReferrals := Array.append(
-                indirectReferrals,
-                Array.map(
-                  indirects,
-                  func(ref : (PlayerId, Bool, Float)) : PlayerId {
-                    ref.0;
-                  },
-                ),
-              );
-            };
-          };
-        };
+  // Get the referral node by id
+  public query func getReferralNodeById(id : Principal) : async ?RNode {
+    for ((_, node) in referrals.entries()) {
+      if (node.id == id) {
+        return ?node;
       };
     };
-
-    return indirectReferrals;
+    return null;
   };
-  // Get a player's beyond referrer
-  public query func getBeyondReferrals(playerId : PlayerId) : async [PlayerId] {
-    var beyondReferrals : [PlayerId] = [];
 
-    // Retrieve the direct referrals of the player
-    switch (referralsByPlayer.get(playerId)) {
-      case (null) { return [] }; // No direct referrals found
-      case (?info) {
-        let directRefs = Array.filter(
-          info.referredPlayers,
-          func(ref : (PlayerId, Bool, Float)) : Bool {
-            ref.1 == true; // Only direct referrals
-          },
-        );
+  // Get the count of the matching referrals searched by id
+  public query func getReferralCountById(id : Principal) : async Int {
+    var count = 0;
+    for ((_, node) in referrals.entries()) {
+      if (node.referrerId == ?id) {
+        count += 1;
+      };
+    };
+    return count;
+  };
 
-        // For each direct referral, check for their indirect referrals
-        for (directRef in directRefs.vals()) {
-          switch (referralsByPlayer.get(directRef.0)) {
-            case (null) {}; // No referrals found for this direct referral
-            case (?directInfo) {
-              let indirectRefs = Array.filter(
-                directInfo.referredPlayers,
-                func(ref : (PlayerId, Bool, Float)) : Bool {
-                  ref.1 == true; // Only direct referrals of the direct referral (indirect for the original player)
-                },
-              );
+  // Get an array of getReferralCount from all the referrals
+  public func getAllReferralCounts() : async [(Principal, Int, Float, Float)] {
+    var counts : [(Principal, Int, Float, Float)] = [];
+    for ((_, node) in referrals.entries()) {
+      let count = await getReferralCountById(node.id);
+      counts := Array.append<(Principal, Int, Float, Float)>(
+        counts,
+        [(node.id, count, node.multiplier, node.earnings)],
+      );
+    };
+    return counts;
+  };
 
-              // For each indirect referral, check if they have their own direct referrals (which are beyond for the original player)
-              for (indirectRef in indirectRefs.vals()) {
-                switch (referralsByPlayer.get(indirectRef.0)) {
-                  case (null) {}; // No referrals found for this indirect referral
-                  case (?indirectInfo) {
-                    let beyonds = Array.filter(
-                      indirectInfo.referredPlayers,
-                      func(ref : (PlayerId, Bool, Float)) : Bool {
-                        ref.1 == true; // Only direct referrals of the indirect referral (beyond for the original player)
-                      },
-                    );
+  // Calculate the multiplier for the referral
+  public func calculateMultiplier(id : Principal) : async (Int, Float) {
+    let n = await getReferralCountById(id);
+    if (n == 0) {
+      return (n, 1.0);
+    };
+    Debug.print("ID: " # Principal.toText(id));
+    Debug.print("Total referrals: " # Int.toText(n));
+    var x = 0.0;
 
-                    // Append these beyond referrals to the result
-                    beyondReferrals := Array.append(
-                      beyondReferrals,
-                      Array.map(
-                        beyonds,
-                        func(ref : (PlayerId, Bool, Float)) : PlayerId {
-                          ref.0;
-                        },
-                      ),
-                    );
-                  };
-                };
+    for (count in Iter.range(0, n)) {
+      let i = Float.fromInt(count + 1);
+      x += 1.0 + 1.0 / i;
+      Debug.print(Int.toText(count) # " referral's with  " # Float.toText(x - 1) # " of multiplier");
+    };
+    return (n, x - 1);
+  };
+
+  // Helper function to build the referral tree
+  private func buildTree(nodeId : Principal) : async ?RNode {
+    switch (await getReferralNodeById(nodeId)) {
+      case (?node) {
+        var childNodes : [RNode] = [];
+        for ((_, refNode) in referrals.entries()) {
+          if (refNode.referrerId == ?nodeId) {
+            switch (await buildTree(refNode.id)) {
+              case (?childNode) {
+                childNodes := Array.append<RNode>(childNodes, [childNode]);
               };
+              case null {};
             };
           };
         };
+        return ?{ node with nodes = childNodes };
       };
-    };
-
-    return beyondReferrals;
-  };
-  // Get a player's total referral network
-  public query func getTotalReferralNetwork(playerId : PlayerId) : async {
-    directReferrals : [PlayerId];
-    indirectReferrals : [PlayerId];
-    beyondReferrals : [PlayerId];
-  } {
-    var directReferrals : [PlayerId] = [];
-    var indirectReferrals : [PlayerId] = [];
-    var beyondReferrals : [PlayerId] = [];
-
-    // Retrieve the direct referrals of the player
-    switch (referralsByPlayer.get(playerId)) {
-      case (null) {
-        return {
-          directReferrals = [];
-          indirectReferrals = [];
-          beyondReferrals = [];
-        };
+      case null {
+        return null;
       };
-      case (?info) {
-        // Filter for direct referrals
-        let filteredDirectRefs = Array.filter(
-          info.referredPlayers,
-          func(ref : (PlayerId, Bool, Float)) : Bool {
-            ref.1 == true; // Only direct referrals
-          },
-        );
-
-        // Map to extract the PlayerIds
-        directReferrals := Array.map(
-          filteredDirectRefs,
-          func(ref : (PlayerId, Bool, Float)) : PlayerId {
-            ref.0;
-          },
-        );
-
-        // For each direct referral, gather indirect and beyond referrals
-        for (directRef in directReferrals.vals()) {
-          switch (referralsByPlayer.get(directRef)) {
-            case (null) {}; // No referrals found for this direct referral
-            case (?directInfo) {
-              // Filter for indirect referrals
-              let filteredIndirectRefs = Array.filter(
-                directInfo.referredPlayers,
-                func(ref : (PlayerId, Bool, Float)) : Bool {
-                  ref.1 == true; // Only direct referrals of the direct referral (indirect for the original player)
-                },
-              );
-
-              // Append indirect referrals
-              indirectReferrals := Array.append(
-                indirectReferrals,
-                Array.map(
-                  filteredIndirectRefs,
-                  func(ref : (PlayerId, Bool, Float)) : PlayerId {
-                    ref.0;
-                  },
-                ),
-              );
-
-              // For each indirect referral, gather beyond referrals
-              for (indirectRef in filteredIndirectRefs.vals()) {
-                switch (referralsByPlayer.get(indirectRef.0)) {
-                  case (null) {}; // No referrals found for this indirect referral
-                  case (?indirectInfo) {
-                    // Filter for beyond referrals
-                    let filteredBeyonds = Array.filter(
-                      indirectInfo.referredPlayers,
-                      func(ref : (PlayerId, Bool, Float)) : Bool {
-                        ref.1 == true; // Only direct referrals of the indirect referral (beyond for the original player)
-                      },
-                    );
-
-                    // Append beyond referrals
-                    beyondReferrals := Array.append(
-                      beyondReferrals,
-                      Array.map(
-                        filteredBeyonds,
-                        func(ref : (PlayerId, Bool, Float)) : PlayerId {
-                          ref.0;
-                        },
-                      ),
-                    );
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-
-    return {
-      directReferrals = directReferrals;
-      indirectReferrals = indirectReferrals;
-      beyondReferrals = beyondReferrals;
     };
   };
-  // Get a player's total referrals
-  public func getTotalReferrals(player : PlayerId) : async Nat {
-    switch (referralsByPlayer.get(player)) {
-      case (?referralInfo) {
-        return referralInfo.directReferrals +
-        referralInfo.indirectReferrals +
-        referralInfo.beyondReferrals;
+
+  // Get the referral tree for a specific ID
+  public shared func getReferralTree(id : Principal) : async ?RNode {
+    return await buildTree(id);
+  };
+
+  //Check if the referral is linked
+  public func isReferralLinked(id : Principal) : async Bool {
+    for ((_, node) in referrals.entries()) {
+      if (node.id == id) {
+        return true;
+      };
+    };
+    return false;
+  };
+
+  // Link the referral to the account
+  public func linkReferral(id : Principal, code : Text) : async (Bool, Text) {
+
+    if (await isReferralLinked(id)) {
+      return (false, "Referral already linked");
+    };
+
+    Debug.print("Getting the referral id");
+    let n = await getReferrerIdByCode(code);
+    let foundId = switch (n) {
+      case (?principal) {
+        Debug.print(
+          "Referral id found: " #
+          Principal.toText(principal)
+        );
+        principal;
       };
       case (null) {
-        return 0;
+        Debug.print("Referral code not found");
+        if (referrals.size() == 0) {
+          Debug.print("Linking first account");
+          let (refs, mult) = await calculateMultiplier(id);
+          let earn = Float.fromInt(refs) * mult;
+          let newNode : RNode = {
+            id = id;
+            username = "user1";
+            multiplier = mult;
+            earnings = earn;
+            referralCode = code;
+            referrerId = ?Principal.fromText("aaaaa-aa");
+            nodes = [];
+          };
+          referrals.put(newNode.id, newNode);
+          return (true, "Referral linked");
+        };
+        return (true, "Referral not linked");
       };
     };
-  };
-  // Get a player's multiplier
-  public query func getMultiplier(playerId : PlayerId) : async Float {
-    switch (multiplierByPlayer.get(playerId)) {
-      case (null) { return 1.0 }; // Default multiplier
-      case (?multiplier) { return multiplier };
+
+    Debug.print("Finding referrer node by id");
+    let node = await getReferralNodeById(foundId);
+    let referrerNode = switch (node) {
+      case (?node) {
+        node;
+      };
+      case (null) {
+        return (false, "Error. Referrer not found");
+      };
     };
+
+    Debug.print("Updating referrer nodes");
+    let newNode : RNode = {
+      id = id;
+      username = "user1";
+      multiplier = 1.0;
+      earnings = 0.0;
+      referralCode = await generateReferralCode();
+      referrerId = ?foundId;
+      nodes = [];
+    };
+    var updatedNode = {
+      referrerNode with
+      nodes = Array.append<RNode>(
+        referrerNode.nodes,
+        [newNode],
+      );
+    };
+    referrals.put(updatedNode.id, updatedNode);
+    referrals.put(newNode.id, newNode);
+
+    Debug.print("Calculating earnings and multiplier");
+    let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
+    let earnReferrer = Float.fromInt(refsReferrer) * multReferrer;
+
+    Debug.print(
+      "Referrer has " # Int.toText(refsReferrer) #
+      " referrals with " # Float.toText(multReferrer)
+      # " of multiplier"
+    );
+
+    Debug.print("Updating referrer");
+    var updReferrerNode = {
+      referrerNode with
+      multiplier = multReferrer;
+      earnings = earnReferrer;
+    };
+    referrals.put(updReferrerNode.id, updReferrerNode);
+    return (true, "Referral linked");
+  };
+
+  // Util to enerate a short UUID
+  private func generateShortUUID() : async Nat {
+    let randomBytes = await Random.blob();
+    var uuid : Nat = 0;
+    let byteArray = Blob.toArray(randomBytes);
+    for (i in Iter.range(0, 3)) {
+      uuid := Nat.add(
+        Nat.bitshiftLeft(uuid, 8),
+        Nat8.toNat(byteArray[i]),
+      );
+    };
+    uuid := uuid % 10000;
+    return uuid;
+  };
+
+  // Util to Generate a referral code
+  private func generateReferralCode() : async Text {
+    let uuid = await generateShortUUID();
+    let indices : [Nat] = Array.tabulate(
+      cosmicWords.size(),
+      func(i : Nat) : Nat { i },
+    );
+    let shuffledIndices = Utils.shuffleArray(indices);
+    let word = cosmicWords[shuffledIndices[0]];
+    let referralCode = word # Nat.toText(uuid);
+    referralCode;
+  };
+
+  // Util to generate n referral codes
+  public func refCodeGen(n : Nat) : async (Bool, Text) {
+    if (refCodes.size() > 0) {
+      return (false, "Referral codes already generated");
+    };
+    for (i in Iter.range(0, n)) {
+      let referralCode = await generateReferralCode();
+      refCodes.add(referralCode);
+    };
+    return (true, "Referral codes generated");
   };
   // #endregion
 
   //#region |Tops|
+  /**
   public query func dumpAllPlayerMultipliers() : async [(PlayerId, Float)] {
     let buffer = Buffer.Buffer<(PlayerId, Float)>(multiplierByPlayer.size());
     for ((playerId, multiplier) in multiplierByPlayer.entries()) {
@@ -7774,10 +7362,10 @@ shared actor class Cosmicrafts() = Self {
       topAchievementPlayers := Array.append(topAchievementPlayers, [p]);
     };
     return topAchievementPlayers;
-  };
-// #endregion
+  };*/
+  // #endregion
 
-//#region |Achievements|
+  //#region |Achievements|
   stable var achievementCategoryIDCounter : Nat = 1;
   stable var achievementIDCounter : Nat = 1;
   stable var individualAchievementIDCounter : Nat = 1;
@@ -8811,28 +8399,15 @@ shared actor class Cosmicrafts() = Self {
         };
       };
       case (#Multiplier) {
-        // Convert Nat to Float
-        let rewardAmountFloat = Float.fromInt64(Int64.fromNat64(Nat64.fromNat(reward.amount)));
 
-        let currentMultiplier = switch (multiplierByPlayer.get(caller)) {
-          case (null) { 1.0 };
-          case (?multiplier) { multiplier };
-        };
-
-        let newMultiplier = currentMultiplier + rewardAmountFloat;
-
-        // Update the player's multiplier
-        multiplierByPlayer.put(caller, newMultiplier);
-        _multiplierByPlayer := Iter.toArray(multiplierByPlayer.entries());
-
-        return (true, "Multiplier increased by: " # Float.toText(rewardAmountFloat));
+        return (false, "not implemented");
       };
     };
   };
-// #endregion
+  // #endregion
 
-//#region |Views|
-
+  //#region |Views|
+  /**
   public type TopView = {
     referralsTop : [ReferralsTop];
     eloTop : [ELOTop];
@@ -8850,7 +8425,7 @@ shared actor class Cosmicrafts() = Self {
       achTop = await getTopAchievements(0);
     };
   };
-
+  */
   public shared ({ caller }) func get_achievements() : async (
     [AchievementCategory],
     [AchievementLine],
@@ -8874,11 +8449,10 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-  public shared ({ caller }) func getAchievementsView() 
-  : async (
-  [AchievementCategory],
-  [AchievementLine],
-  [IndividualAchievement],
+  public shared ({ caller }) func getAchievementsView() : async (
+    [AchievementCategory],
+    [AchievementLine],
+    [IndividualAchievement],
   ) {
     let data = await getUserAchievements(caller);
     var categories : [AchievementCategory] = [];
@@ -8896,6 +8470,6 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
-// #endregion
+  // #endregion
 
 };
