@@ -36,7 +36,7 @@ const principalToString = (principal) => {
 
 const convertBP = (obj) => {
   if (Array.isArray(obj)) {
-    return obj.map(BigAndID);
+    return obj.map(convertBP);
   } else if (typeof obj === 'object' && obj !== null) {
     return Object.fromEntries(
       Object.entries(obj).map(
@@ -44,7 +44,7 @@ const convertBP = (obj) => {
           k, typeof v === 'bigint' ? v.toString() :
             (
               v && v._isPrincipal ? principalToString(v) :
-                BigAndID(v)
+                convertBP(v)
             )
         ]
       )
@@ -176,7 +176,7 @@ export const useCosmicraftsStore = defineStore(
           (key, value) => (
             typeof value === 'string' &&
               /^\d+n$/.test(value) ?
-              BigInt(value.slice(0, -1)) : value
+              convertBP(value.slice(0, -1)) : value
           ));
         console.log(
           "Loaded state from localStorage:",

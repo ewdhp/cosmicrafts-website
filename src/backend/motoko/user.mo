@@ -11,7 +11,6 @@ import Types "Types";
 
 import Referral "canister:referral";
 
-import Debug "mo:base/Debug";
 
 actor class User() {
   public type UserID = Types.UserID;
@@ -160,13 +159,19 @@ actor class User() {
           likes = ?[];
         };
         
+        //referral
         let referral = Referral;
         let (success, text) = await referral.linkReferral(userId, referralCode);
 
         if (not success) {
           return (false, text);
         };
-        //let result = await initAchievements();
+
+        // let result = await initAchievements();
+        // createMissionsPeriodically
+        // mintDeck
+        // some nfts mintNFT
+        // stats
 
         userNetwork.put(userId, newUserNetwork);
         userBasicInfo.put(userId, newPlayer);
@@ -983,62 +988,8 @@ actor class User() {
     };
   };
 
-  // Get all likes from a post by postId and by query caller
-  public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.posts) {
-          case (null) return null;
-          case (?posts) {
-            let postOpt = Array.find<Post>(
-              posts,
-              func(post) {
-                post.id == postId;
-              },
-            );
-            switch (postOpt) {
-              case (null) return null;
-              case (?post) {
-                return post.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Get all likes from a comment by commentId and by query caller
-  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return null;
-              case (?comment) {
-                return comment.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Delete a like from a post ID by likeId and by caller
-  public shared ({ caller }) func deleteLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
+    // Unlike from a post ID by likeId and by caller
+  public shared ({ caller }) func unLikeFromPost(postId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -1089,8 +1040,8 @@ actor class User() {
     };
   };
 
-  // Delete a like from a comment ID by likeId and by caller
-  public shared ({ caller }) func deleteLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
+  // Unlike from a comment ID by likeId and by caller
+  public shared ({ caller }) func unLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
     switch (userNetwork.get(caller)) {
       case (null) return false;
       case (?network) {
@@ -1133,6 +1084,60 @@ actor class User() {
                     return true;
                   };
                 };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  // Get all likes from a post by postId and by query caller
+  public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.posts) {
+          case (null) return null;
+          case (?posts) {
+            let postOpt = Array.find<Post>(
+              posts,
+              func(post) {
+                post.id == postId;
+              },
+            );
+            switch (postOpt) {
+              case (null) return null;
+              case (?post) {
+                return post.likes;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+
+  // Get all likes from a comment by commentId and by query caller
+  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
+    let userNetworkOpt = userNetwork.get(caller);
+    switch (userNetworkOpt) {
+      case (null) return null;
+      case (?network) {
+        switch (network.comments) {
+          case (null) return null;
+          case (?comments) {
+            let commentOpt = Array.find<Comment>(
+              comments,
+              func(comment) {
+                comment.id == commentId;
+              },
+            );
+            switch (commentOpt) {
+              case (null) return null;
+              case (?comment) {
+                return comment.likes;
               };
             };
           };

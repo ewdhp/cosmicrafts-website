@@ -14,7 +14,7 @@ import Float "mo:base/Float";
 import Int "mo:base/Int";
 import Utils "Utils";
 
-actor class Referral() {
+shared actor class Referral() {
 
   type PlayerId = Principal;
   public type RNode = {
@@ -138,7 +138,7 @@ actor class Referral() {
     };
   };
 
-  // Public function to get the referral tree for a specific ID
+  // Get the referral tree for a specific ID
   public shared func getReferralTree(id : Principal) : async ?RNode {
     return await buildTree(id);
   };

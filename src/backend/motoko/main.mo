@@ -8874,6 +8874,28 @@ shared actor class Cosmicrafts() = Self {
     (categories, lines, individuals);
   };
 
+  public shared ({ caller }) func getAchievementsView() 
+  : async (
+  [AchievementCategory],
+  [AchievementLine],
+  [IndividualAchievement],
+  ) {
+    let data = await getUserAchievements(caller);
+    var categories : [AchievementCategory] = [];
+    var lines : [AchievementLine] = [];
+    var individuals : [IndividualAchievement] = [];
+    for (category in data.vals()) {
+      categories := Array.append(categories, [category]);
+      for (line in category.achievements.vals()) {
+        lines := Array.append(lines, [line]);
+        for (achievement in line.individualAchievements.vals()) {
+          individuals := Array.append(individuals, [achievement]);
+        };
+      };
+    };
+    (categories, lines, individuals);
+  };
+
 // #endregion
 
 };

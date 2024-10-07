@@ -120,6 +120,7 @@ module Types {
   public type WouID = Text;
   public type MarketingID = Text;
   public type UpdateID = Text;
+  
   public type NotificationIdentity = {
     #FriendRequest : UserID;
     #WorldOfUnreal : WouID;

@@ -9,6 +9,7 @@ import LoginView from '@/views/login/LoginView.vue';
 import TopView from '@/views/top/TopView.vue';
 import BKView from '@/views/BKView.vue';
 import PROView from '@/views/profile/ProfileView.vue';
+import NFTView from '@/views/nfts/NFTView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -53,7 +54,7 @@ const navItems = [
     path: '/login',
     name: "Login",
     component: LoginView,
-    icons: { 
+    icons: {
       active: LoginActiveIcon,
       hover: LoginHoverIcon,
       inactive: LoginInactiveIcon,
@@ -64,7 +65,7 @@ const navItems = [
     path: '/register',
     name: "Register",
     component: RegView,
-    icons: { 
+    icons: {
       active: RegisterActiveIcon,
       hover: RegisterHoverIcon,
       inactive: RegisterInactiveIcon,
@@ -90,11 +91,11 @@ const navItems = [
       },
       {
         path: '/preview',
-        name: "Backend Preview", 
+        name: "Backend Preview",
         component: BKView,
         meta: { requiresAuth: true },
-        icons: { 
-          active: AchievementsActiveIcon, 
+        icons: {
+          active: AchievementsActiveIcon,
           hover: AchievementsHoverIcon,
           inactive: AchievementsInactiveIcon,
         },
@@ -102,23 +103,36 @@ const navItems = [
       },
       {
         path: '/top',
-        name: "Top Players", 
+        name: "Top Players",
         component: TopView,
         meta: { requiresAuth: true },
-        icons: { 
-          active: AchievementsActiveIcon, 
+        icons: {
+          active: AchievementsActiveIcon,
           hover: AchievementsHoverIcon,
           inactive: AchievementsInactiveIcon,
         },
         children: []
       },
       {
+        path: '/nfts',
+        name: "NFTView",
+        component: NFTView,
+        meta: { requiresAuth: true },
+        icons: {
+          active: NFTSActiveIcon,
+          hover: NFTSHoverIcon,
+          inactive: NFTSInactiveIcon,
+        },
+        children: []
+      },
+
+      {
         path: '/achievements',
-        name: "Achievements", 
+        name: "Achievements",
         component: ACHView,
         meta: { requiresAuth: true },
-        icons: { 
-          active: AchievementsActiveIcon, 
+        icons: {
+          active: AchievementsActiveIcon,
           hover: AchievementsHoverIcon,
           inactive: AchievementsInactiveIcon,
         },
@@ -129,7 +143,7 @@ const navItems = [
         name: "Tournament Dashboard",
         component: TNYDashView,
         meta: { requiresAuth: true },
-        icons: { 
+        icons: {
           active: TourneysActiveIcon,
           hover: TourneysHoverIcon,
           inactive: TourneysInactiveIcon,
@@ -140,7 +154,7 @@ const navItems = [
             name: "Tournament",
             component: TNYView,
             meta: { requiresAuth: true },
-            icons: { 
+            icons: {
               active: TourneysActiveIcon,
               hover: TourneysHoverIcon,
               inactive: TourneysInactiveIcon,
@@ -154,7 +168,7 @@ const navItems = [
         name: "Profile",
         component: PROView,
         meta: { requiresAuth: true },
-        icons: { 
+        icons: {
           active: ProfileActiveIcon,
           hover: ProfileHoverIcon,
           inactive: ProfileInactiveIcon,
