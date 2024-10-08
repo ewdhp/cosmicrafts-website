@@ -6,3 +6,4 @@ export * from './token.js';
 export * from './tournament.js';
 export * from './ach.js';
 export * from './tops.js';
+export * from './profile.js';

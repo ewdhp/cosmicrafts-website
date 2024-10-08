@@ -114,8 +114,15 @@
     <script>
     import avatar1 from '@/assets/avatars/Avatar_01.jpg';
     import avatar2 from '@/assets/avatars/Avatar_02.jpg';
-    
+    import useProfileStore from '@/stores/profile.js'; 
+
     export default {
+      mounted() {
+        const profileStore = useProfileStore();
+        profileStore.loadStore().then(() => {
+          this.userBasicInfo = profileStore.$state.userBasicInfo;
+        });
+      },
       data() {
         return {
           selectedAvatarIndex: 0,

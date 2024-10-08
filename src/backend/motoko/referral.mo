@@ -160,17 +160,22 @@ shared actor class Referral() {
     };
 
     Debug.print("Getting the referral id");
+
     let n = await getReferrerIdByCode(code);
     let foundId = switch (n) {
       case (?principal) {
+
         Debug.print(
           "Referral id found: " #
           Principal.toText(principal)
         );
+
         principal;
       };
       case (null) {
+
         Debug.print("Referral code not found");
+
         if (referrals.size() == 0) {
           Debug.print("Linking first account");
           let (refs, mult) = await calculateMultiplier(id);
@@ -187,7 +192,7 @@ shared actor class Referral() {
           referrals.put(newNode.id, newNode);
           return (true, "Referral linked");
         };
-        return (true, "Referral not linked");
+        return (false, "Referral not linked");
       };
     };
 
@@ -212,15 +217,21 @@ shared actor class Referral() {
       referrerId = ?foundId;
       nodes = [];
     };
-    var updatedNode = {
-      referrerNode with
+    let updatedNode : RNode = {
+      id = referrerNode.id;
+      username = referrerNode.username;
+      multiplier = referrerNode.multiplier;
+      earnings = referrerNode.earnings;
+      referralCode = referrerNode.referralCode;
+      referrerId = referrerNode.referrerId;
       nodes = Array.append<RNode>(
         referrerNode.nodes,
         [newNode],
       );
     };
-    referrals.put(updatedNode.id, updatedNode);
+
     referrals.put(newNode.id, newNode);
+    referrals.put(updatedNode.id, updatedNode);
 
     Debug.print("Calculating earnings and multiplier");
     let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
@@ -233,10 +244,18 @@ shared actor class Referral() {
     );
 
     Debug.print("Updating referrer");
-    var updReferrerNode = {
-      referrerNode with
+
+    let updReferrerNode : RNode = {
+      id = referrerNode.id;
+      username = referrerNode.username;
       multiplier = multReferrer;
       earnings = earnReferrer;
+      referralCode = referrerNode.referralCode;
+      referrerId = referrerNode.referrerId;
+      nodes = Array.append<RNode>(
+        referrerNode.nodes,
+        [newNode],
+      );
     };
     referrals.put(updReferrerNode.id, updReferrerNode);
     return (true, "Referral linked");

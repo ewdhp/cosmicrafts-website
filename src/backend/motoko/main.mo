@@ -1808,9 +1808,9 @@ shared actor class Cosmicrafts() = Self {
           level = 0;
           elo = 1200.0;
           verificationBadge = false;
-          title = null;
-          description = null;
-          country = null;
+          title = ?("Your title");
+          description =  ?("Your description");
+          country =  ?("Your country");
           registrationDate = registrationDate;
         };
         let newUserNetwork : UserNetwork = {

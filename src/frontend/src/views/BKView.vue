@@ -32,7 +32,9 @@ export default {
 
     // Load the store in background at mount
     onMounted(async () => {
-      await cosmicrafts.loadStore();
+      cosmicrafts.loadStore().then(() => {
+        data.value = cosmicrafts.module.achievements;
+      }); 
     });
 
     // Watch for changes and update data

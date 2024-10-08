@@ -10,6 +10,7 @@ import TopView from '@/views/top/TopView.vue';
 import BKView from '@/views/BKView.vue';
 import PROView from '@/views/profile/ProfileView.vue';
 import NFTView from '@/views/nfts/NFTView.vue';
+import ReferralView from '@/views/referral/ReferralView.vue';
 
 // Import icons for all states
 import DashboardActiveIcon from '@/assets/icons/dashboard-active.svg';
@@ -90,14 +91,14 @@ const navItems = [
         children: []
       },
       {
-        path: '/preview',
-        name: "Backend Preview",
-        component: BKView,
+        path: '/referrals',
+        name: "Referrals",
+        component: ReferralView,
         meta: { requiresAuth: true },
         icons: {
-          active: AchievementsActiveIcon,
-          hover: AchievementsHoverIcon,
-          inactive: AchievementsInactiveIcon,
+          active: ReferralsActiveIcon,
+          hover: ReferralsHoverIcon,
+          inactive: ReferralsInactiveIcon,
         },
         children: []
       },
