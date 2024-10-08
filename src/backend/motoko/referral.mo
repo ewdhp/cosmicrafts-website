@@ -153,7 +153,7 @@ shared actor class Referral() {
   };
 
   // Link the referral to the account
-  public func linkReferral(id : Principal, code : Text) : async (Bool, Text) {
+  public func linkReferral(id : Principal, username : Text, code : Text) : async (Bool, Text) {
 
     if (await isReferralLinked(id)) {
       return (false, "Referral already linked");
@@ -182,7 +182,7 @@ shared actor class Referral() {
           let earn = Float.fromInt(refs) * mult;
           let newNode : RNode = {
             id = id;
-            username = "user1";
+            username = username;
             multiplier = mult;
             earnings = earn;
             referralCode = code;

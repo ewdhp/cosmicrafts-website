@@ -53,7 +53,7 @@ module Types {
   };
 
   public type UserNetwork = {
-    connections : ?[SocialConnection];
+    connections : [SocialConnection];
     notifications : ?[Notification];
     friends : ?[FriendDetails];
     friendRequests : ?[FriendRequest];
@@ -70,6 +70,15 @@ module Types {
     username : Text;
     profileLink : Text;
     memberSince : RegistrationDate;
+  };
+   public type Platform = {
+    #Twitter;
+    #WhatsApp;
+    #Discord;
+    #Facebook;
+    #Instagram;
+    #DSCVR;
+    #Cosmicrafts;
   };
 
   public type FriendDetails = {
@@ -128,15 +137,7 @@ module Types {
     #Update : UpdateID;
   };
 
-  public type Platform = {
-    #Twitter;
-    #WhatsApp;
-    #Discord;
-    #Facebook;
-    #Instagram;
-    #DSCVR;
-    #Cosmicrafts;
-  };
+ 
 
   public type AIFeatures = {
     aiAvatar : Nat;

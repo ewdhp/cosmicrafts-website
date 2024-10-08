@@ -1693,7 +1693,7 @@ shared actor class Cosmicrafts() = Self {
   public type TitleBasicInfo = Text;
   public type DescriptionBasicInfo = Text;
   public type CountryBasicInfo = Text;
-
+  public type SocialConnection = Types.SocialConnection;
   public type FriendRequest = Types.FriendRequest;
   public type Notification = Types.Notification;
   public type UserProfile = Types.UserProfile;
@@ -1747,32 +1747,32 @@ shared actor class Cosmicrafts() = Self {
           level = 0;
           elo = 1200.0;
           verificationBadge = false;
-          title = null;
-          description = null;
-          country = null;
+          title = ?("Your title");
+          description = ?("Your description");
+          country = ?("Your country");
           registrationDate = registrationDate;
         };
+        let connection : SocialConnection  = {
+          platform = #Cosmicrafts;
+          username = username;
+          profileLink = "https://cosmicrafts.com/"#username#"_uuid";
+          memberSince = registrationDate;
+        };
         let newUserNetwork : UserNetwork = {
-          connection = {
-            platform = #cosmicrafts;
-            username = username;
-            profileLink = "/profile/username-uuid";
-            memberSince = registrationDate;
-          };
-          notifications = ?[];
-          connections = ?[];
-          friends = ?[];
-          friendRequests = ?[];
-          mutualFriends = ?[];
-          blockedUsers = ?[];
-          following = ?[];
-          followers = ?[];
-          posts = ?[];
-          comments = ?[];
-          likes = ?[];
+          connections = [connection];
+          notifications = null;
+          friends = null;
+          friendRequests = null;
+          mutualFriends = null;
+          blockedUsers = null;
+          following = null;
+          followers = null;
+          posts = null;
+          comments = null;
+          likes = null;
         };
 
-        let (success, text) = await linkReferral(caller, code);
+        let (success, text) = await linkReferral(caller, username, code);
 
         if (not success) {
           return (false, text);
@@ -1787,7 +1787,6 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
-
   public shared func signupByID(
     userId : Principal,
     username : Text,
@@ -1813,27 +1812,27 @@ shared actor class Cosmicrafts() = Self {
           country =  ?("Your country");
           registrationDate = registrationDate;
         };
+        let connection : SocialConnection  = {
+          platform = #Cosmicrafts;
+          username = username;
+          profileLink = "https://cosmicrafts.com/"#username#"_uuid";
+          memberSince = registrationDate;
+        };
         let newUserNetwork : UserNetwork = {
-          connection = {
-            platform = #cosmicrafts;
-            username = username;
-            profileLink = "/profile/username-uuid";
-            memberSince = registrationDate;
-          };
-          notifications = ?[];
-          connections = ?[];
-          friends = ?[];
-          friendRequests = ?[];
-          mutualFriends = ?[];
-          blockedUsers = ?[];
-          following = ?[];
-          followers = ?[];
-          posts = ?[];
-          comments = ?[];
-          likes = ?[];
+          connections = [connection];
+          notifications = null;
+          friends = null;
+          friendRequests = null;
+          mutualFriends = null;
+          blockedUsers = null;
+          following = null;
+          followers = null;
+          posts = null;
+          comments = null;
+          likes = null;
         };
 
-        let (success, text) = await linkReferral(userId, code);
+        let (success, text) = await linkReferral(userId, username, code);
 
         if (not success) {
           return (false, text);
@@ -6821,31 +6820,36 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Link the referral to the account
-  public func linkReferral(id : Principal, code : Text) : async (Bool, Text) {
+  public func linkReferral(id : Principal, username : Text, code : Text) : async (Bool, Text) {
 
     if (await isReferralLinked(id)) {
       return (false, "Referral already linked");
     };
 
     Debug.print("Getting the referral id");
+
     let n = await getReferrerIdByCode(code);
     let foundId = switch (n) {
       case (?principal) {
+
         Debug.print(
           "Referral id found: " #
           Principal.toText(principal)
         );
+
         principal;
       };
       case (null) {
+
         Debug.print("Referral code not found");
+
         if (referrals.size() == 0) {
           Debug.print("Linking first account");
           let (refs, mult) = await calculateMultiplier(id);
           let earn = Float.fromInt(refs) * mult;
           let newNode : RNode = {
             id = id;
-            username = "user1";
+            username = username;
             multiplier = mult;
             earnings = earn;
             referralCode = code;
@@ -6855,7 +6859,7 @@ shared actor class Cosmicrafts() = Self {
           referrals.put(newNode.id, newNode);
           return (true, "Referral linked");
         };
-        return (true, "Referral not linked");
+        return (false, "Referral not linked");
       };
     };
 
@@ -6880,15 +6884,21 @@ shared actor class Cosmicrafts() = Self {
       referrerId = ?foundId;
       nodes = [];
     };
-    var updatedNode = {
-      referrerNode with
+    let updatedNode : RNode = {
+      id = referrerNode.id;
+      username = referrerNode.username;
+      multiplier = referrerNode.multiplier;
+      earnings = referrerNode.earnings;
+      referralCode = referrerNode.referralCode;
+      referrerId = referrerNode.referrerId;
       nodes = Array.append<RNode>(
         referrerNode.nodes,
         [newNode],
       );
     };
-    referrals.put(updatedNode.id, updatedNode);
+
     referrals.put(newNode.id, newNode);
+    referrals.put(updatedNode.id, updatedNode);
 
     Debug.print("Calculating earnings and multiplier");
     let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
@@ -6901,10 +6911,18 @@ shared actor class Cosmicrafts() = Self {
     );
 
     Debug.print("Updating referrer");
-    var updReferrerNode = {
-      referrerNode with
+
+    let updReferrerNode : RNode = {
+      id = referrerNode.id;
+      username = referrerNode.username;
       multiplier = multReferrer;
       earnings = earnReferrer;
+      referralCode = referrerNode.referralCode;
+      referrerId = referrerNode.referrerId;
+      nodes = Array.append<RNode>(
+        referrerNode.nodes,
+        [newNode],
+      );
     };
     referrals.put(updReferrerNode.id, updReferrerNode);
     return (true, "Referral linked");
