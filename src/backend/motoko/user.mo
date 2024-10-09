@@ -22,7 +22,7 @@ actor class User() {
   public type TitleBasicInfo = Text;
   public type DescriptionBasicInfo = Text;
   public type CountryBasicInfo = Text;
-
+  public type SocialConnection =  Types.SocialConnection;
   public type FriendRequest = Types.FriendRequest;
   public type Notification = Types.Notification;
   public type UserProfile = Types.UserProfile;
@@ -82,14 +82,13 @@ actor class User() {
           registrationDate = registrationDate;
         };
         let newUserNetwork : UserNetwork = {
-          connection = {
-            platform = #cosmicrafts;
+          notifications = ?[];
+          connections = [{
+            platform = #Cosmicrafts;
             username = username;
             profileLink = "/profile/username-uuid";
             memberSince = registrationDate;
-          };
-          notifications = ?[];
-          connections = ?[];
+          }];
           friends = ?[];
           friendRequests = ?[];
           mutualFriends = ?[];
@@ -97,7 +96,6 @@ actor class User() {
           following = ?[];
           followers = ?[];
           posts = ?[];
-          comments = ?[];
           likes = ?[];
         };
 
@@ -137,14 +135,13 @@ actor class User() {
           registrationDate = registrationDate;
         };
         let newUserNetwork : UserNetwork = {
-          connection = {
-            platform = #cosmicrafts;
+          notifications = ?[];
+          connections = [{
+            platform = #Cosmicrafts;
             username = username;
             profileLink = "/profile/username-uuid";
             memberSince = registrationDate;
-          };
-          notifications = ?[];
-          connections = ?[];
+          }];
           friends = ?[];
           friendRequests = ?[];
           mutualFriends = ?[];
@@ -152,7 +149,6 @@ actor class User() {
           following = ?[];
           followers = ?[];
           posts = ?[];
-          comments = ?[];
           likes = ?[];
         };
 
@@ -745,93 +741,39 @@ actor class User() {
     };
   };
 
-  // Get a comment by user ID and comment ID
-  public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
+    // Get a comment by user ID and comment ID
+  public query func getComment(fromUserID : UserID, postId: Nat, commentId : Nat) : async ?Comment {
     let userNetworkOpt = userNetwork.get(fromUserID);
     switch (userNetworkOpt) {
       case (null) return null;
       case (?network) {
-        switch (network.comments) {
+        let comment = switch(network.posts) {
           case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
+          case (?posts) {
+            let post = Array.find<Post>(
+              posts,
+              func(post : Post) {                                
+                post.id == postId;
+              },               
             );
-            return commentOpt;
-          };
-        };
-      };
-    };
-  };
-
-  // Update comment by caller and comment ID
-  public shared ({ caller }) func updateComment(
-    commentId : Nat,
-    newContent : Text,
-  ) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return false;
-              case (?comment) {
-                let updatedComment = {
-                  comment with
-                  content = newContent;
-                  timestamp = Time.now();
+            let comment = switch (post) {
+              case (null) return null;
+              case (?post) {
+                let comment = switch (post.comments) {
+                  case (null) {return null};
+                  case (?comments) {
+                    let commentOpt = Array.find<Comment>(
+                      comments,
+                      func(comment : Comment) {
+                        comment.id == commentId;
+                      },
+                    );
+                    commentOpt;
+                  };
                 };
-                let updatedComments = Array.map<Comment, Comment>(
-                  comments,
-                  func(c : Comment) : Comment {
-                    if (c.id == commentId) updatedComment else c;
-                  },
-                );
-                let updatedNetwork = {
-                  network with
-                  comments = ?updatedComments;
-                };
-                userNetwork.put(caller, updatedNetwork);
-                return true;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Delete comment from caller by comment ID
-  public shared ({ caller }) func deleteComment(commentId : Nat) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let updatedComments = Array.filter<Comment>(
-              comments,
-              func(comment : Comment) : Bool {
-                comment.id != commentId;
-              },
-            );
-            let updatedNetwork = {
-              network with
-              comments = ?updatedComments;
-            };
-            userNetwork.put(caller, updatedNetwork);
-            return true;
+                comment; 
+              };            
+            };       
           };
         };
       };
@@ -1037,57 +979,6 @@ actor class User() {
     };
   };
 
-  // Unlike from a comment ID by likeId and by caller
-  public shared ({ caller }) func unLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return false;
-              case (?comment) {
-                switch (comment.likes) {
-                  case (null) return false;
-                  case (?likes) {
-                    let updatedLikes = Array.filter<Like>(
-                      likes,
-                      func(like : Like) : Bool {
-                        like.id != likeId;
-                      },
-                    );
-                    let updatedComment = {
-                      comment with
-                      likes = ?updatedLikes;
-                    };
-                    let updatedComments = Array.map<Comment, Comment>(
-                      comments,
-                      func(c : Comment) : Comment {
-                        if (c.id == commentId) updatedComment else c;
-                      },
-                    );
-                    let updatedNetwork = {
-                      network with
-                      comments = ?updatedComments;
-                    };
-                    userNetwork.put(caller, updatedNetwork);
-                    return true;
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
 
   // Get all likes from a post by postId and by query caller
   public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
@@ -1116,32 +1007,6 @@ actor class User() {
     };
   };
 
-  // Get all likes from a comment by commentId and by query caller
-  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return null;
-              case (?comment) {
-                return comment.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
 
   // Block a user by user ID
   public shared ({ caller }) func blockUser(userIdToBlock : UserID) : async Bool {

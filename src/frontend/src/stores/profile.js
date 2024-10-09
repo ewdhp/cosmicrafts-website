@@ -56,10 +56,10 @@ export const useProfileStore = defineStore(
       const authStore = useAuthStore();
       const canisterStore = useCanisterStore();
       const cosmicrafts = await canisterStore.get('cosmicrafts');
-      const id = authStore.getIdentity().getPrincipal();
+      // const id = authStore.getIdentity().getPrincipal();
       const profile = await Promise.all([
-        cosmicrafts.getUserBasicInfoByID(id),
-        cosmicrafts.getUserNetwork(id)
+        cosmicrafts.getUserBasicInfo(),
+        cosmicrafts.getUserNetwork()
       ]);
       const newDataString = JSON.stringify(
         profile, (key, value) =>

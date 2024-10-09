@@ -1694,6 +1694,7 @@ shared actor class Cosmicrafts() = Self {
   public type DescriptionBasicInfo = Text;
   public type CountryBasicInfo = Text;
   public type SocialConnection = Types.SocialConnection;
+  public type Platform = Types.Platform;
   public type FriendRequest = Types.FriendRequest;
   public type Notification = Types.Notification;
   public type UserProfile = Types.UserProfile;
@@ -1747,29 +1748,32 @@ shared actor class Cosmicrafts() = Self {
           level = 0;
           elo = 1200.0;
           verificationBadge = false;
-          title = ?("Your title");
-          description = ?("Your description");
-          country = ?("Your country");
+          title = null;
+          description = null;
+          country = null;
           registrationDate = registrationDate;
         };
-        let connection : SocialConnection  = {
-          platform = #Cosmicrafts;
-          username = username;
-          profileLink = "https://cosmicrafts.com/"#username#"_uuid";
-          memberSince = registrationDate;
-        };
+      
         let newUserNetwork : UserNetwork = {
-          connections = [connection];
-          notifications = null;
-          friends = null;
-          friendRequests = null;
-          mutualFriends = null;
-          blockedUsers = null;
-          following = null;
-          followers = null;
-          posts = null;
-          comments = null;
-          likes = null;
+ 
+          notifications = ?[];
+
+          connections = [{
+            platform = #Cosmicrafts;
+            username = username;
+            profileLink = "/profile/username-uuid";
+            memberSince = registrationDate;
+          }];
+
+          friends = ?[];
+          friendRequests = ?[];
+          mutualFriends = ?[];
+          blockedUsers = ?[];
+          following = ?[];
+          followers = ?[];
+          posts = ?[];
+          comments = ?[];
+          likes = ?[];
         };
 
         let (success, text) = await linkReferral(caller, username, code);
@@ -1787,6 +1791,7 @@ shared actor class Cosmicrafts() = Self {
       };
     };
   };
+
   public shared func signupByID(
     userId : Principal,
     username : Text,
@@ -1800,6 +1805,7 @@ shared actor class Cosmicrafts() = Self {
       case (null) {
 
         let registrationDate = Time.now();
+      
         let newPlayer : UserBasicInfo = {
           id = userId;
           username = username;
@@ -1807,29 +1813,32 @@ shared actor class Cosmicrafts() = Self {
           level = 0;
           elo = 1200.0;
           verificationBadge = false;
-          title = ?("Your title");
-          description =  ?("Your description");
-          country =  ?("Your country");
+          title = null;
+          description = null;
+          country = null;
           registrationDate = registrationDate;
         };
-        let connection : SocialConnection  = {
-          platform = #Cosmicrafts;
-          username = username;
-          profileLink = "https://cosmicrafts.com/"#username#"_uuid";
-          memberSince = registrationDate;
-        };
+
         let newUserNetwork : UserNetwork = {
-          connections = [connection];
-          notifications = null;
-          friends = null;
-          friendRequests = null;
-          mutualFriends = null;
-          blockedUsers = null;
-          following = null;
-          followers = null;
-          posts = null;
-          comments = null;
-          likes = null;
+
+          notifications = ?[];
+
+          connections = [{
+            platform = #Cosmicrafts;
+            username = username;
+            profileLink = "/profile/username-uuid";
+            memberSince = registrationDate;
+          }];
+
+          friends = ?[];
+          friendRequests = ?[];
+          mutualFriends = ?[];
+          blockedUsers = ?[];
+          following = ?[];
+          followers = ?[];
+          posts = ?[];
+          comments = ?[];
+          likes = ?[];
         };
 
         let (success, text) = await linkReferral(userId, username, code);
@@ -1944,8 +1953,12 @@ shared actor class Cosmicrafts() = Self {
   //////////  User Network  //////////
 
   // Get the user network information
-  public func getUserNetwork(id : UserID) : async ?UserNetwork {
+  public func getUserNetworkByID(id : UserID) : async ?UserNetwork {
     return userNetwork.get(id);
+  };
+  // Get the user network information
+  public query({caller}) func getUserNetwork() : async ?UserNetwork {
+    return userNetwork.get(caller);
   };
 
   // Send a friend request
@@ -2225,24 +2238,28 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Create a post by caller
-  public shared ({ caller }) func createPost(
-    userID : UserID,
-    username : Text,
+  public shared({caller}) func createPost(
     images : ?[Nat],
     content : Text,
-  ) : async Bool {
+  ) : async Int {
+
+    let user : ?UserBasicInfo = userBasicInfo.get(caller);
+    let basicInfo :UserBasicInfo = switch (user) {
+      case null {return -1};
+      case (?info) {info};
+    };
 
     switch (userNetwork.get(caller)) {
-      case (null) return false;
+      case (null) return -1;
       case (?network) {
         switch (network.posts) {
-          case (null) return false;
+          case (null) return -1;
           case (?posts) {
             let postCount = posts.size() + 1;
             let newPost : Post = {
               id = postCount;
-              userId = userID;
-              username = username;
+              userId = caller;
+              username = basicInfo.username;
               images = switch (images) {
                 case (?images) ?images;
                 case (null) ?[];
@@ -2264,7 +2281,7 @@ shared actor class Cosmicrafts() = Self {
               caller,
               updatedUserNetwork,
             );
-            return true;
+            return postCount;
           };
         };
       };
@@ -2355,20 +2372,20 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Create a comment in a post
-  public shared ({ caller }) func createComment(
+  public shared func createComment(
     postId : Nat,
-    fromUserID : UserID,
-    fromUsername : Text,
+    postOwnerId : UserID,
+    commentCreatorId : UserID,
     content : Text,
-  ) : async Bool {
+  ) : async (Bool, Int, Text) {
 
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
+    switch (userNetwork.get(postOwnerId)) {
+      case (null) return (false, -1, "userNetwork.get(postOwnerId) NULL");
       case (?network) {
         switch (network.posts) {
-          case (null) return false;
+          case (null) return return (false, -1, "network.posts NULL");
           case (?posts) {
-            let commentCount = posts.size() + 1;
+            
             let postOpt = Array.find<Post>(
               posts,
               func(post) {
@@ -2376,28 +2393,36 @@ shared actor class Cosmicrafts() = Self {
               },
             );
             switch (postOpt) {
-              case (null) return false;
+              case (null) return (false, -1, "let postOpt = Array.find<Post> NULL");
               case (?post) {
+                
+                let info = userBasicInfo.get(commentCreatorId);
+                let userInfo = switch (info) {
+                  case null {return (false, -1, "let info = userBasicInfo.get(commentCreatorId) NULL")};
+                  case (?info) {info};
+                };
+                var comments = switch(post.comments) {
+                  case null {[]};
+                  case (?comments) {comments}
+                };
+                let commentCount = comments.size() + 1;
 
                 let newComment : Comment = {
                   id = commentCount;
                   postId = postId;
-                  fromUserID = fromUserID;
-                  fromUsername = fromUsername;
+                  fromUserID = commentCreatorId;
+                  fromUsername = userInfo.username;
                   content = content;
                   timestamp = Time.now();
                   likes = ?[];
                 };
-                let updatedComments = switch (post.comments) {
-                  case (null) [newComment];
-                  case (?comments) Array.append<Comment>(
-                    comments,
-                    [newComment],
-                  );
-                };
+
                 let updatedPost = {
                   post with
-                  comments = ?updatedComments
+                  comments = ?Array.append<Comment>(
+                    comments,
+                    [newComment],
+                  )
                 };
                 let updatedPosts = Array.map<Post, Post>(
                   posts,
@@ -2407,10 +2432,10 @@ shared actor class Cosmicrafts() = Self {
                 );
                 let updatedUserNetwork = {
                   network with
-                  posts = ?updatedPosts
+                  posts = ?updatedPosts;
                 };
-                userNetwork.put(caller, updatedUserNetwork);
-                return true;
+                userNetwork.put(postOwnerId, updatedUserNetwork);
+                return (true, commentCount, "Comment created successfully");
               };
             };
           };
@@ -2419,108 +2444,14 @@ shared actor class Cosmicrafts() = Self {
     };
   };
 
-  // Get a comment by user ID and comment ID
-  public query func getComment(fromUserID : UserID, commentId : Nat) : async ?Comment {
-    let userNetworkOpt = userNetwork.get(fromUserID);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            return commentOpt;
-          };
-        };
-      };
-    };
-  };
-
-  // Update comment by caller and comment ID
-  public shared ({ caller }) func updateComment(
-    commentId : Nat,
-    newContent : Text,
-  ) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return false;
-              case (?comment) {
-                let updatedComment = {
-                  comment with
-                  content = newContent;
-                  timestamp = Time.now();
-                };
-                let updatedComments = Array.map<Comment, Comment>(
-                  comments,
-                  func(c : Comment) : Comment {
-                    if (c.id == commentId) updatedComment else c;
-                  },
-                );
-                let updatedNetwork = {
-                  network with
-                  comments = ?updatedComments;
-                };
-                userNetwork.put(caller, updatedNetwork);
-                return true;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-
-  // Delete comment from caller by comment ID
-  public shared ({ caller }) func deleteComment(commentId : Nat) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let updatedComments = Array.filter<Comment>(
-              comments,
-              func(comment : Comment) : Bool {
-                comment.id != commentId;
-              },
-            );
-            let updatedNetwork = {
-              network with
-              comments = ?updatedComments;
-            };
-            userNetwork.put(caller, updatedNetwork);
-            return true;
-          };
-        };
-      };
-    };
-  };
 
   // Give a like to post
-  public shared ({ caller }) func likePost(
+  public func likePost(
     postId : Nat,
-    likeId : Nat,
-    fromUserID : UserID,
-    fromUsername : Text,
-    timestamp : Time.Time,
+    postCreatorUserId : UserID,
+    userLikerId : UserID,
   ) : async Bool {
-    switch (userNetwork.get(caller)) {
+    switch (userNetwork.get(postCreatorUserId)) {
       case (null) return false;
       case (?network) {
         switch (network.posts) {
@@ -2535,12 +2466,27 @@ shared actor class Cosmicrafts() = Self {
             switch (postOpt) {
               case (null) return false;
               case (?post) {
+
+                let likes : [Like] = switch (postOpt) {
+                  case (null) {return false};
+                  case (?post) {
+                    let likes = switch(post.likes) {
+                      case null {[]};
+                      case (?likeArray) {likeArray}
+                    };
+                  };
+                };
+                let fromUsername = switch (userBasicInfo.get(userLikerId)) {
+                  case (null) {return false};
+                  case (?info) {info.username};
+                };
+                let likeId = likes.size() + 1;
                 let newLike : Like = {
                   id = likeId;
-                  fromUserID = fromUserID;
+                  fromUserID = userLikerId;
                   likeVariant = #Post;
                   fromUsername = fromUsername;
-                  timestamp = timestamp;
+                  timestamp = Time.now();
                 };
                 let updatedLikes = switch (post.likes) {
                   case (null) [newLike];
@@ -2560,7 +2506,7 @@ shared actor class Cosmicrafts() = Self {
                   network with
                   posts = ?updatedPosts
                 };
-                userNetwork.put(caller, updatedUserNetwork);
+                userNetwork.put(postCreatorUserId, updatedUserNetwork);
                 return true;
               };
             };
@@ -2571,16 +2517,14 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Give a like to comment
-  public shared ({ caller }) func likeComment(
+  public func likeComment(
     postId : Nat,
+    postCreatorUserId : UserID,
     commentId : Nat,
-    likeId : Nat,
-    fromUserID : UserID,
-    fromUsername : Text,
-    timestamp : Time.Time,
+    userLikerId : UserID,
   ) : async Bool {
 
-    switch (userNetwork.get(caller)) {
+    switch (userNetwork.get(postCreatorUserId)) {
       case (null) return false;
       case (?network) {
         switch (network.posts) {
@@ -2607,12 +2551,26 @@ shared actor class Cosmicrafts() = Self {
                 switch (commentOpt) {
                   case (null) return false;
                   case (?comment) {
-                    let newLike : Like = {
+                    let likes : [Like] = switch (postOpt) {
+                  case (null) {return false};
+                  case (?post) {
+                    let likes = switch(post.likes) {
+                      case null {[]};
+                      case (?likeArray) {likeArray}
+                    };
+                  };
+                };
+                let fromUsername = switch (userBasicInfo.get(userLikerId)) {
+                  case (null) {return false};
+                  case (?info) {info.username};
+                };
+                let likeId = likes.size() + 1;
+                   let newLike : Like = {
                       id = likeId;
-                      fromUserID = fromUserID;
+                      fromUserID = userLikerId;
                       likeVariant = #Comment;
                       fromUsername = fromUsername;
-                      timestamp = timestamp;
+                      timestamp = Time.now();
                     };
                     let updatedLikes = switch (comment.likes) {
                       case (null) [newLike];
@@ -2645,7 +2603,7 @@ shared actor class Cosmicrafts() = Self {
                           network with
                           posts = ?updatedPosts
                         };
-                        userNetwork.put(caller, updatedUserNetwork);
+                        userNetwork.put(postCreatorUserId, updatedUserNetwork);
                         return true;
                       };
                     };
@@ -2712,56 +2670,6 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Unlike from a comment ID by likeId and by caller
-  public shared ({ caller }) func unLikeFromComment(commentId : Nat, likeId : Nat) : async Bool {
-    switch (userNetwork.get(caller)) {
-      case (null) return false;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return false;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return false;
-              case (?comment) {
-                switch (comment.likes) {
-                  case (null) return false;
-                  case (?likes) {
-                    let updatedLikes = Array.filter<Like>(
-                      likes,
-                      func(like : Like) : Bool {
-                        like.id != likeId;
-                      },
-                    );
-                    let updatedComment = {
-                      comment with
-                      likes = ?updatedLikes;
-                    };
-                    let updatedComments = Array.map<Comment, Comment>(
-                      comments,
-                      func(c : Comment) : Comment {
-                        if (c.id == commentId) updatedComment else c;
-                      },
-                    );
-                    let updatedNetwork = {
-                      network with
-                      comments = ?updatedComments;
-                    };
-                    userNetwork.put(caller, updatedNetwork);
-                    return true;
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
 
   // Get all likes from a post by postId and by query caller
   public query ({ caller }) func likesFromPost(postId : Nat) : async ?[Like] {
@@ -2791,31 +2699,7 @@ shared actor class Cosmicrafts() = Self {
   };
 
   // Get all likes from a comment by commentId and by query caller
-  public query ({ caller }) func likesFromComment(commentId : Nat) : async ?[Like] {
-    let userNetworkOpt = userNetwork.get(caller);
-    switch (userNetworkOpt) {
-      case (null) return null;
-      case (?network) {
-        switch (network.comments) {
-          case (null) return null;
-          case (?comments) {
-            let commentOpt = Array.find<Comment>(
-              comments,
-              func(comment) {
-                comment.id == commentId;
-              },
-            );
-            switch (commentOpt) {
-              case (null) return null;
-              case (?comment) {
-                return comment.likes;
-              };
-            };
-          };
-        };
-      };
-    };
-  };
+
 
   // Block a user by user ID
   public shared ({ caller }) func blockUser(userIdToBlock : UserID) : async Bool {
@@ -6827,29 +6711,24 @@ shared actor class Cosmicrafts() = Self {
     };
 
     Debug.print("Getting the referral id");
-
     let n = await getReferrerIdByCode(code);
     let foundId = switch (n) {
       case (?principal) {
-
         Debug.print(
           "Referral id found: " #
           Principal.toText(principal)
         );
-
         principal;
       };
       case (null) {
-
         Debug.print("Referral code not found");
-
         if (referrals.size() == 0) {
           Debug.print("Linking first account");
           let (refs, mult) = await calculateMultiplier(id);
           let earn = Float.fromInt(refs) * mult;
           let newNode : RNode = {
             id = id;
-            username = username;
+            username = "user1";
             multiplier = mult;
             earnings = earn;
             referralCode = code;
@@ -6859,7 +6738,7 @@ shared actor class Cosmicrafts() = Self {
           referrals.put(newNode.id, newNode);
           return (true, "Referral linked");
         };
-        return (false, "Referral not linked");
+        return (true, "Referral not linked");
       };
     };
 
@@ -6877,28 +6756,22 @@ shared actor class Cosmicrafts() = Self {
     Debug.print("Updating referrer nodes");
     let newNode : RNode = {
       id = id;
-      username = "user1";
+      username = username;
       multiplier = 1.0;
       earnings = 0.0;
       referralCode = await generateReferralCode();
       referrerId = ?foundId;
       nodes = [];
     };
-    let updatedNode : RNode = {
-      id = referrerNode.id;
-      username = referrerNode.username;
-      multiplier = referrerNode.multiplier;
-      earnings = referrerNode.earnings;
-      referralCode = referrerNode.referralCode;
-      referrerId = referrerNode.referrerId;
+    var updatedNode = {
+      referrerNode with
       nodes = Array.append<RNode>(
         referrerNode.nodes,
         [newNode],
       );
     };
-
-    referrals.put(newNode.id, newNode);
     referrals.put(updatedNode.id, updatedNode);
+    referrals.put(newNode.id, newNode);
 
     Debug.print("Calculating earnings and multiplier");
     let (refsReferrer, multReferrer) = await calculateMultiplier(foundId);
@@ -6911,18 +6784,10 @@ shared actor class Cosmicrafts() = Self {
     );
 
     Debug.print("Updating referrer");
-
-    let updReferrerNode : RNode = {
-      id = referrerNode.id;
-      username = referrerNode.username;
+    var updReferrerNode = {
+      referrerNode with
       multiplier = multReferrer;
       earnings = earnReferrer;
-      referralCode = referrerNode.referralCode;
-      referrerId = referrerNode.referrerId;
-      nodes = Array.append<RNode>(
-        referrerNode.nodes,
-        [newNode],
-      );
     };
     referrals.put(updReferrerNode.id, updReferrerNode);
     return (true, "Referral linked");

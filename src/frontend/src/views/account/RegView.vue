@@ -65,9 +65,6 @@ export default {
       loading.value = false;
     };
 
-    onMounted(async () => {
-    });
-
     return {
       loading,
       username,

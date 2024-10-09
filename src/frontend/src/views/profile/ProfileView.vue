@@ -89,7 +89,7 @@ export default {
           <div>
             <h3>Posts</h3>
             <ul v-if="network.posts">
-              <li v-for="(post, pIndex) in network.posts" :key="pIndex">{{ post }}</li>
+              <li v-for="(post, pIndex) in network.posts[0]" :key="pIndex">{{ post }}</li>
             </ul>
           </div>
           <div>

@@ -61,8 +61,6 @@ module Types {
     following : ?[UserID];
     followers : ?[UserID];
     posts : ?[Post];
-    comments : ?[Comment];
-    likes : ?[Like];
   };
 
   public type SocialConnection = {
